@@ -63,16 +63,42 @@ function createWebStore(): KVStore {
 }
 
 /**
- * The default store for the running app.
+ * The on-device store.
  *
  * - Web / PWA  -> localStorage (persists across reloads, survives install).
  * - Native     -> in-memory for now. TODO(native): swap in an
  *   @react-native-async-storage/async-storage adapter when we cut the native
  *   build; nothing else has to change.
  */
-export const kv: KVStore = hasLocalStorage()
+export const localStore: KVStore = hasLocalStorage()
   ? createWebStore()
   : createMemoryStore();
+
+/**
+ * `kv` is a thin façade that delegates to whichever backend is "active".
+ *
+ * Every repository in the app reads/writes through `kv` (it's the default
+ * store argument everywhere). On sign-in we point the façade at a Supabase-
+ * backed store; on sign-out we point it back at `localStore`. No call site
+ * changes — that's the entire reason the storage interface exists.
+ */
+let active: KVStore = localStore;
+
+export const kv: KVStore = {
+  get: (key) => active.get(key),
+  set: (key, value) => active.set(key, value),
+  remove: (key) => active.remove(key),
+};
+
+/** Point the global store at a new backend (e.g. Supabase after sign-in). */
+export function setActiveStore(store: KVStore): void {
+  active = store;
+}
+
+/** Revert to the on-device store (e.g. after sign-out). */
+export function resetActiveStore(): void {
+  active = localStore;
+}
 
 /** Small helpers so call sites don't repeat JSON.parse/stringify + try/catch. */
 export async function getJSON<T>(store: KVStore, key: string): Promise<T | null> {

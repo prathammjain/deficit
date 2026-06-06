@@ -6,9 +6,20 @@
  * lookup → AI sanity-check) and nothing else in the app changes.
  */
 
+import { supabase } from '../supabase/client';
 import { LocalFoodProvider } from './local-provider';
+import { RemoteFoodProvider } from './remote-provider';
 import type { FoodProvider } from './types';
 
-export const foodProvider: FoodProvider = new LocalFoodProvider();
+const local = new LocalFoodProvider();
+
+/**
+ * When Supabase is configured we route lookups through the Edge Function
+ * (Gemini + FatSecret), with the local Indian table as an automatic fallback.
+ * Otherwise we use the local table directly. Same interface either way.
+ */
+export const foodProvider: FoodProvider = supabase
+  ? new RemoteFoodProvider(supabase, local)
+  : local;
 
 export * from './types';
