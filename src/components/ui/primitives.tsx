@@ -164,7 +164,7 @@ const s = StyleSheet.create({
   scrollContent: { flexGrow: 1 },
   screenInner: {
     paddingHorizontal: space.xl,
-    paddingTop: space.xl,
+    paddingTop: space.lg,
     paddingBottom: space.xxxl,
     maxWidth: maxContentWidth,
     width: '100%',

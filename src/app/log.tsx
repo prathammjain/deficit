@@ -20,13 +20,15 @@ import {
 } from '@/components/ui/primitives';
 import { palette, radius, space, type as typo } from '@/constants/palette';
 import { computeBudget } from '@/lib/budget';
-import { foodProvider, totalMacros, type FoodItem } from '@/lib/food';
+import { foodProvider, type FoodItem } from '@/lib/food';
 import {
   addEntry,
   loadDay,
+  portionedEntry,
   removeEntry,
   summarize,
   todayKey,
+  updateEntryQuantity,
   type LogEntry,
 } from '@/lib/log-store';
 import { loadProfile } from '@/lib/profile-store';
@@ -80,6 +82,19 @@ export default function LogScreen() {
       setMeals(await addEntry(date, entry)),
     [date],
   );
+  const onAddMeals = useCallback(
+    async (entries: Omit<LogEntry, 'id' | 'at'>[]) => {
+      let latest = meals;
+      for (const e of entries) latest = await addEntry(date, e);
+      setMeals(latest);
+    },
+    [date, meals],
+  );
+  const onMealQty = useCallback(
+    async (id: string, qty: number) =>
+      setMeals(await updateEntryQuantity(date, id, qty)),
+    [date],
+  );
   const onRemoveMeal = useCallback(
     async (id: string) => setMeals(await removeEntry(date, id)),
     [date],
@@ -110,7 +125,7 @@ export default function LogScreen() {
           targetKcal,
           consumedKcal: sum.kcal,
           burnedKcal: burned,
-          eatBackFactor: 0, // display-only; science-based default
+          eatBackFactor: 0,
         })
       : null;
 
@@ -146,9 +161,7 @@ export default function LogScreen() {
               </Text>
             </View>
           </View>
-
           <ProgressBar fraction={budget.fraction} over={budget.isOver} />
-
           <View style={st.macroLine}>
             <MacroChip
               text={`P ${sum.proteinG}${proteinTarget ? ` / ${proteinTarget}` : ''}g`}
@@ -163,21 +176,23 @@ export default function LogScreen() {
         </Card>
       )}
 
-      {/* Meals */}
-      <SectionLabel>Meals</SectionLabel>
-      <MealComposer onAdd={onAddMeal} />
+      {/* Meals: add + list on one screen */}
+      <SectionLabel>
+        {meals.length ? `Meals · ${sum.kcal} kcal` : 'Meals'}
+      </SectionLabel>
+      <MealComposer onAdd={onAddMeal} onAddMany={onAddMeals} />
+
       <View style={st.list}>
         {meals.map((e) => (
-          <Row
+          <MealRow
             key={e.id}
-            title={e.label}
-            sub={e.proteinG ? `${e.proteinG}g protein` : undefined}
-            value={`${e.kcal}`}
+            entry={e}
+            onQty={(q) => onMealQty(e.id, q)}
             onRemove={() => onRemoveMeal(e.id)}
           />
         ))}
         {meals.length === 0 ? (
-          <Text style={st.empty}>No meals logged yet.</Text>
+          <Text style={st.empty}>Nothing logged yet — add your first meal above.</Text>
         ) : null}
       </View>
 
@@ -186,12 +201,9 @@ export default function LogScreen() {
       <ManualWorkoutAdd onAdd={onAddWorkout} />
       <View style={st.list}>
         {workouts.map((w) => (
-          <Row
+          <WorkoutRow
             key={w.id}
-            title={w.label}
-            sub={w.minutes ? `${w.minutes} min` : undefined}
-            value={`+${w.kcalBurned}`}
-            valueColor={palette.fat}
+            entry={w}
             onRemove={() => onRemoveWorkout(w.id)}
           />
         ))}
@@ -209,199 +221,16 @@ export default function LogScreen() {
 
 /* ---------------- meal composer ---------------- */
 
-type ComposerMode = 'describe' | 'search';
-
 function MealComposer({
   onAdd,
+  onAddMany,
 }: {
   onAdd: (e: Omit<LogEntry, 'id' | 'at'>) => void;
-}) {
-  const [mode, setMode] = useState<ComposerMode>('describe');
-  return (
-    <View>
-      <View style={st.segment}>
-        <SegmentBtn
-          label="Describe"
-          active={mode === 'describe'}
-          onPress={() => setMode('describe')}
-        />
-        <SegmentBtn
-          label="Search"
-          active={mode === 'search'}
-          onPress={() => setMode('search')}
-        />
-      </View>
-      {mode === 'describe' ? (
-        <DescribeMeal onAdd={onAdd} />
-      ) : (
-        <SearchMeal onAdd={onAdd} />
-      )}
-    </View>
-  );
-}
-
-function SegmentBtn({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[st.segmentBtn, active && st.segmentBtnActive]}>
-      <Text style={[st.segmentText, active && st.segmentTextActive]}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
-function DescribeMeal({
-  onAdd,
-}: {
-  onAdd: (e: Omit<LogEntry, 'id' | 'at'>) => void;
-}) {
-  const [text, setText] = useState('');
-  const [items, setItems] = useState<{ item: FoodItem; quantity: number }[]>([]);
-  const [note, setNote] = useState<string | undefined>();
-  const [calculated, setCalculated] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  const calc = async () => {
-    if (!text.trim()) return;
-    setBusy(true);
-    const parsed = foodProvider.parseMeal
-      ? await foodProvider.parseMeal(text)
-      : { items: [], total: { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 } };
-    setItems(parsed.items);
-    setNote(parsed.note);
-    setCalculated(true);
-    setBusy(false);
-  };
-
-  const total = totalMacros(items);
-  const setQty = (idx: number, q: number) =>
-    setItems((arr) =>
-      arr.map((it, i) =>
-        i === idx ? { ...it, quantity: Math.max(0.5, Math.round(q * 2) / 2) } : it,
-      ),
-    );
-  const removeItem = (idx: number) =>
-    setItems((arr) => arr.filter((_, i) => i !== idx));
-
-  const reset = () => {
-    setText('');
-    setItems([]);
-    setNote(undefined);
-    setCalculated(false);
-  };
-
-  const log = () => {
-    if (!items.length) return;
-    onAdd({
-      label: text.trim(),
-      kcal: total.kcal,
-      proteinG: total.proteinG,
-      carbsG: total.carbsG,
-      fatG: total.fatG,
-    });
-    reset();
-  };
-
-  return (
-    <View>
-      <Card style={st.describeCard}>
-        <TextInput
-          style={st.describeInput}
-          placeholder="Describe your meal — “2 roti, mom’s dal, 1 katori rice, salad”"
-          placeholderTextColor={palette.textDim}
-          value={text}
-          onChangeText={setText}
-          multiline
-        />
-        <View style={st.describeFooter}>
-          <Text style={st.describeHint}>
-            Your words, your portions. We match each item and total it up —
-            check and tweak before logging.
-          </Text>
-          <PrimaryButton
-            label={busy ? '…' : 'Calculate'}
-            disabled={busy || text.trim().length === 0}
-            style={st.calcBtn}
-            onPress={calc}
-          />
-        </View>
-      </Card>
-
-      {calculated ? (
-        <Card style={st.breakdownCard}>
-          {items.map((it, idx) => (
-            <View key={`${it.item.id}-${idx}`} style={st.breakdownRow}>
-              <View style={st.flex1}>
-                <Text style={st.breakdownName}>{it.item.name}</Text>
-                <Text style={st.breakdownSub}>
-                  {it.item.serving} · {Math.round(it.item.kcal * it.quantity)} kcal
-                </Text>
-              </View>
-              <View style={st.stepper}>
-                <Pressable
-                  onPress={() => setQty(idx, it.quantity - 0.5)}
-                  hitSlop={8}
-                  style={st.stepBtn}>
-                  <Text style={st.stepText}>−</Text>
-                </Pressable>
-                <Text style={st.stepQty}>{it.quantity}</Text>
-                <Pressable
-                  onPress={() => setQty(idx, it.quantity + 0.5)}
-                  hitSlop={8}
-                  style={st.stepBtn}>
-                  <Text style={st.stepText}>＋</Text>
-                </Pressable>
-              </View>
-              <Pressable onPress={() => removeItem(idx)} hitSlop={8}>
-                <Text style={st.removeText}>✕</Text>
-              </Pressable>
-            </View>
-          ))}
-
-          {items.length === 0 ? (
-            <Text style={st.empty}>
-              Couldn’t match anything — try simpler names, or use Search / custom.
-            </Text>
-          ) : null}
-
-          {note ? <Text style={st.breakdownNote}>{note}</Text> : null}
-
-          {items.length > 0 ? (
-            <>
-              <View style={st.breakdownTotalRow}>
-                <Text style={st.breakdownTotalLabel}>Total</Text>
-                <Text style={st.breakdownTotalValue}>
-                  {total.kcal} kcal · P{total.proteinG} C{total.carbsG} F
-                  {total.fatG}
-                </Text>
-              </View>
-              <PrimaryButton label="Log this meal" onPress={log} />
-            </>
-          ) : null}
-        </Card>
-      ) : null}
-    </View>
-  );
-}
-
-function SearchMeal({
-  onAdd,
-}: {
-  onAdd: (e: Omit<LogEntry, 'id' | 'at'>) => void;
+  onAddMany: (e: Omit<LogEntry, 'id' | 'at'>[]) => void;
 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<FoodItem[]>([]);
-  const [manual, setManual] = useState(false);
+  const [panel, setPanel] = useState<'none' | 'describe' | 'custom'>('none');
 
   useEffect(() => {
     let alive = true;
@@ -417,25 +246,14 @@ function SearchMeal({
     };
   }, [query]);
 
-  const addFood = (f: FoodItem) => {
-    onAdd({
-      label: f.name,
-      kcal: f.kcal,
-      proteinG: f.proteinG,
-      carbsG: f.carbsG,
-      fatG: f.fatG,
-    });
-    setQuery('');
-    setResults([]);
-  };
-
   return (
     <View>
+      {/* Primary: search a food, tap to add (stays open for the next one) */}
       <View style={st.searchWrap}>
         <Text style={st.searchIcon}>⌕</Text>
         <TextInput
           style={st.searchInput}
-          placeholder="Search food — roti, dal, paneer…"
+          placeholder="Add a food — roti, dal, paneer…"
           placeholderTextColor={palette.textDim}
           value={query}
           onChangeText={setQuery}
@@ -453,7 +271,10 @@ function SearchMeal({
           {results.map((f, i) => (
             <Pressable
               key={f.id}
-              onPress={() => addFood(f)}
+              onPress={() => {
+                onAdd(portionedEntry(f, 1));
+                setQuery('');
+              }}
               style={({ pressed }) => [
                 st.resultRow,
                 i > 0 && st.resultRowBorder,
@@ -472,23 +293,44 @@ function SearchMeal({
         </Card>
       ) : null}
 
-      {query.trim().length > 0 && results.length === 0 ? (
-        <Text style={st.noMatch}>
-          No match in the built-in list — add it as a custom entry below.
-        </Text>
+      {/* Secondary actions */}
+      {query.length === 0 ? (
+        <View style={st.secondaryRow}>
+          <Pressable
+            onPress={() => setPanel(panel === 'describe' ? 'none' : 'describe')}
+            style={[st.pill, panel === 'describe' && st.pillActive]}>
+            <Text
+              style={[
+                st.pillText,
+                panel === 'describe' && st.pillTextActive,
+              ]}>
+              ✦ Describe a meal
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setPanel(panel === 'custom' ? 'none' : 'custom')}
+            style={[st.pill, panel === 'custom' && st.pillActive]}>
+            <Text
+              style={[st.pillText, panel === 'custom' && st.pillTextActive]}>
+              ＋ Custom
+            </Text>
+          </Pressable>
+        </View>
       ) : null}
 
-      <Pressable onPress={() => setManual((m) => !m)} style={st.manualToggle}>
-        <Text style={st.manualToggleText}>
-          {manual ? '− Hide custom entry' : '＋ Add custom entry'}
-        </Text>
-      </Pressable>
-
-      {manual ? (
-        <ManualMealAdd
+      {panel === 'describe' ? (
+        <DescribeMeal
+          onLog={(entries) => {
+            onAddMany(entries);
+            setPanel('none');
+          }}
+        />
+      ) : null}
+      {panel === 'custom' ? (
+        <CustomMeal
           onAdd={(e) => {
             onAdd(e);
-            setManual(false);
+            setPanel('none');
           }}
         />
       ) : null}
@@ -496,7 +338,111 @@ function SearchMeal({
   );
 }
 
-function ManualMealAdd({
+function DescribeMeal({
+  onLog,
+}: {
+  onLog: (entries: Omit<LogEntry, 'id' | 'at'>[]) => void;
+}) {
+  const [text, setText] = useState('');
+  const [items, setItems] = useState<{ item: FoodItem; quantity: number }[]>([]);
+  const [note, setNote] = useState<string | undefined>();
+  const [calculated, setCalculated] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const calc = async () => {
+    if (!text.trim() || !foodProvider.parseMeal) return;
+    setBusy(true);
+    const parsed = await foodProvider.parseMeal(text);
+    setItems(parsed.items);
+    setNote(parsed.note);
+    setCalculated(true);
+    setBusy(false);
+  };
+
+  const setQty = (idx: number, q: number) =>
+    setItems((arr) =>
+      arr.map((it, i) =>
+        i === idx ? { ...it, quantity: Math.max(0.5, Math.round(q * 2) / 2) } : it,
+      ),
+    );
+  const removeItem = (idx: number) =>
+    setItems((arr) => arr.filter((_, i) => i !== idx));
+
+  const total = items.reduce(
+    (a, { item, quantity }) => ({
+      kcal: a.kcal + Math.round(item.kcal * quantity),
+      proteinG: a.proteinG + Math.round(item.proteinG * quantity),
+    }),
+    { kcal: 0, proteinG: 0 },
+  );
+
+  return (
+    <Card style={st.describeCard}>
+      <TextInput
+        style={st.describeInput}
+        placeholder="“2 roti, mom’s dal, 1 katori rice, salad” — say it your way"
+        placeholderTextColor={palette.textDim}
+        value={text}
+        onChangeText={setText}
+        multiline
+      />
+      <View style={st.describeFooter}>
+        <Text style={st.describeHint}>
+          We match each item — review and adjust portions before logging.
+        </Text>
+        <PrimaryButton
+          label={busy ? '…' : 'Match'}
+          disabled={busy || text.trim().length === 0}
+          style={st.calcBtn}
+          onPress={calc}
+        />
+      </View>
+
+      {calculated ? (
+        <View style={st.breakdown}>
+          {items.map((it, idx) => (
+            <View key={`${it.item.id}-${idx}`} style={st.breakdownRow}>
+              <View style={st.flex1}>
+                <Text style={st.breakdownName}>{it.item.name}</Text>
+                <Text style={st.breakdownSub}>
+                  {it.item.serving} · {Math.round(it.item.kcal * it.quantity)} kcal
+                </Text>
+              </View>
+              <Stepper value={it.quantity} onChange={(q) => setQty(idx, q)} />
+              <Pressable onPress={() => removeItem(idx)} hitSlop={8}>
+                <Text style={st.removeText}>✕</Text>
+              </Pressable>
+            </View>
+          ))}
+          {items.length === 0 ? (
+            <Text style={st.empty}>
+              Couldn’t match anything — try simpler names or use Custom.
+            </Text>
+          ) : null}
+          {note ? <Text style={st.breakdownNote}>{note}</Text> : null}
+          {items.length > 0 ? (
+            <>
+              <View style={st.breakdownTotalRow}>
+                <Text style={st.breakdownTotalLabel}>Total</Text>
+                <Text style={st.breakdownTotalValue}>
+                  {total.kcal} kcal · {total.proteinG}g protein
+                </Text>
+              </View>
+              <PrimaryButton
+                label={`Log ${items.length} item${items.length > 1 ? 's' : ''}`}
+                onPress={() =>
+                  onLog(items.map(({ item, quantity }) => portionedEntry(item, quantity)))
+                }
+              />
+            </>
+          ) : null}
+        </View>
+      ) : null}
+    </Card>
+  );
+}
+
+function CustomMeal({
   onAdd,
 }: {
   onAdd: (e: Omit<LogEntry, 'id' | 'at'>) => void;
@@ -614,6 +560,86 @@ function ManualWorkoutAdd({
   );
 }
 
+/* ---------------- rows & bits ---------------- */
+
+function Stepper({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <View style={st.stepper}>
+      <Pressable onPress={() => onChange(value - 0.5)} hitSlop={8} style={st.stepBtn}>
+        <Text style={st.stepText}>−</Text>
+      </Pressable>
+      <Text style={st.stepQty}>{value}</Text>
+      <Pressable onPress={() => onChange(value + 0.5)} hitSlop={8} style={st.stepBtn}>
+        <Text style={st.stepText}>＋</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function MealRow({
+  entry,
+  onQty,
+  onRemove,
+}: {
+  entry: LogEntry;
+  onQty: (q: number) => void;
+  onRemove: () => void;
+}) {
+  const portioned = entry.unitKcal != null && entry.quantity != null;
+  return (
+    <View style={st.entryRow}>
+      <View style={st.flex1}>
+        <Text style={st.entryLabel}>{entry.label}</Text>
+        <Text style={st.entrySub}>
+          {portioned
+            ? `${entry.quantity} × ${entry.serving}`
+            : entry.proteinG
+              ? `${entry.proteinG}g protein`
+              : 'custom'}
+        </Text>
+      </View>
+      {portioned ? (
+        <Stepper value={entry.quantity as number} onChange={onQty} />
+      ) : null}
+      <Text style={st.entryKcal}>{entry.kcal}</Text>
+      <Pressable onPress={onRemove} hitSlop={10} style={st.removeBtn}>
+        <Text style={st.removeText}>✕</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function WorkoutRow({
+  entry,
+  onRemove,
+}: {
+  entry: WorkoutEntry;
+  onRemove: () => void;
+}) {
+  return (
+    <View style={st.entryRow}>
+      <View style={st.flex1}>
+        <Text style={st.entryLabel}>{entry.label}</Text>
+        {entry.minutes ? (
+          <Text style={st.entrySub}>{entry.minutes} min</Text>
+        ) : null}
+      </View>
+      <Text style={[st.entryKcal, { color: palette.fat }]}>
+        +{entry.kcalBurned}
+      </Text>
+      <Pressable onPress={onRemove} hitSlop={10} style={st.removeBtn}>
+        <Text style={st.removeText}>✕</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function MacroChip({
   text,
   color,
@@ -627,35 +653,6 @@ function MacroChip({
     <View style={st.chip}>
       {!muted ? <View style={[st.chipDot, { backgroundColor: color }]} /> : null}
       <Text style={[st.chipText, muted && { color: palette.fat }]}>{text}</Text>
-    </View>
-  );
-}
-
-function Row({
-  title,
-  sub,
-  value,
-  valueColor,
-  onRemove,
-}: {
-  title: string;
-  sub?: string;
-  value: string;
-  valueColor?: string;
-  onRemove: () => void;
-}) {
-  return (
-    <View style={st.entryRow}>
-      <View style={st.flex1}>
-        <Text style={st.entryLabel}>{title}</Text>
-        {sub ? <Text style={st.entrySub}>{sub}</Text> : null}
-      </View>
-      <Text style={[st.entryKcal, valueColor ? { color: valueColor } : null]}>
-        {value}
-      </Text>
-      <Pressable onPress={onRemove} hitSlop={10} style={st.removeBtn}>
-        <Text style={st.removeText}>✕</Text>
-      </Pressable>
     </View>
   );
 }
@@ -680,11 +677,7 @@ const st = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: space.lg,
   },
-  remainingLabel: {
-    color: palette.textFaint,
-    fontSize: 13,
-    letterSpacing: 0.2,
-  },
+  remainingLabel: { color: palette.textFaint, fontSize: 13, letterSpacing: 0.2 },
   remaining: { ...typo.hero, fontSize: 56, color: palette.accent, marginTop: 2 },
   consumedBox: { alignItems: 'flex-end', paddingTop: space.sm },
   consumed: { color: palette.text, fontSize: 22, fontWeight: '600' },
@@ -703,87 +696,6 @@ const st = StyleSheet.create({
   chipDot: { width: 6, height: 6, borderRadius: 3 },
   chipText: { color: palette.textMuted, fontSize: 12, fontWeight: '600' },
 
-  segment: {
-    flexDirection: 'row',
-    backgroundColor: palette.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: palette.hairline,
-    padding: 3,
-    gap: 3,
-    marginBottom: space.md,
-  },
-  segmentBtn: {
-    flex: 1,
-    paddingVertical: space.sm,
-    alignItems: 'center',
-    borderRadius: radius.sm,
-  },
-  segmentBtnActive: { backgroundColor: palette.accentSoft },
-  segmentText: { color: palette.textFaint, fontSize: 14, fontWeight: '600' },
-  segmentTextActive: { color: palette.accent },
-
-  describeCard: { gap: space.md },
-  describeInput: {
-    color: palette.text,
-    fontSize: 16,
-    lineHeight: 22,
-    minHeight: 64,
-    textAlignVertical: 'top',
-    padding: 0,
-  },
-  describeFooter: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: space.md,
-  },
-  describeHint: {
-    flex: 1,
-    color: palette.textFaint,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  calcBtn: { paddingHorizontal: space.xl },
-
-  breakdownCard: { marginTop: space.md, gap: space.sm },
-  breakdownRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    paddingVertical: space.sm,
-  },
-  breakdownName: { color: palette.text, fontSize: 15, fontWeight: '600' },
-  breakdownSub: { color: palette.textFaint, fontSize: 12, marginTop: 2 },
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    backgroundColor: palette.bg,
-    borderRadius: radius.pill,
-    paddingHorizontal: space.md,
-    paddingVertical: space.xs,
-  },
-  stepBtn: { minWidth: 16, alignItems: 'center' },
-  stepText: { color: palette.accent, fontSize: 16, fontWeight: '700' },
-  stepQty: { color: palette.text, fontSize: 14, fontWeight: '600', minWidth: 22, textAlign: 'center' },
-  breakdownNote: {
-    color: palette.warn,
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: space.xs,
-  },
-  breakdownTotalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: space.md,
-    borderTopWidth: 1,
-    borderTopColor: palette.hairline,
-    marginTop: space.xs,
-  },
-  breakdownTotalLabel: { color: palette.textMuted, fontSize: 14 },
-  breakdownTotalValue: { color: palette.text, fontSize: 14, fontWeight: '600' },
-
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -795,12 +707,7 @@ const st = StyleSheet.create({
     gap: space.sm,
   },
   searchIcon: { color: palette.textFaint, fontSize: 18 },
-  searchInput: {
-    flex: 1,
-    color: palette.text,
-    fontSize: 16,
-    paddingVertical: space.lg,
-  },
+  searchInput: { flex: 1, color: palette.text, fontSize: 16, paddingVertical: space.lg },
   searchClear: { color: palette.textFaint, fontSize: 14 },
 
   resultsCard: { marginTop: space.sm, overflow: 'hidden' },
@@ -817,16 +724,48 @@ const st = StyleSheet.create({
   resultKcal: { color: palette.text, fontSize: 15, fontWeight: '700' },
   resultAdd: { color: palette.accent, fontSize: 18, fontWeight: '700' },
 
-  noMatch: {
-    color: palette.textFaint,
-    fontSize: 13,
-    marginTop: space.md,
-    lineHeight: 18,
+  secondaryRow: { flexDirection: 'row', gap: space.sm, marginTop: space.md },
+  pill: {
+    paddingVertical: space.sm,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.pill,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.hairline,
   },
-  manualToggle: { paddingVertical: space.md },
-  manualToggleText: { color: palette.accent, fontSize: 14, fontWeight: '600' },
+  pillActive: { backgroundColor: palette.accentSoft, borderColor: palette.accentBorder },
+  pillText: { color: palette.textMuted, fontSize: 13, fontWeight: '600' },
+  pillTextActive: { color: palette.accent },
 
-  manualCard: { gap: space.md, marginTop: space.xs },
+  describeCard: { gap: space.md, marginTop: space.md },
+  describeInput: {
+    color: palette.text,
+    fontSize: 16,
+    lineHeight: 22,
+    minHeight: 60,
+    textAlignVertical: 'top',
+    padding: 0,
+  },
+  describeFooter: { flexDirection: 'row', alignItems: 'flex-end', gap: space.md },
+  describeHint: { flex: 1, color: palette.textFaint, fontSize: 12, lineHeight: 17 },
+  calcBtn: { paddingHorizontal: space.xl },
+  breakdown: { gap: space.sm, marginTop: space.sm },
+  breakdownRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
+  breakdownName: { color: palette.text, fontSize: 15, fontWeight: '600' },
+  breakdownSub: { color: palette.textFaint, fontSize: 12, marginTop: 2 },
+  breakdownNote: { color: palette.warn, fontSize: 12, lineHeight: 17 },
+  breakdownTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: space.md,
+    borderTopWidth: 1,
+    borderTopColor: palette.hairline,
+  },
+  breakdownTotalLabel: { color: palette.textMuted, fontSize: 14 },
+  breakdownTotalValue: { color: palette.text, fontSize: 14, fontWeight: '600' },
+
+  manualCard: { gap: space.md, marginTop: space.md },
   manualLabelInput: {
     backgroundColor: palette.bg,
     borderRadius: radius.sm,
@@ -846,7 +785,7 @@ const st = StyleSheet.create({
   },
   manualBtn: { paddingHorizontal: space.lg },
 
-  list: { marginTop: space.xs },
+  list: { marginTop: space.md },
   empty: { color: palette.textDim, fontSize: 14, paddingVertical: space.sm },
   entryRow: {
     flexDirection: 'row',
@@ -858,13 +797,22 @@ const st = StyleSheet.create({
   },
   entryLabel: { color: palette.text, fontSize: 15, fontWeight: '500' },
   entrySub: { color: palette.textFaint, fontSize: 13, marginTop: 2 },
-  entryKcal: { color: palette.text, fontSize: 15, fontWeight: '700' },
+  entryKcal: { color: palette.text, fontSize: 15, fontWeight: '700', minWidth: 44, textAlign: 'right' },
   removeBtn: { paddingHorizontal: space.xs },
   removeText: { color: palette.textFaint, fontSize: 15 },
-  workoutNote: {
-    color: palette.textDim,
-    fontSize: 12,
-    marginTop: space.md,
-    lineHeight: 17,
+
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    backgroundColor: palette.bg,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.md,
+    paddingVertical: space.xs,
   },
+  stepBtn: { minWidth: 16, alignItems: 'center' },
+  stepText: { color: palette.accent, fontSize: 16, fontWeight: '700' },
+  stepQty: { color: palette.text, fontSize: 14, fontWeight: '600', minWidth: 24, textAlign: 'center' },
+
+  workoutNote: { color: palette.textDim, fontSize: 12, marginTop: space.md, lineHeight: 17 },
 });

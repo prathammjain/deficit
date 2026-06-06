@@ -13,12 +13,57 @@ export interface LogEntry {
   id: string;
   /** What the user ate, free text. */
   label: string;
+  /** Total calories for this entry (unit × quantity for portioned entries). */
   kcal: number;
   proteinG?: number;
   carbsG?: number;
   fatG?: number;
   /** ISO timestamp the entry was added. */
   at: string;
+
+  // --- Portioning (present for food-database entries; absent for custom) ---
+  /** Human serving the unit macros describe, e.g. "1 katori (150g)". */
+  serving?: string;
+  /** Number of servings. Editable in the log. */
+  quantity?: number;
+  /** Per-single-serving macros, so quantity can be re-scaled later. */
+  unitKcal?: number;
+  unitProteinG?: number;
+  unitCarbsG?: number;
+  unitFatG?: number;
+}
+
+/** Minimal shape of a food-database item used to build a portioned entry. */
+export interface FoodLike {
+  name: string;
+  serving: string;
+  kcal: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+}
+
+const r = (n: number) => Math.round(n);
+
+/** Build a portioned (quantity-editable) entry from a food item. */
+export function portionedEntry(
+  food: FoodLike,
+  quantity = 1,
+): Omit<LogEntry, 'id' | 'at'> {
+  const q = Math.max(0.5, quantity);
+  return {
+    label: food.name,
+    serving: food.serving,
+    quantity: q,
+    unitKcal: food.kcal,
+    unitProteinG: food.proteinG,
+    unitCarbsG: food.carbsG,
+    unitFatG: food.fatG,
+    kcal: r(food.kcal * q),
+    proteinG: r(food.proteinG * q),
+    carbsG: r(food.carbsG * q),
+    fatG: r(food.fatG * q),
+  };
 }
 
 export interface DaySummary {
@@ -88,6 +133,33 @@ export async function removeEntry(
 ): Promise<LogEntry[]> {
   const entries = await loadDay(date, store);
   const next = entries.filter((e) => e.id !== id);
+  await setJSON(store, dayKey(date), next);
+  return next;
+}
+
+/**
+ * Re-scale a portioned entry to a new quantity, recomputing its macros from the
+ * stored per-serving unit. No-op for custom entries (no unit macros).
+ */
+export async function updateEntryQuantity(
+  date: string,
+  id: string,
+  quantity: number,
+  store: KVStore = kv,
+): Promise<LogEntry[]> {
+  const q = Math.max(0.5, Math.round(quantity * 2) / 2);
+  const entries = await loadDay(date, store);
+  const next = entries.map((e) => {
+    if (e.id !== id || e.unitKcal == null) return e;
+    return {
+      ...e,
+      quantity: q,
+      kcal: r(e.unitKcal * q),
+      proteinG: e.unitProteinG != null ? r(e.unitProteinG * q) : e.proteinG,
+      carbsG: e.unitCarbsG != null ? r(e.unitCarbsG * q) : e.carbsG,
+      fatG: e.unitFatG != null ? r(e.unitFatG * q) : e.fatG,
+    };
+  });
   await setJSON(store, dayKey(date), next);
   return next;
 }

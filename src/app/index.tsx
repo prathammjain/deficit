@@ -392,7 +392,7 @@ const st = StyleSheet.create({
   editLink: { color: palette.accent, fontSize: 14, fontWeight: '600' },
 
   hero: { alignItems: 'center', marginTop: space.xxl, marginBottom: space.sm },
-  heroNumber: { ...typo.hero, color: palette.text },
+  heroNumber: { ...typo.hero, fontSize: 64, color: palette.text },
   heroUnit: {
     color: palette.textFaint,
     fontSize: 15,

@@ -8,10 +8,12 @@ import {
 import {
   addEntry,
   loadDay,
+  portionedEntry,
   remaining,
   removeEntry,
   summarize,
   todayKey,
+  updateEntryQuantity,
   type LogEntry,
 } from './log-store';
 import type { ProfileInput } from './targets';
@@ -100,6 +102,55 @@ describe('log-store', () => {
     const s = createMemoryStore();
     await addEntry('2026-06-06', { label: 'A', kcal: 100 }, s);
     expect(await loadDay('2026-06-07', s)).toEqual([]);
+  });
+});
+
+describe('portioned entries', () => {
+  const dal = {
+    name: 'Dal Tadka',
+    serving: '1 katori',
+    kcal: 150,
+    proteinG: 8,
+    carbsG: 20,
+    fatG: 4,
+  };
+
+  it('builds an entry scaled by quantity, keeping the per-unit macros', () => {
+    const e = portionedEntry(dal, 2);
+    expect(e.kcal).toBe(300);
+    expect(e.proteinG).toBe(16);
+    expect(e.quantity).toBe(2);
+    expect(e.unitKcal).toBe(150);
+  });
+
+  it('re-scales a logged entry when the quantity changes', async () => {
+    const s = createMemoryStore();
+    const date = '2026-06-06';
+    await addEntry(date, portionedEntry(dal, 1), s);
+    const [entry] = await loadDay(date, s);
+    expect(entry.kcal).toBe(150);
+
+    const next = await updateEntryQuantity(date, entry.id, 2.5, s);
+    expect(next[0].kcal).toBe(375); // 150 × 2.5
+    expect(next[0].quantity).toBe(2.5);
+  });
+
+  it('clamps quantity to a 0.5 minimum and half-step', async () => {
+    const s = createMemoryStore();
+    const date = '2026-06-06';
+    await addEntry(date, portionedEntry(dal, 1), s);
+    const [entry] = await loadDay(date, s);
+    const next = await updateEntryQuantity(date, entry.id, 0, s);
+    expect(next[0].quantity).toBe(0.5);
+  });
+
+  it('leaves custom (non-portioned) entries untouched', async () => {
+    const s = createMemoryStore();
+    const date = '2026-06-06';
+    await addEntry(date, { label: 'Mystery', kcal: 200 }, s);
+    const [entry] = await loadDay(date, s);
+    const next = await updateEntryQuantity(date, entry.id, 3, s);
+    expect(next[0].kcal).toBe(200); // unchanged, no unit macros
   });
 });
 

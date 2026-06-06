@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { palette } from '@/constants/palette';
+import { maxContentWidth, palette, space } from '@/constants/palette';
 import {
   ACTIVITY_FACTORS,
   computeTargets,
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 32,
     paddingBottom: 24,
-    maxWidth: 520,
+    maxWidth: maxContentWidth,
     width: '100%',
     alignSelf: 'center',
     flexGrow: 1,
@@ -513,6 +513,9 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 8,
     gap: 12,
+    maxWidth: maxContentWidth,
+    width: '100%',
+    alignSelf: 'center',
   },
   backBtn: { paddingVertical: 14, paddingHorizontal: 8, minWidth: 64 },
   backText: { color: palette.textMuted, fontSize: 16, fontWeight: '600' },
