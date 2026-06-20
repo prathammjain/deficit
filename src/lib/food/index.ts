@@ -22,4 +22,15 @@ export const foodProvider: FoodProvider = supabase
   ? new RemoteFoodProvider(supabase, local)
   : local;
 
+/**
+ * Ask the live engine whether it's ready (cheap, no AI/DB calls) so the UI can
+ * show "AI grounding active" vs "offline — local foods". No-op for the local
+ * provider, which is always ready.
+ */
+export async function probeProvider(): Promise<void> {
+  if (foodProvider instanceof RemoteFoodProvider) {
+    await foodProvider.health();
+  }
+}
+
 export * from './types';

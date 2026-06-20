@@ -55,7 +55,11 @@ export function computeBudget(input: BudgetInput): DailyBudget {
   const adjustedTarget = target + creditedBurn;
   const remaining = adjustedTarget - consumed;
   const fraction =
-    adjustedTarget > 0 ? clamp01(consumed / adjustedTarget) : consumed > 0 ? 1 : 0;
+    adjustedTarget > 0
+      ? clamp01(consumed / adjustedTarget)
+      : consumed > 0
+        ? 1
+        : 0;
 
   return {
     targetKcal: target,
@@ -70,7 +74,10 @@ export function computeBudget(input: BudgetInput): DailyBudget {
 }
 
 /** Progress against a single macro target (e.g. protein). */
-export function macroProgress(consumedG: number, targetG: number): MacroProgress {
+export function macroProgress(
+  consumedG: number,
+  targetG: number,
+): MacroProgress {
   const consumed = Math.max(0, Math.round(consumedG));
   const target = Math.max(0, Math.round(targetG));
   return {

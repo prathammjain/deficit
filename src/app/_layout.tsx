@@ -1,5 +1,8 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import { ActivityIndicator, useColorScheme, View } from 'react-native';
+import '@/global.css';
+
+import { DarkTheme, ThemeProvider } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { ActivityIndicator, View } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
@@ -8,10 +11,12 @@ import { palette } from '@/constants/palette';
 import { AuthProvider, useAuth } from '@/lib/supabase/auth';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  // The app is dark-only (deep charcoal glass), so the theme is fixed
+  // regardless of the device's light/dark setting.
   return (
     <AuthProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <ThemeProvider value={DarkTheme}>
+        <StatusBar style="light" />
         <AnimatedSplashOverlay />
         <AuthGate>
           <AppTabs />
@@ -32,7 +37,14 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: palette.bg, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: palette.bg,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <ActivityIndicator color={palette.accent} />
       </View>
     );

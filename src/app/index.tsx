@@ -13,12 +13,11 @@ import { OnboardingFlow } from '@/components/onboarding-flow';
 import {
   Card,
   Eyebrow,
-  GhostButton,
+  GlassSurface,
   Hairline,
   PrimaryButton,
   Screen,
   SectionLabel,
-  Title,
 } from '@/components/ui/primitives';
 import { palette, radius, space, type as typo } from '@/constants/palette';
 import {
@@ -126,19 +125,30 @@ export default function HomeScreen() {
           <Text style={st.editLink}>Edit</Text>
         </Pressable>
       </View>
-      <Title>Your daily target</Title>
-
-      {/* Hero */}
-      <View style={st.hero}>
-        <Text style={st.heroNumber}>{t.targetKcal.toLocaleString()}</Text>
-        <Text style={st.heroUnit}>kcal / day</Text>
-      </View>
-
-      {/* Maintenance / deficit */}
-      <View style={st.statRow}>
-        <StatTile label="Maintenance" value={t.maintenanceKcal.toLocaleString()} />
-        <StatTile label="Daily deficit" value={`−${t.dailyDeficitKcal}`} accent />
-      </View>
+      {/* Hero balance card — the focal point, lifted by an accent glow */}
+      <GlassSurface padded style={st.heroCard}>
+        <Text style={st.heroLabel}>Your daily target</Text>
+        <View style={st.heroNumberRow}>
+          <Text style={st.heroNumber}>{t.targetKcal.toLocaleString()}</Text>
+          <Text style={st.heroUnit}>kcal</Text>
+        </View>
+        <Hairline style={st.heroDivider} />
+        <View style={st.heroStatsRow}>
+          <View style={st.heroStat}>
+            <Text style={st.heroStatValue}>
+              {t.maintenanceKcal.toLocaleString()}
+            </Text>
+            <Text style={st.heroStatLabel}>Maintenance</Text>
+          </View>
+          <View style={st.heroStatDivider} />
+          <View style={st.heroStat}>
+            <Text style={[st.heroStatValue, { color: palette.accent }]}>
+              −{t.dailyDeficitKcal}
+            </Text>
+            <Text style={st.heroStatLabel}>Daily deficit</Text>
+          </View>
+        </View>
+      </GlassSurface>
 
       {/* Macros */}
       <SectionLabel>Macros</SectionLabel>
@@ -183,25 +193,6 @@ export default function HomeScreen() {
 
 /* ---------------- subcomponents ---------------- */
 
-function StatTile({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-}) {
-  return (
-    <Card style={st.tile}>
-      <Text style={[st.tileValue, accent && { color: palette.accent }]}>
-        {value}
-      </Text>
-      <Text style={st.tileLabel}>{label}</Text>
-    </Card>
-  );
-}
-
 function MacroTile({
   label,
   grams,
@@ -241,7 +232,7 @@ function WeighInCard({
   const valid = val !== '' && num >= 30 && num <= 300;
 
   return (
-    <Card style={st.weighCard}>
+    <GlassSurface padded style={st.weighCard}>
       <View style={st.weighRow}>
         <TextInput
           style={st.weighInput}
@@ -269,7 +260,7 @@ function WeighInCard({
           ? `Last logged ${last} kg. Weigh in each morning for the best read.`
           : 'Weigh in each morning — same time, same conditions.'}
       </Text>
-    </Card>
+    </GlassSurface>
   );
 }
 
@@ -305,9 +296,7 @@ function AdaptiveCard({
         <View style={st.adaptiveProgressRow}>
           <Text style={st.adaptiveProgressText}>{days}/7 days logged</Text>
           <Text style={st.adaptiveProgressDot}>·</Text>
-          <Text style={st.adaptiveProgressText}>
-            {weighIns}/3 weigh-ins
-          </Text>
+          <Text style={st.adaptiveProgressText}>{weighIns}/3 weigh-ins</Text>
         </View>
       </Card>
     );
@@ -325,7 +314,9 @@ function AdaptiveCard({
   return (
     <Card>
       <View style={st.adaptiveHeader}>
-        <Text style={st.adaptiveLead}>From your last {adaptive.intakeDays} days</Text>
+        <Text style={st.adaptiveLead}>
+          From your last {adaptive.intakeDays} days
+        </Text>
         <View style={st.confidenceChip}>
           <Text style={st.confidenceText}>
             {CONFIDENCE_COPY[adaptive.confidence]}
@@ -342,7 +333,13 @@ function AdaptiveCard({
         <AdaptiveStat
           label="Weight trend"
           value={`${trend > 0 ? '+' : ''}${trend.toFixed(2)} kg/wk`}
-          tone={trend < 0 ? palette.good : trend > 0 ? palette.danger : palette.textMuted}
+          tone={
+            trend < 0
+              ? palette.good
+              : trend > 0
+                ? palette.danger
+                : palette.textMuted
+          }
         />
         <AdaptiveStat
           label="vs formula"
@@ -391,18 +388,50 @@ const st = StyleSheet.create({
   },
   editLink: { color: palette.accent, fontSize: 14, fontWeight: '600' },
 
-  hero: { alignItems: 'center', marginTop: space.xxl, marginBottom: space.sm },
-  heroNumber: { ...typo.hero, fontSize: 64, color: palette.text },
-  heroUnit: {
-    color: palette.textFaint,
-    fontSize: 15,
-    marginTop: space.xs,
-    letterSpacing: 0.3,
+  heroCard: {
+    marginTop: space.lg,
+    // peach glow that lifts the focal card off the dark canvas
+    shadowColor: palette.accent,
+    shadowOpacity: 0.3,
+    shadowRadius: 40,
+    shadowOffset: { width: 0, height: 16 },
   },
-
-  statRow: { flexDirection: 'row', gap: space.md, marginTop: space.lg },
+  heroLabel: {
+    color: palette.textMuted,
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  heroNumberRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: space.sm,
+    marginTop: space.sm,
+  },
+  heroNumber: { ...typo.hero, fontSize: 56, color: palette.text },
+  heroUnit: { color: palette.textFaint, fontSize: 17, fontWeight: '600' },
+  heroDivider: { marginVertical: space.lg },
+  heroStatsRow: { flexDirection: 'row', alignItems: 'center' },
+  heroStat: { flex: 1 },
+  heroStatValue: {
+    color: palette.text,
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  heroStatLabel: {
+    color: palette.textFaint,
+    fontSize: 12,
+    marginTop: 3,
+    letterSpacing: 0.2,
+  },
+  heroStatDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: palette.hairline,
+    marginHorizontal: space.lg,
+  },
   tile: { flex: 1, alignItems: 'center', paddingVertical: space.lg },
-  tileValue: { ...typo.stat, color: palette.text },
   tileLabel: {
     color: palette.textFaint,
     fontSize: 12,
@@ -417,6 +446,7 @@ const st = StyleSheet.create({
   weighRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   weighInput: {
     flex: 1,
+    minWidth: 0, // let the field shrink so the unit + Save stay on-screen (RNW)
     color: palette.text,
     fontSize: 28,
     fontWeight: '600',
@@ -466,11 +496,20 @@ const st = StyleSheet.create({
     paddingHorizontal: space.md,
     paddingVertical: space.xs,
   },
-  confidenceText: { color: palette.accent, fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
+  confidenceText: {
+    color: palette.accent,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
   adaptiveBig: { marginTop: space.lg },
   adaptiveTdee: { ...typo.stat, fontSize: 40, color: palette.text },
   adaptiveTdeeUnit: { color: palette.textFaint, fontSize: 13, marginTop: 2 },
-  adaptiveStatsRow: { flexDirection: 'row', gap: space.xl, marginTop: space.lg },
+  adaptiveStatsRow: {
+    flexDirection: 'row',
+    gap: space.xl,
+    marginTop: space.lg,
+  },
   adaptiveStat: {},
   adaptiveStatValue: { fontSize: 17, fontWeight: '600' },
   adaptiveStatLabel: { color: palette.textFaint, fontSize: 12, marginTop: 2 },

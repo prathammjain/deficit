@@ -6,6 +6,7 @@
 
 import { ReactNode } from 'react';
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,8 +16,50 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 
-import { maxContentWidth, palette, radius, space, type } from '@/constants/palette';
+import {
+  maxContentWidth,
+  palette,
+  radius,
+  shadow,
+  space,
+  type,
+} from '@/constants/palette';
+
+/** True only where Apple's Liquid Glass renders natively (iOS 26+). */
+const LIQUID_GLASS = Platform.OS === 'ios' && isLiquidGlassAvailable();
+
+/** Web backdrop-blur (no-op off web). `any`: these keys aren't in RN's style
+ *  types, and the result is spread into both View and TextInput styles. */
+export const webBlur = (px: number) =>
+  Platform.OS === 'web'
+    ? ({
+        backdropFilter: `blur(${px}px)`,
+        WebkitBackdropFilter: `blur(${px}px)`,
+      } as any)
+    : null;
+
+/** Soft blur on the element itself — used for the decorative background blobs. */
+const webFilterBlur = (px: number) =>
+  Platform.OS === 'web'
+    ? ({ filter: `blur(${px}px)` } as any)
+    : { opacity: 0.5 };
+
+/**
+ * The soft color wash that frosted surfaces refract — blurred accent blobs
+ * painted over the cream canvas (web blurs them with `filter`, native softens
+ * with opacity). Sits behind every screen's content.
+ */
+export function GlassBackdrop() {
+  return (
+    <View pointerEvents="none" style={s.backdrop}>
+      <View style={[s.blob, s.blobA]} />
+      <View style={[s.blob, s.blobB]} />
+      <View style={[s.blob, s.blobC]} />
+    </View>
+  );
+}
 
 export function Screen({
   children,
@@ -27,17 +70,17 @@ export function Screen({
   scroll?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
 }) {
-  const inner = (
-    <View style={[s.screenInner, contentStyle]}>{children}</View>
-  );
+  const inner = <View style={[s.screenInner, contentStyle]}>{children}</View>;
   return (
     <View style={s.screenRoot}>
+      <GlassBackdrop />
       <SafeAreaView style={s.flex}>
         {scroll ? (
           <ScrollView
             contentContainerStyle={s.scrollContent}
             keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}>
+            showsVerticalScrollIndicator={false}
+          >
             {inner}
           </ScrollView>
         ) : (
@@ -84,6 +127,48 @@ export function Card({
   );
 }
 
+/**
+ * A frosted glass surface for floating chrome (tab bar, search/add bar, hero).
+ * Uses Apple's Liquid Glass on iOS 26+, and a translucent + backdrop-blur
+ * fallback everywhere else (the web PWA path).
+ */
+export function GlassSurface({
+  children,
+  style,
+  dark = false,
+  padded = false,
+}: {
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+  /** Dark glass (e.g. the bottom tab bar). */
+  dark?: boolean;
+  padded?: boolean;
+}) {
+  if (LIQUID_GLASS && !dark) {
+    return (
+      <GlassView
+        glassEffectStyle="regular"
+        colorScheme="light"
+        style={[s.glassShape, padded && s.cardPadded, style]}
+      >
+        {children}
+      </GlassView>
+    );
+  }
+  return (
+    <View
+      style={[
+        s.glassShape,
+        dark ? s.glassFillDark : s.glassFill,
+        padded && s.cardPadded,
+        style,
+      ]}
+    >
+      {children}
+    </View>
+  );
+}
+
 export function Hairline({ style }: { style?: StyleProp<ViewStyle> }) {
   return <View style={[s.hairline, style]} />;
 }
@@ -108,7 +193,8 @@ export function PrimaryButton({
         disabled && s.primaryBtnDisabled,
         pressed && !disabled && s.pressed,
         style,
-      ]}>
+      ]}
+    >
       <Text style={[s.primaryBtnText, disabled && s.primaryBtnTextDisabled]}>
         {label}
       </Text>
@@ -128,7 +214,8 @@ export function GhostButton({
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [s.ghostBtn, pressed && s.pressed, style]}>
+      style={({ pressed }) => [s.ghostBtn, pressed && s.pressed, style]}
+    >
       <Text style={s.ghostBtnText}>{label}</Text>
     </Pressable>
   );
@@ -137,7 +224,7 @@ export function GhostButton({
 export function ProgressBar({
   fraction,
   over,
-  trackColor = palette.bg,
+  trackColor = palette.hairline,
   fillColor = palette.accent,
 }: {
   fraction: number;
@@ -151,7 +238,10 @@ export function ProgressBar({
       <View
         style={[
           s.fill,
-          { width: `${pct}%`, backgroundColor: over ? palette.danger : fillColor },
+          {
+            width: `${pct}%`,
+            backgroundColor: over ? palette.danger : fillColor,
+          },
         ]}
       />
     </View>
@@ -160,8 +250,28 @@ export function ProgressBar({
 
 const s = StyleSheet.create({
   flex: { flex: 1 },
+  // Opaque cream canvas; GlassBackdrop paints the color wash on top of it and
+  // frosted surfaces refract that wash.
   screenRoot: { flex: 1, backgroundColor: palette.bg },
   scrollContent: { flexGrow: 1 },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    overflow: 'hidden',
+  },
+  blob: {
+    position: 'absolute',
+    width: 460,
+    height: 460,
+    borderRadius: radius.pill,
+    ...webFilterBlur(100),
+  },
+  blobA: { top: -160, right: -120, backgroundColor: palette.blobA },
+  blobB: { top: '34%', left: -170, backgroundColor: palette.blobB },
+  blobC: { bottom: -160, right: -90, backgroundColor: palette.blobC },
   screenInner: {
     paddingHorizontal: space.xl,
     paddingTop: space.lg,
@@ -178,9 +288,24 @@ const s = StyleSheet.create({
     backgroundColor: palette.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: palette.hairline,
+    borderColor: palette.glassBorder,
+    ...webBlur(26),
+    ...shadow.card,
   },
   cardPadded: { padding: space.xl },
+  glassShape: { borderRadius: radius.lg, ...shadow.card },
+  glassFill: {
+    backgroundColor: palette.glass,
+    borderWidth: 1,
+    borderColor: palette.glassBorder,
+    ...webBlur(20),
+  },
+  glassFillDark: {
+    backgroundColor: palette.glassDark,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    ...webBlur(24),
+  },
   hairline: { height: 1, backgroundColor: palette.hairline },
   primaryBtn: {
     backgroundColor: palette.accent,
@@ -188,8 +313,18 @@ const s = StyleSheet.create({
     paddingVertical: space.lg,
     alignItems: 'center',
     justifyContent: 'center',
+    // accent glow instead of a drop shadow — reads premium on dark
+    shadowColor: palette.accent,
+    shadowOpacity: 0.45,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
   },
-  primaryBtnDisabled: { backgroundColor: palette.surface2 },
+  primaryBtnDisabled: {
+    backgroundColor: palette.surface2Solid,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   primaryBtnText: {
     color: palette.accentText,
     fontSize: 16,

@@ -166,8 +166,7 @@ export function computeTargets(profile: ProfileInput): Targets {
   targetKcal = round(targetKcal);
   const dailyDeficitKcal = round(maintenanceKcal - targetKcal);
   // Back out the rate the applied deficit actually represents.
-  const appliedRateKgWeek =
-    (dailyDeficitKcal * 7) / KCAL_PER_KG_FAT;
+  const appliedRateKgWeek = (dailyDeficitKcal * 7) / KCAL_PER_KG_FAT;
 
   const { proteinG, carbsG, fatG } = macroSplit({
     targetKcal,

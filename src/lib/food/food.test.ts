@@ -80,6 +80,22 @@ describe('parseMeal', () => {
     expect(parsed.items.map((i) => i.item.id)).toContain('rajma');
     expect(parsed.note).toMatch(/couldn’t match/i);
   });
+
+  it('attaches a confidence to every matched item (table caps at medium)', async () => {
+    const parsed = await provider.parseMeal('2 roti, dal tadka, 1 katori rice');
+    for (const it of parsed.items) {
+      expect(['low', 'medium']).toContain(it.confidence);
+      expect(it.confidence).not.toBe('high'); // only the AI backend earns 'high'
+    }
+  });
+
+  it('offers alternates so a wrong match is a one-tap fix', async () => {
+    // "dal" hits dal-tadka (alias) plus dal-makhani/dal-khichdi by substring.
+    const [dal] = (await provider.parseMeal('dal')).items;
+    expect(dal.item.id).toBe('dal-tadka');
+    expect(dal.alternates?.some((a) => a.id === 'dal-makhani')).toBe(true);
+    expect(dal.alternates?.some((a) => a.id === dal.item.id)).toBe(false);
+  });
 });
 
 describe('totalMacros', () => {

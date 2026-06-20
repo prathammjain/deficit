@@ -32,10 +32,12 @@ export function createSupabaseStore(
       return (data?.value as string | undefined) ?? null;
     },
     async set(key, value) {
-      const { error } = await client.from(TABLE).upsert(
-        { user_id: userId, key, value, updated_at: new Date().toISOString() },
-        { onConflict: 'user_id,key' },
-      );
+      const { error } = await client
+        .from(TABLE)
+        .upsert(
+          { user_id: userId, key, value, updated_at: new Date().toISOString() },
+          { onConflict: 'user_id,key' },
+        );
       if (error) throw error;
     },
     async remove(key) {
@@ -52,7 +54,8 @@ export function createSupabaseStore(
 /** All `deficit.*` keys currently in localStorage (web only). */
 function localKeys(): string[] {
   try {
-    const ls = (globalThis as unknown as { localStorage?: Storage }).localStorage;
+    const ls = (globalThis as unknown as { localStorage?: Storage })
+      .localStorage;
     if (!ls) return [];
     const keys: string[] = [];
     for (let i = 0; i < ls.length; i++) {

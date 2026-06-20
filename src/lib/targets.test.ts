@@ -148,10 +148,7 @@ describe('computeTargets', () => {
   it('keeps the deficit consistent with the applied rate', () => {
     const t = computeTargets(baseExample);
     // deficit = applliedRate × 7700 / 7
-    expect(t.dailyDeficitKcal).toBeCloseTo(
-      (t.appliedRateKgWeek * 7700) / 7,
-      5,
-    );
+    expect(t.dailyDeficitKcal).toBeCloseTo((t.appliedRateKgWeek * 7700) / 7, 5);
     expect(t.targetKcal).toBe(t.maintenanceKcal - t.dailyDeficitKcal);
   });
 });

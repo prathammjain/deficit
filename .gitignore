@@ -30,8 +30,13 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env files (real values stay out of git; only .env.example is tracked)
 .env*.local
+.env*
+!.env.example
+
+# Supabase CLI temp
+supabase/.temp/
 
 # typescript
 *.tsbuildinfo

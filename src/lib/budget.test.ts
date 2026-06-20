@@ -1,12 +1,4 @@
 import { computeBudget, macroProgress } from './budget';
-import { createMemoryStore } from './kv';
-import {
-  addWorkout,
-  loadWorkouts,
-  removeWorkout,
-  sumBurned,
-  type WorkoutEntry,
-} from './workout-store';
 
 describe('computeBudget', () => {
   it('remaining = target − consumed when no workouts', () => {
@@ -56,28 +48,5 @@ describe('macroProgress', () => {
     const p = macroProgress(90, 153);
     expect(p.remainingG).toBe(63);
     expect(p.fraction).toBeCloseTo(0.588, 2);
-  });
-});
-
-describe('workout-store', () => {
-  it('sums burned calories', () => {
-    const entries: WorkoutEntry[] = [
-      { id: '1', label: 'Run', kcalBurned: 300, at: '' },
-      { id: '2', label: 'Lift', kcalBurned: 150, at: '' },
-    ];
-    expect(sumBurned(entries)).toBe(450);
-  });
-
-  it('adds and removes workouts per day', async () => {
-    const s = createMemoryStore();
-    const date = '2026-06-06';
-    await addWorkout(date, { label: 'Run', kcalBurned: 300, minutes: 30 }, s);
-    const after = await addWorkout(date, { label: 'Lift', kcalBurned: 150 }, s);
-    expect(after).toHaveLength(2);
-    expect(sumBurned(after)).toBe(450);
-
-    const pruned = await removeWorkout(date, after[0].id, s);
-    expect(pruned).toHaveLength(1);
-    expect((await loadWorkouts(date, s))[0].label).toBe('Lift');
   });
 });

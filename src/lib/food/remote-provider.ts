@@ -6,6 +6,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { setProviderStatus } from './provider-status';
 import type { FoodItem, FoodProvider, ParsedMeal } from './types';
 
 export class RemoteFoodProvider implements FoodProvider {
@@ -16,14 +17,33 @@ export class RemoteFoodProvider implements FoodProvider {
     private readonly fallback: FoodProvider,
   ) {}
 
+  /**
+   * Readiness probe (no Gemini/FatSecret calls). Marks the engine `online` only
+   * when the function is reachable *and* both secrets are set; otherwise the app
+   * is silently using the local table, so we mark it `offline`.
+   */
+  async health(): Promise<void> {
+    try {
+      const { data, error } = await this.client.functions.invoke('food', {
+        body: { action: 'health' },
+      });
+      if (error || !data?.ok) throw error ?? new Error('no data');
+      setProviderStatus(data.gemini && data.fatsecret ? 'online' : 'offline');
+    } catch {
+      setProviderStatus('offline');
+    }
+  }
+
   async search(query: string, limit = 12): Promise<FoodItem[]> {
     try {
       const { data, error } = await this.client.functions.invoke('food', {
         body: { action: 'search', query, limit },
       });
       if (error || !data?.items) throw error ?? new Error('no data');
+      setProviderStatus('online');
       return data.items as FoodItem[];
     } catch {
+      setProviderStatus('offline');
       return this.fallback.search(query, limit);
     }
   }
@@ -34,8 +54,10 @@ export class RemoteFoodProvider implements FoodProvider {
         body: { action: 'parse', text },
       });
       if (error || !data?.items) throw error ?? new Error('no data');
+      setProviderStatus('online');
       return data as ParsedMeal;
     } catch {
+      setProviderStatus('offline');
       // Local heuristic parse is a reasonable degraded experience.
       return this.fallback.parseMeal
         ? this.fallback.parseMeal(text)

@@ -18,8 +18,32 @@ export interface FoodItem {
   source?: 'local' | 'fatsecret' | 'ai';
 }
 
+/**
+ * How much to trust a single parsed item. The whole point of the hybrid engine
+ * is to never hide a guess: when the AI and the food database don't clearly
+ * agree, we say so ('low') instead of presenting a number as fact.
+ */
+export type Confidence = 'high' | 'medium' | 'low';
+
+/** One line of a parsed meal: the chosen food, its portion, and how sure we are. */
+export interface ParsedItem {
+  item: FoodItem;
+  /** Number of servings of `item`. */
+  quantity: number;
+  /** How sure we are this is the right food + portion. */
+  confidence?: Confidence;
+  /** One-line rationale, e.g. "matched Dal Tadka; 1 katori ≈ 150g". */
+  reason?: string;
+  /**
+   * Other database candidates for this item, best-first, so the user can
+   * correct a wrong match in one tap. This is the trust mechanism — the thing a
+   * plain chatbot never gives you.
+   */
+  alternates?: FoodItem[];
+}
+
 export interface ParsedMeal {
-  items: { item: FoodItem; quantity: number }[];
+  items: ParsedItem[];
   total: { kcal: number; proteinG: number; carbsG: number; fatG: number };
   /** Any AI caveat, e.g. "estimated portion for dal". */
   note?: string;

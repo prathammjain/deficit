@@ -94,7 +94,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [applySession]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ loading, session, enabled: isSupabaseConfigured, signIn, signOut }),
+    () => ({
+      loading,
+      session,
+      enabled: isSupabaseConfigured,
+      signIn,
+      signOut,
+    }),
     [loading, session, signIn, signOut],
   );
 

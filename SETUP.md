@@ -18,7 +18,7 @@ Estimated time: ~15 minutes.
    make sure Email is enabled. (Magic links work out of the box on the built-in
    email sender for low volume; for nicer delivery add an SMTP provider later.)
 4. **Allow the redirect URL.** Authentication → **URL Configuration** → add your
-   app URL to *Redirect URLs* (for local dev: `http://localhost:8081`; for the
+   app URL to _Redirect URLs_ (for local dev: `http://localhost:8081`; for the
    deployed PWA: its real URL).
 5. **Grab the keys.** Project Settings → **API**. Copy the **Project URL** and
    the **anon public** key.
@@ -44,11 +44,13 @@ Without these, "Describe" mode uses the built-in Indian food table. With them,
 it uses Gemini to understand your wording and FatSecret for real nutrition.
 
 ### Get the keys
+
 - **Gemini:** https://aistudio.google.com → **Get API key** (free tier).
 - **FatSecret:** https://platform.fatsecret.com → register → create an app →
   copy **Client ID** and **Client Secret**. (Request "Basic" API access.)
 
 ### Deploy the Edge Function
+
 Install the Supabase CLI (https://supabase.com/docs/guides/cli), then from the
 project root:
 
@@ -73,11 +75,11 @@ Once deployed, the app automatically routes meal lookups through the function
 
 ## What's where
 
-| Piece | File |
-|---|---|
-| DB schema + RLS | `supabase/schema.sql` |
+| Piece                    | File                               |
+| ------------------------ | ---------------------------------- |
+| DB schema + RLS          | `supabase/schema.sql`              |
 | Gemini + FatSecret proxy | `supabase/functions/food/index.ts` |
-| Supabase client (gated) | `src/lib/supabase/client.ts` |
-| Auth (magic link) | `src/lib/supabase/auth.tsx` |
-| Cloud-backed storage | `src/lib/supabase/supabase-kv.ts` |
-| Remote food provider | `src/lib/food/remote-provider.ts` |
+| Supabase client (gated)  | `src/lib/supabase/client.ts`       |
+| Auth (magic link)        | `src/lib/supabase/auth.tsx`        |
+| Cloud-backed storage     | `src/lib/supabase/supabase-kv.ts`  |
+| Remote food provider     | `src/lib/food/remote-provider.ts`  |

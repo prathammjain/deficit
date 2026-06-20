@@ -9,6 +9,7 @@ import { kv, type KVStore } from './kv';
 import { loadDay, summarize, todayKey } from './log-store';
 import { loadWeights } from './weight-store';
 import type { DailyDatum } from './adaptive-tdee';
+import type { DayRecord } from './history-stats';
 
 /** YYYY-MM-DD for `offset` days before `from` (offset 0 = from). */
 function dateMinus(offset: number, from: Date = new Date()): string {
@@ -41,4 +42,34 @@ export async function gatherHistory(
   );
 
   return data;
+}
+
+/**
+ * The last `days` calendar days with full macro breakdown + weigh-in — the
+ * richer series the History dashboard charts and exports.
+ */
+export async function gatherDailyRecords(
+  days = 90,
+  store: KVStore = kv,
+): Promise<DayRecord[]> {
+  const dates: string[] = [];
+  for (let i = days - 1; i >= 0; i--) dates.push(dateMinus(i));
+
+  const weights = await loadWeights(store);
+  const weightByDate = new Map(weights.map((w) => [w.date, w.kg]));
+
+  return Promise.all(
+    dates.map(async (date): Promise<DayRecord> => {
+      const s = summarize(await loadDay(date, store));
+      return {
+        date,
+        logged: s.count > 0,
+        kcal: s.kcal,
+        proteinG: s.proteinG,
+        carbsG: s.carbsG,
+        fatG: s.fatG,
+        weightKg: weightByDate.get(date) ?? null,
+      };
+    }),
+  );
 }

@@ -12,6 +12,7 @@ import {
 import {
   Card,
   Eyebrow,
+  GlassSurface,
   PrimaryButton,
   ProgressBar,
   Screen,
@@ -20,7 +21,17 @@ import {
 } from '@/components/ui/primitives';
 import { palette, radius, space, type as typo } from '@/constants/palette';
 import { computeBudget } from '@/lib/budget';
-import { foodProvider, type FoodItem } from '@/lib/food';
+import {
+  foodProvider,
+  probeProvider,
+  type Confidence,
+  type FoodItem,
+  type ParsedItem,
+} from '@/lib/food';
+import {
+  useProviderStatus,
+  type ProviderStatus,
+} from '@/lib/food/provider-status';
 import {
   addEntry,
   loadDay,
@@ -33,30 +44,22 @@ import {
 } from '@/lib/log-store';
 import { loadProfile } from '@/lib/profile-store';
 import { computeTargets } from '@/lib/targets';
-import {
-  addWorkout,
-  loadWorkouts,
-  removeWorkout,
-  sumBurned,
-  type WorkoutEntry,
-} from '@/lib/workout-store';
 
 export default function LogScreen() {
   const [loading, setLoading] = useState(true);
   const [targetKcal, setTargetKcal] = useState<number | null>(null);
   const [proteinTarget, setProteinTarget] = useState<number | null>(null);
   const [meals, setMeals] = useState<LogEntry[]>([]);
-  const [workouts, setWorkouts] = useState<WorkoutEntry[]>([]);
   const date = todayKey();
 
   useFocusEffect(
     useCallback(() => {
       let alive = true;
+      void probeProvider(); // refresh the "is the AI engine live?" signal
       (async () => {
-        const [profile, day, sessions] = await Promise.all([
+        const [profile, day] = await Promise.all([
           loadProfile(),
           loadDay(date),
-          loadWorkouts(date),
         ]);
         if (!alive) return;
         if (profile) {
@@ -68,7 +71,6 @@ export default function LogScreen() {
           setProteinTarget(null);
         }
         setMeals(day);
-        setWorkouts(sessions);
         setLoading(false);
       })();
       return () => {
@@ -99,15 +101,6 @@ export default function LogScreen() {
     async (id: string) => setMeals(await removeEntry(date, id)),
     [date],
   );
-  const onAddWorkout = useCallback(
-    async (entry: Omit<WorkoutEntry, 'id' | 'at'>) =>
-      setWorkouts(await addWorkout(date, entry)),
-    [date],
-  );
-  const onRemoveWorkout = useCallback(
-    async (id: string) => setWorkouts(await removeWorkout(date, id)),
-    [date],
-  );
 
   if (loading) {
     return (
@@ -118,13 +111,12 @@ export default function LogScreen() {
   }
 
   const sum = summarize(meals);
-  const burned = sumBurned(workouts);
   const budget =
     targetKcal != null
       ? computeBudget({
           targetKcal,
           consumedKcal: sum.kcal,
-          burnedKcal: burned,
+          burnedKcal: 0,
           eatBackFactor: 0,
         })
       : null;
@@ -141,14 +133,18 @@ export default function LogScreen() {
           </Text>
         </Card>
       ) : (
-        <Card style={st.summaryCard}>
+        <GlassSurface padded style={st.summaryCard}>
           <View style={st.summaryTopRow}>
             <View>
               <Text style={st.remainingLabel}>
                 {budget.isOver ? 'Over by' : 'Left to eat'}
               </Text>
               <Text
-                style={[st.remaining, budget.isOver && { color: palette.danger }]}>
+                style={[
+                  st.remaining,
+                  budget.isOver && { color: palette.danger },
+                ]}
+              >
                 {Math.abs(budget.remainingKcal).toLocaleString()}
               </Text>
             </View>
@@ -169,11 +165,8 @@ export default function LogScreen() {
             />
             <MacroChip text={`C ${sum.carbsG}g`} color={palette.carb} />
             <MacroChip text={`F ${sum.fatG}g`} color={palette.fat} />
-            {burned > 0 ? (
-              <MacroChip text={`🔥 ${burned} burned`} color={palette.fat} muted />
-            ) : null}
           </View>
-        </Card>
+        </GlassSurface>
       )}
 
       {/* Meals: add + list on one screen */}
@@ -192,29 +185,11 @@ export default function LogScreen() {
           />
         ))}
         {meals.length === 0 ? (
-          <Text style={st.empty}>Nothing logged yet — add your first meal above.</Text>
+          <Text style={st.empty}>
+            Nothing logged yet — add your first meal above.
+          </Text>
         ) : null}
       </View>
-
-      {/* Workouts */}
-      <SectionLabel>Workouts</SectionLabel>
-      <ManualWorkoutAdd onAdd={onAddWorkout} />
-      <View style={st.list}>
-        {workouts.map((w) => (
-          <WorkoutRow
-            key={w.id}
-            entry={w}
-            onRemove={() => onRemoveWorkout(w.id)}
-          />
-        ))}
-        {workouts.length === 0 ? (
-          <Text style={st.empty}>No workouts logged yet.</Text>
-        ) : null}
-      </View>
-      <Text style={st.workoutNote}>
-        Workouts are logged for awareness — they don’t change your target (your
-        activity level already accounts for training).
-      </Text>
     </Screen>
   );
 }
@@ -234,22 +209,30 @@ function MealComposer({
 
   useEffect(() => {
     let alive = true;
-    if (query.trim().length < 1) {
-      setResults([]);
-      return;
-    }
-    foodProvider.search(query).then((r) => {
-      if (alive) setResults(r);
-    });
+    const q = query.trim();
+    // Debounce search-as-you-type — fewer redundant lookups, and it keeps
+    // setState out of the synchronous effect body (no cascading renders).
+    const id = setTimeout(() => {
+      if (!alive) return;
+      if (q.length < 1) {
+        setResults([]);
+        return;
+      }
+      foodProvider.search(q).then((r) => {
+        if (alive) setResults(r);
+      });
+    }, 150);
     return () => {
       alive = false;
+      clearTimeout(id);
     };
   }, [query]);
 
   return (
     <View>
+      <EngineStatus />
       {/* Primary: search a food, tap to add (stays open for the next one) */}
-      <View style={st.searchWrap}>
+      <GlassSurface style={st.searchWrap}>
         <Text style={st.searchIcon}>⌕</Text>
         <TextInput
           style={st.searchInput}
@@ -264,7 +247,7 @@ function MealComposer({
             <Text style={st.searchClear}>✕</Text>
           </Pressable>
         ) : null}
-      </View>
+      </GlassSurface>
 
       {results.length > 0 ? (
         <Card style={st.resultsCard} padded={false}>
@@ -279,9 +262,13 @@ function MealComposer({
                 st.resultRow,
                 i > 0 && st.resultRowBorder,
                 pressed && st.pressed,
-              ]}>
+              ]}
+            >
               <View style={st.flex1}>
-                <Text style={st.resultName}>{f.name}</Text>
+                <View style={st.resultNameRow}>
+                  <Text style={st.resultName}>{f.name}</Text>
+                  <SourceTag source={f.source} />
+                </View>
                 <Text style={st.resultSub}>
                   {f.serving} · P{f.proteinG} C{f.carbsG} F{f.fatG}
                 </Text>
@@ -298,20 +285,21 @@ function MealComposer({
         <View style={st.secondaryRow}>
           <Pressable
             onPress={() => setPanel(panel === 'describe' ? 'none' : 'describe')}
-            style={[st.pill, panel === 'describe' && st.pillActive]}>
+            style={[st.pill, panel === 'describe' && st.pillActive]}
+          >
             <Text
-              style={[
-                st.pillText,
-                panel === 'describe' && st.pillTextActive,
-              ]}>
+              style={[st.pillText, panel === 'describe' && st.pillTextActive]}
+            >
               ✦ Describe a meal
             </Text>
           </Pressable>
           <Pressable
             onPress={() => setPanel(panel === 'custom' ? 'none' : 'custom')}
-            style={[st.pill, panel === 'custom' && st.pillActive]}>
+            style={[st.pill, panel === 'custom' && st.pillActive]}
+          >
             <Text
-              style={[st.pillText, panel === 'custom' && st.pillTextActive]}>
+              style={[st.pillText, panel === 'custom' && st.pillTextActive]}
+            >
               ＋ Custom
             </Text>
           </Pressable>
@@ -344,10 +332,11 @@ function DescribeMeal({
   onLog: (entries: Omit<LogEntry, 'id' | 'at'>[]) => void;
 }) {
   const [text, setText] = useState('');
-  const [items, setItems] = useState<{ item: FoodItem; quantity: number }[]>([]);
+  const [items, setItems] = useState<ParsedItem[]>([]);
   const [note, setNote] = useState<string | undefined>();
   const [calculated, setCalculated] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [expanded, setExpanded] = useState<number | null>(null);
 
   const calc = async () => {
     if (!text.trim() || !foodProvider.parseMeal) return;
@@ -356,17 +345,41 @@ function DescribeMeal({
     setItems(parsed.items);
     setNote(parsed.note);
     setCalculated(true);
+    setExpanded(null);
     setBusy(false);
   };
 
   const setQty = (idx: number, q: number) =>
     setItems((arr) =>
       arr.map((it, i) =>
-        i === idx ? { ...it, quantity: Math.max(0.5, Math.round(q * 2) / 2) } : it,
+        i === idx
+          ? { ...it, quantity: Math.max(0.5, Math.round(q * 2) / 2) }
+          : it,
       ),
     );
   const removeItem = (idx: number) =>
     setItems((arr) => arr.filter((_, i) => i !== idx));
+  // Swap a wrong match for one of its alternates — the chosen food becomes
+  // user-confirmed ('high'), and the one it replaced moves into the alternates.
+  const swapItem = (idx: number, alt: FoodItem) => {
+    setItems((arr) =>
+      arr.map((it, i) => {
+        if (i !== idx) return it;
+        const others = [
+          it.item,
+          ...(it.alternates ?? []).filter((a) => a.id !== alt.id),
+        ];
+        return {
+          ...it,
+          item: alt,
+          confidence: 'high',
+          reason: undefined,
+          alternates: others,
+        };
+      }),
+    );
+    setExpanded(null);
+  };
 
   const total = items.reduce(
     (a, { item, quantity }) => ({
@@ -388,7 +401,8 @@ function DescribeMeal({
       />
       <View style={st.describeFooter}>
         <Text style={st.describeHint}>
-          We match each item — review and adjust portions before logging.
+          We match each item — tap a flagged one to swap it, adjust portions,
+          then log.
         </Text>
         <PrimaryButton
           label={busy ? '…' : 'Match'}
@@ -400,20 +414,67 @@ function DescribeMeal({
 
       {calculated ? (
         <View style={st.breakdown}>
-          {items.map((it, idx) => (
-            <View key={`${it.item.id}-${idx}`} style={st.breakdownRow}>
-              <View style={st.flex1}>
-                <Text style={st.breakdownName}>{it.item.name}</Text>
-                <Text style={st.breakdownSub}>
-                  {it.item.serving} · {Math.round(it.item.kcal * it.quantity)} kcal
-                </Text>
+          {items.map((it, idx) => {
+            const alts = it.alternates ?? [];
+            const canSwap = alts.length > 0;
+            const open = expanded === idx;
+            return (
+              <View key={`${it.item.id}-${idx}`}>
+                <View style={st.breakdownRow}>
+                  <Pressable
+                    style={st.flex1}
+                    disabled={!canSwap}
+                    onPress={() => setExpanded(open ? null : idx)}
+                  >
+                    <View style={st.breakdownNameRow}>
+                      <Text style={st.breakdownName}>{it.item.name}</Text>
+                      <ConfidenceBadge confidence={it.confidence} />
+                      <SourceTag source={it.item.source} />
+                    </View>
+                    <Text style={st.breakdownSub}>
+                      {it.item.serving} ·{' '}
+                      {Math.round(it.item.kcal * it.quantity)} kcal
+                      {canSwap ? (
+                        <Text style={st.changeHint}>
+                          {open ? '  · close' : '  · change'}
+                        </Text>
+                      ) : null}
+                    </Text>
+                  </Pressable>
+                  <Stepper
+                    value={it.quantity}
+                    onChange={(q) => setQty(idx, q)}
+                  />
+                  <Pressable onPress={() => removeItem(idx)} hitSlop={8}>
+                    <Text style={st.removeText}>✕</Text>
+                  </Pressable>
+                </View>
+                {open ? (
+                  <View style={st.altPanel}>
+                    {it.reason ? (
+                      <Text style={st.altReason}>{it.reason}</Text>
+                    ) : null}
+                    {alts.map((alt) => (
+                      <Pressable
+                        key={alt.id}
+                        onPress={() => swapItem(idx, alt)}
+                        style={({ pressed }) => [
+                          st.altRow,
+                          pressed && st.pressed,
+                        ]}
+                      >
+                        <View style={st.flex1}>
+                          <Text style={st.altName}>{alt.name}</Text>
+                          <Text style={st.altSub}>{alt.serving}</Text>
+                        </View>
+                        <Text style={st.altKcal}>{alt.kcal}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : null}
               </View>
-              <Stepper value={it.quantity} onChange={(q) => setQty(idx, q)} />
-              <Pressable onPress={() => removeItem(idx)} hitSlop={8}>
-                <Text style={st.removeText}>✕</Text>
-              </Pressable>
-            </View>
-          ))}
+            );
+          })}
           {items.length === 0 ? (
             <Text style={st.empty}>
               Couldn’t match anything — try simpler names or use Custom.
@@ -431,7 +492,11 @@ function DescribeMeal({
               <PrimaryButton
                 label={`Log ${items.length} item${items.length > 1 ? 's' : ''}`}
                 onPress={() =>
-                  onLog(items.map(({ item, quantity }) => portionedEntry(item, quantity)))
+                  onLog(
+                    items.map(({ item, quantity }) =>
+                      portionedEntry(item, quantity),
+                    ),
+                  )
                 }
               />
             </>
@@ -501,65 +566,6 @@ function CustomMeal({
   );
 }
 
-function ManualWorkoutAdd({
-  onAdd,
-}: {
-  onAdd: (e: Omit<WorkoutEntry, 'id' | 'at'>) => void;
-}) {
-  const [label, setLabel] = useState('');
-  const [kcal, setKcal] = useState('');
-  const [minutes, setMinutes] = useState('');
-  const valid = label.trim().length > 0 && Number(kcal) > 0;
-
-  return (
-    <Card style={st.manualCard}>
-      <TextInput
-        style={st.manualLabelInput}
-        placeholder="Workout — Run, Gym, Cycling…"
-        placeholderTextColor={palette.textDim}
-        value={label}
-        onChangeText={setLabel}
-      />
-      <View style={st.manualRow}>
-        <TextInput
-          style={[st.manualNumInput, st.flex1]}
-          placeholder="kcal burned"
-          placeholderTextColor={palette.textDim}
-          keyboardType="number-pad"
-          inputMode="numeric"
-          value={kcal}
-          onChangeText={(t) => setKcal(t.replace(/[^0-9]/g, ''))}
-        />
-        <TextInput
-          style={[st.manualNumInput, st.flex1]}
-          placeholder="minutes"
-          placeholderTextColor={palette.textDim}
-          keyboardType="number-pad"
-          inputMode="numeric"
-          value={minutes}
-          onChangeText={(t) => setMinutes(t.replace(/[^0-9]/g, ''))}
-        />
-        <PrimaryButton
-          label="Add"
-          disabled={!valid}
-          style={st.manualBtn}
-          onPress={() => {
-            if (!valid) return;
-            onAdd({
-              label: label.trim(),
-              kcalBurned: Math.round(Number(kcal)),
-              minutes: minutes ? Math.round(Number(minutes)) : undefined,
-            });
-            setLabel('');
-            setKcal('');
-            setMinutes('');
-          }}
-        />
-      </View>
-    </Card>
-  );
-}
-
 /* ---------------- rows & bits ---------------- */
 
 function Stepper({
@@ -571,11 +577,19 @@ function Stepper({
 }) {
   return (
     <View style={st.stepper}>
-      <Pressable onPress={() => onChange(value - 0.5)} hitSlop={8} style={st.stepBtn}>
+      <Pressable
+        onPress={() => onChange(value - 0.5)}
+        hitSlop={8}
+        style={st.stepBtn}
+      >
         <Text style={st.stepText}>−</Text>
       </Pressable>
       <Text style={st.stepQty}>{value}</Text>
-      <Pressable onPress={() => onChange(value + 0.5)} hitSlop={8} style={st.stepBtn}>
+      <Pressable
+        onPress={() => onChange(value + 0.5)}
+        hitSlop={8}
+        style={st.stepBtn}
+      >
         <Text style={st.stepText}>＋</Text>
       </Pressable>
     </View>
@@ -615,29 +629,17 @@ function MealRow({
   );
 }
 
-function WorkoutRow({
-  entry,
-  onRemove,
-}: {
-  entry: WorkoutEntry;
-  onRemove: () => void;
-}) {
-  return (
-    <View style={st.entryRow}>
-      <View style={st.flex1}>
-        <Text style={st.entryLabel}>{entry.label}</Text>
-        {entry.minutes ? (
-          <Text style={st.entrySub}>{entry.minutes} min</Text>
-        ) : null}
-      </View>
-      <Text style={[st.entryKcal, { color: palette.fat }]}>
-        +{entry.kcalBurned}
-      </Text>
-      <Pressable onPress={onRemove} hitSlop={10} style={st.removeBtn}>
-        <Text style={st.removeText}>✕</Text>
-      </Pressable>
-    </View>
-  );
+const CONFIDENCE: Record<Confidence, { label: string; color: string }> = {
+  high: { label: '✓ good match', color: palette.good },
+  medium: { label: '≈ likely', color: palette.textFaint },
+  low: { label: '⚠ check this', color: palette.warn },
+};
+
+/** A tiny trust signal on each parsed item — never hide a guess. */
+function ConfidenceBadge({ confidence }: { confidence?: Confidence }) {
+  if (!confidence) return null;
+  const c = CONFIDENCE[confidence];
+  return <Text style={[st.confidence, { color: c.color }]}>{c.label}</Text>;
 }
 
 function MacroChip({
@@ -651,13 +653,70 @@ function MacroChip({
 }) {
   return (
     <View style={st.chip}>
-      {!muted ? <View style={[st.chipDot, { backgroundColor: color }]} /> : null}
+      {!muted ? (
+        <View style={[st.chipDot, { backgroundColor: color }]} />
+      ) : null}
       <Text style={[st.chipText, muted && { color: palette.fat }]}>{text}</Text>
     </View>
   );
 }
 
+const STATUS_COPY: Record<
+  ProviderStatus,
+  { dot: string; text: string }
+> = {
+  'local-only': { dot: palette.textFaint, text: 'Local food table' },
+  checking: { dot: palette.textFaint, text: 'Checking AI engine…' },
+  online: { dot: palette.good, text: 'AI-grounded · Gemini + FatSecret' },
+  offline: { dot: palette.warn, text: 'AI engine offline — using local foods' },
+};
+
+/** A quiet line that tells the user which food engine is actually answering. */
+function EngineStatus() {
+  const status = useProviderStatus();
+  const c = STATUS_COPY[status];
+  return (
+    <View style={st.engineRow}>
+      <View style={[st.engineDot, { backgroundColor: c.dot }]} />
+      <Text style={st.engineText}>{c.text}</Text>
+    </View>
+  );
+}
+
+const SOURCE_LABEL: Record<NonNullable<FoodItem['source']>, string> = {
+  local: 'local',
+  fatsecret: 'FatSecret',
+  ai: 'AI est.',
+};
+
+/** Where a food's numbers came from — shown only for the grounded sources. */
+function SourceTag({ source }: { source?: FoodItem['source'] }) {
+  if (!source || source === 'local') return null;
+  return <Text style={st.sourceTag}>{SOURCE_LABEL[source]}</Text>;
+}
+
 const st = StyleSheet.create({
+  engineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    marginBottom: space.md,
+    paddingHorizontal: space.xs,
+  },
+  engineDot: { width: 7, height: 7, borderRadius: 4 },
+  engineText: {
+    color: palette.textFaint,
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  resultNameRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  sourceTag: {
+    color: palette.textDim,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+  },
   loadingRoot: {
     flex: 1,
     backgroundColor: palette.bg,
@@ -677,18 +736,32 @@ const st = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: space.lg,
   },
-  remainingLabel: { color: palette.textFaint, fontSize: 13, letterSpacing: 0.2 },
-  remaining: { ...typo.hero, fontSize: 56, color: palette.accent, marginTop: 2 },
+  remainingLabel: {
+    color: palette.textFaint,
+    fontSize: 13,
+    letterSpacing: 0.2,
+  },
+  remaining: {
+    ...typo.hero,
+    fontSize: 56,
+    color: palette.accent,
+    marginTop: 2,
+  },
   consumedBox: { alignItems: 'flex-end', paddingTop: space.sm },
   consumed: { color: palette.text, fontSize: 22, fontWeight: '600' },
   consumedLabel: { color: palette.textFaint, fontSize: 13, marginTop: 2 },
 
-  macroLine: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.lg },
+  macroLine: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space.sm,
+    marginTop: space.lg,
+  },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.xs,
-    backgroundColor: palette.bg,
+    backgroundColor: palette.surface2,
     paddingVertical: space.xs,
     paddingHorizontal: space.md,
     borderRadius: radius.pill,
@@ -699,15 +772,18 @@ const st = StyleSheet.create({
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: palette.surface,
     borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: palette.hairline,
     paddingHorizontal: space.lg,
     gap: space.sm,
   },
   searchIcon: { color: palette.textFaint, fontSize: 18 },
-  searchInput: { flex: 1, color: palette.text, fontSize: 16, paddingVertical: space.lg },
+  searchInput: {
+    flex: 1,
+    minWidth: 0,
+    color: palette.text,
+    fontSize: 16,
+    paddingVertical: space.lg,
+  },
   searchClear: { color: palette.textFaint, fontSize: 14 },
 
   resultsCard: { marginTop: space.sm, overflow: 'hidden' },
@@ -733,7 +809,10 @@ const st = StyleSheet.create({
     borderWidth: 1,
     borderColor: palette.hairline,
   },
-  pillActive: { backgroundColor: palette.accentSoft, borderColor: palette.accentBorder },
+  pillActive: {
+    backgroundColor: palette.accentSoft,
+    borderColor: palette.accentBorder,
+  },
   pillText: { color: palette.textMuted, fontSize: 13, fontWeight: '600' },
   pillTextActive: { color: palette.accent },
 
@@ -746,13 +825,60 @@ const st = StyleSheet.create({
     textAlignVertical: 'top',
     padding: 0,
   },
-  describeFooter: { flexDirection: 'row', alignItems: 'flex-end', gap: space.md },
-  describeHint: { flex: 1, color: palette.textFaint, fontSize: 12, lineHeight: 17 },
+  describeFooter: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: space.md,
+  },
+  describeHint: {
+    flex: 1,
+    color: palette.textFaint,
+    fontSize: 12,
+    lineHeight: 17,
+  },
   calcBtn: { paddingHorizontal: space.xl },
   breakdown: { gap: space.sm, marginTop: space.sm },
-  breakdownRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
+  breakdownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    paddingVertical: space.sm,
+  },
+  breakdownNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+  },
   breakdownName: { color: palette.text, fontSize: 15, fontWeight: '600' },
   breakdownSub: { color: palette.textFaint, fontSize: 12, marginTop: 2 },
+  changeHint: { color: palette.accent, fontSize: 12, fontWeight: '600' },
+  confidence: { fontSize: 11, fontWeight: '700', letterSpacing: 0.2 },
+
+  altPanel: {
+    backgroundColor: palette.surface2,
+    borderRadius: radius.sm,
+    paddingHorizontal: space.md,
+    paddingVertical: space.xs,
+    marginBottom: space.sm,
+  },
+  altReason: {
+    color: palette.textFaint,
+    fontSize: 12,
+    fontStyle: 'italic',
+    paddingVertical: space.sm,
+    lineHeight: 16,
+  },
+  altRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    paddingVertical: space.md,
+    borderTopWidth: 1,
+    borderTopColor: palette.hairline,
+  },
+  altName: { color: palette.text, fontSize: 14, fontWeight: '500' },
+  altSub: { color: palette.textFaint, fontSize: 12, marginTop: 1 },
+  altKcal: { color: palette.textMuted, fontSize: 14, fontWeight: '600' },
   breakdownNote: { color: palette.warn, fontSize: 12, lineHeight: 17 },
   breakdownTotalRow: {
     flexDirection: 'row',
@@ -767,7 +893,7 @@ const st = StyleSheet.create({
 
   manualCard: { gap: space.md, marginTop: space.md },
   manualLabelInput: {
-    backgroundColor: palette.bg,
+    backgroundColor: palette.surface2,
     borderRadius: radius.sm,
     paddingHorizontal: space.md,
     paddingVertical: space.md,
@@ -776,7 +902,8 @@ const st = StyleSheet.create({
   },
   manualRow: { flexDirection: 'row', gap: space.sm },
   manualNumInput: {
-    backgroundColor: palette.bg,
+    minWidth: 0, // shrink with flex:1 so the Add button stays on-screen (RNW)
+    backgroundColor: palette.surface2,
     borderRadius: radius.sm,
     paddingHorizontal: space.md,
     paddingVertical: space.md,
@@ -797,7 +924,13 @@ const st = StyleSheet.create({
   },
   entryLabel: { color: palette.text, fontSize: 15, fontWeight: '500' },
   entrySub: { color: palette.textFaint, fontSize: 13, marginTop: 2 },
-  entryKcal: { color: palette.text, fontSize: 15, fontWeight: '700', minWidth: 44, textAlign: 'right' },
+  entryKcal: {
+    color: palette.text,
+    fontSize: 15,
+    fontWeight: '700',
+    minWidth: 44,
+    textAlign: 'right',
+  },
   removeBtn: { paddingHorizontal: space.xs },
   removeText: { color: palette.textFaint, fontSize: 15 },
 
@@ -805,14 +938,18 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
-    backgroundColor: palette.bg,
+    backgroundColor: palette.surface2,
     borderRadius: radius.pill,
     paddingHorizontal: space.md,
     paddingVertical: space.xs,
   },
   stepBtn: { minWidth: 16, alignItems: 'center' },
   stepText: { color: palette.accent, fontSize: 16, fontWeight: '700' },
-  stepQty: { color: palette.text, fontSize: 14, fontWeight: '600', minWidth: 24, textAlign: 'center' },
-
-  workoutNote: { color: palette.textDim, fontSize: 12, marginTop: space.md, lineHeight: 17 },
+  stepQty: {
+    color: palette.text,
+    fontSize: 14,
+    fontWeight: '600',
+    minWidth: 24,
+    textAlign: 'center',
+  },
 });

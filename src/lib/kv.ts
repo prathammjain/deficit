@@ -101,7 +101,10 @@ export function resetActiveStore(): void {
 }
 
 /** Small helpers so call sites don't repeat JSON.parse/stringify + try/catch. */
-export async function getJSON<T>(store: KVStore, key: string): Promise<T | null> {
+export async function getJSON<T>(
+  store: KVStore,
+  key: string,
+): Promise<T | null> {
   const raw = await store.get(key);
   if (raw == null) return null;
   try {

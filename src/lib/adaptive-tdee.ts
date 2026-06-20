@@ -74,8 +74,7 @@ export function estimateAdaptiveTdee(
 
   const intakeDays = intakes.length;
   const weighIns = weights.length;
-  const spanDays =
-    weighIns >= 2 ? weights[weighIns - 1].x - weights[0].x : 0;
+  const spanDays = weighIns >= 2 ? weights[weighIns - 1].x - weights[0].x : 0;
 
   const avgIntakeKcal =
     intakeDays > 0

@@ -18,29 +18,32 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { maxContentWidth, palette, space } from '@/constants/palette';
+import { GlassBackdrop, webBlur } from '@/components/ui/primitives';
+import { maxContentWidth, palette } from '@/constants/palette';
 import {
   ACTIVITY_FACTORS,
   computeTargets,
   type ActivityLevel,
   type ProfileInput,
-  type Sex,
 } from '@/lib/targets';
 
 type Draft = Partial<ProfileInput>;
 
-const ACTIVITY_OPTIONS: { value: ActivityLevel; title: string; hint: string }[] =
-  [
-    { value: 'sedentary', title: 'Sedentary', hint: 'Desk job, little exercise' },
-    { value: 'light', title: 'Light', hint: 'Light exercise 1–3 days/week' },
-    { value: 'moderate', title: 'Moderate', hint: 'Exercise 3–5 days/week' },
-    { value: 'active', title: 'Active', hint: 'Hard exercise 6–7 days/week' },
-    {
-      value: 'very_active',
-      title: 'Very active',
-      hint: 'Physical job or 2x/day training',
-    },
-  ];
+const ACTIVITY_OPTIONS: {
+  value: ActivityLevel;
+  title: string;
+  hint: string;
+}[] = [
+  { value: 'sedentary', title: 'Sedentary', hint: 'Desk job, little exercise' },
+  { value: 'light', title: 'Light', hint: 'Light exercise 1–3 days/week' },
+  { value: 'moderate', title: 'Moderate', hint: 'Exercise 3–5 days/week' },
+  { value: 'active', title: 'Active', hint: 'Hard exercise 6–7 days/week' },
+  {
+    value: 'very_active',
+    title: 'Very active',
+    hint: 'Physical job or 2x/day training',
+  },
+];
 
 const RATE_OPTIONS: { value: number; title: string; hint: string }[] = [
   { value: 0.25, title: 'Gentle', hint: '0.25 kg / week' },
@@ -49,7 +52,14 @@ const RATE_OPTIONS: { value: number; title: string; hint: string }[] = [
   { value: 1.0, title: 'Aggressive', hint: '1.0 kg / week' },
 ];
 
-type StepId = 'sex' | 'age' | 'height' | 'weight' | 'activity' | 'rate' | 'review';
+type StepId =
+  | 'sex'
+  | 'age'
+  | 'height'
+  | 'weight'
+  | 'activity'
+  | 'rate'
+  | 'review';
 const STEPS: StepId[] = [
   'sex',
   'age',
@@ -90,6 +100,7 @@ export function OnboardingFlow({
 
   return (
     <View style={styles.root}>
+      <GlassBackdrop />
       <SafeAreaView style={styles.safe}>
         {/* Progress */}
         <View style={styles.progressTrack}>
@@ -103,12 +114,14 @@ export function OnboardingFlow({
 
         <ScrollView
           contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled">
+          keyboardShouldPersistTaps="handled"
+        >
           {step === 'sex' && (
             <Question
               eyebrow={`Step ${index + 1} of ${STEPS.length}`}
               title="What's your biological sex?"
-              hint="Used by the Mifflin-St Jeor formula — it changes the calorie math.">
+              hint="Used by the Mifflin-St Jeor formula — it changes the calorie math."
+            >
               <OptionRow>
                 <OptionCard
                   label="Male"
@@ -128,7 +141,8 @@ export function OnboardingFlow({
             <Question
               eyebrow={`Step ${index + 1} of ${STEPS.length}`}
               title="How old are you?"
-              hint="Years.">
+              hint="Years."
+            >
               <NumberField
                 value={draft.age}
                 onChange={(n) => set({ age: n })}
@@ -142,7 +156,8 @@ export function OnboardingFlow({
             <Question
               eyebrow={`Step ${index + 1} of ${STEPS.length}`}
               title="How tall are you?"
-              hint="Centimetres.">
+              hint="Centimetres."
+            >
               <NumberField
                 value={draft.heightCm}
                 onChange={(n) => set({ heightCm: n })}
@@ -156,7 +171,8 @@ export function OnboardingFlow({
             <Question
               eyebrow={`Step ${index + 1} of ${STEPS.length}`}
               title="What's your current weight?"
-              hint="Kilograms. You can update this any time.">
+              hint="Kilograms. You can update this any time."
+            >
               <NumberField
                 value={draft.weightKg}
                 onChange={(n) => set({ weightKg: n })}
@@ -170,7 +186,8 @@ export function OnboardingFlow({
             <Question
               eyebrow={`Step ${index + 1} of ${STEPS.length}`}
               title="How active are you?"
-              hint="Be honest — overestimating is the most common mistake.">
+              hint="Be honest — overestimating is the most common mistake."
+            >
               <View style={styles.stack}>
                 {ACTIVITY_OPTIONS.map((o) => (
                   <ListOption
@@ -190,7 +207,8 @@ export function OnboardingFlow({
             <Question
               eyebrow={`Step ${index + 1} of ${STEPS.length}`}
               title="How fast do you want to lose?"
-              hint="We cap the pace for safety — faster isn't better, and it costs muscle.">
+              hint="We cap the pace for safety — faster isn't better, and it costs muscle."
+            >
               <View style={styles.stack}>
                 {RATE_OPTIONS.map((o) => (
                   <ListOption
@@ -218,7 +236,8 @@ export function OnboardingFlow({
           <Pressable
             style={[styles.nextBtn, !canAdvance && styles.nextBtnDisabled]}
             disabled={!canAdvance}
-            onPress={next}>
+            onPress={next}
+          >
             <Text style={styles.nextText}>{isLast ? 'Start' : 'Next'}</Text>
           </Pressable>
         </View>
@@ -234,7 +253,8 @@ function ReviewStep({ draft }: { draft: Draft }) {
     <Question
       eyebrow="Last step"
       title="Here's your daily target"
-      hint="You can fine-tune anything later.">
+      hint="You can fine-tune anything later."
+    >
       {t ? (
         <View style={styles.previewCard}>
           <Text style={styles.previewNumber}>{t.targetKcal}</Text>
@@ -327,8 +347,11 @@ function OptionCard({
   return (
     <Pressable
       style={[styles.optionCard, selected && styles.optionCardSelected]}
-      onPress={onPress}>
-      <Text style={[styles.optionLabel, selected && styles.optionLabelSelected]}>
+      onPress={onPress}
+    >
+      <Text
+        style={[styles.optionLabel, selected && styles.optionLabelSelected]}
+      >
         {label}
       </Text>
     </Pressable>
@@ -351,9 +374,12 @@ function ListOption({
   return (
     <Pressable
       style={[styles.listOption, selected && styles.listOptionSelected]}
-      onPress={onPress}>
+      onPress={onPress}
+    >
       <View style={{ flex: 1 }}>
-        <Text style={[styles.listTitle, selected && styles.optionLabelSelected]}>
+        <Text
+          style={[styles.listTitle, selected && styles.optionLabelSelected]}
+        >
           {title}
         </Text>
         {hint ? <Text style={styles.listHint}>{hint}</Text> : null}
@@ -428,7 +454,12 @@ const styles = StyleSheet.create({
     marginTop: 10,
     lineHeight: 34,
   },
-  hint: { color: palette.textMuted, fontSize: 15, marginTop: 10, lineHeight: 21 },
+  hint: {
+    color: palette.textMuted,
+    fontSize: 15,
+    marginTop: 10,
+    lineHeight: 21,
+  },
   questionBody: { marginTop: 28 },
   stack: { gap: 12 },
   optionRow: { flexDirection: 'row', gap: 12 },
@@ -439,7 +470,8 @@ const styles = StyleSheet.create({
     paddingVertical: 28,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: palette.surfaceBorder,
+    borderColor: palette.glassBorder,
+    ...webBlur(16),
   },
   optionCardSelected: {
     borderColor: palette.accent,
@@ -455,7 +487,8 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     paddingHorizontal: 18,
     borderWidth: 1,
-    borderColor: palette.surfaceBorder,
+    borderColor: palette.glassBorder,
+    ...webBlur(16),
   },
   listOptionSelected: {
     borderColor: palette.accent,
@@ -485,7 +518,8 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: palette.surface,
     borderWidth: 1,
-    borderColor: palette.surfaceBorder,
+    borderColor: palette.glassBorder,
+    ...webBlur(18),
   },
   previewNumber: {
     color: palette.text,
@@ -526,6 +560,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
   },
-  nextBtnDisabled: { backgroundColor: palette.surface, opacity: 0.6 },
+  nextBtnDisabled: { backgroundColor: palette.surface2Solid, opacity: 0.6 },
   nextText: { color: palette.accentText, fontSize: 17, fontWeight: '700' },
 });

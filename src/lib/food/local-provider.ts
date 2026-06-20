@@ -15,6 +15,7 @@
 import { INDIAN_FOODS, type IndianFood } from './indian-foods';
 import {
   totalMacros,
+  type Confidence,
   type FoodItem,
   type FoodProvider,
   type ParsedMeal,
@@ -46,16 +47,54 @@ function score(food: IndianFood, q: string): number {
 }
 
 const NUMBER_WORDS: Record<string, number> = {
-  a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5,
-  six: 6, seven: 7, eight: 8, nine: 9, ten: 10, half: 0.5,
+  a: 1,
+  an: 1,
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+  half: 0.5,
 };
 
 /** Portion/unit words we strip so they don't pollute the food-name match. */
 const UNIT_WORDS = new Set([
-  'katori', 'katoris', 'bowl', 'bowls', 'plate', 'plates', 'piece', 'pieces',
-  'pcs', 'pc', 'cup', 'cups', 'glass', 'glasses', 'slice', 'slices', 'g',
-  'gram', 'grams', 'gm', 'gms', 'tbsp', 'tsp', 'serving', 'servings', 'of',
-  'small', 'medium', 'large', 'big', 'full',
+  'katori',
+  'katoris',
+  'bowl',
+  'bowls',
+  'plate',
+  'plates',
+  'piece',
+  'pieces',
+  'pcs',
+  'pc',
+  'cup',
+  'cups',
+  'glass',
+  'glasses',
+  'slice',
+  'slices',
+  'g',
+  'gram',
+  'grams',
+  'gm',
+  'gms',
+  'tbsp',
+  'tsp',
+  'serving',
+  'servings',
+  'of',
+  'small',
+  'medium',
+  'large',
+  'big',
+  'full',
 ]);
 
 /** Split a meal description into individual food segments. */
@@ -98,17 +137,33 @@ export function extractQuantity(segment: string): {
   return { quantity: quantity > 0 ? quantity : 1, name: kept.join(' ').trim() };
 }
 
+/**
+ * The local table is a small set of rough home-portion estimates, so it never
+ * claims 'high' confidence — only the AI+FatSecret backend earns that. A strong
+ * name/alias hit is 'medium'; a looser substring/token hit is 'low' (worth a
+ * glance before logging).
+ */
+function localConfidence(score: number): Confidence {
+  return score >= 80 ? 'medium' : 'low';
+}
+
 export class LocalFoodProvider implements FoodProvider {
   readonly name = 'local';
 
-  async search(query: string, limit = 12): Promise<FoodItem[]> {
+  /** Ranked matches (best first) with their scores. Shared by search + parse. */
+  private rank(query: string): { item: FoodItem; score: number }[] {
     const q = query.trim().toLowerCase();
     if (!q) return [];
     return INDIAN_FOODS.map((f) => ({ f, s: score(f, q) }))
       .filter((x) => x.s > 0)
       .sort((a, b) => b.s - a.s || a.f.name.localeCompare(b.f.name))
+      .map((x) => ({ item: toItem(x.f), score: x.s }));
+  }
+
+  async search(query: string, limit = 12): Promise<FoodItem[]> {
+    return this.rank(query)
       .slice(0, limit)
-      .map((x) => toItem(x.f));
+      .map((x) => x.item);
   }
 
   async parseMeal(text: string): Promise<ParsedMeal> {
@@ -119,9 +174,19 @@ export class LocalFoodProvider implements FoodProvider {
     for (const seg of segments) {
       const { quantity, name } = extractQuantity(seg);
       if (!name) continue;
-      const [top] = await this.search(name, 1);
-      if (top) items.push({ item: top, quantity });
-      else unmatched.push(seg.trim());
+      const ranked = this.rank(name);
+      if (ranked.length === 0) {
+        unmatched.push(seg.trim());
+        continue;
+      }
+      const [best, ...rest] = ranked;
+      items.push({
+        item: best.item,
+        quantity,
+        confidence: localConfidence(best.score),
+        // Up to 4 other guesses so a wrong match is a one-tap fix.
+        alternates: rest.slice(0, 4).map((r) => r.item),
+      });
     }
 
     return {
