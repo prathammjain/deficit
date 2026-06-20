@@ -135,34 +135,3 @@ function longestStreak(days: DayRecord[]): number {
   }
   return best;
 }
-
-/** CSV with one row per day. Stable column order; safe for empty values. */
-export function toCsv(days: DayRecord[], t: HistoryTargets): string {
-  const header = [
-    'date',
-    'logged',
-    'calories_kcal',
-    'protein_g',
-    'carbs_g',
-    'fat_g',
-    'target_kcal',
-    'maintenance_kcal',
-    'deficit_kcal',
-    'weight_kg',
-  ];
-  const rows = days.map((d) =>
-    [
-      d.date,
-      d.logged ? 'yes' : 'no',
-      d.logged ? d.kcal : '',
-      d.logged ? d.proteinG : '',
-      d.logged ? d.carbsG : '',
-      d.logged ? d.fatG : '',
-      t.targetKcal,
-      t.maintenanceKcal,
-      d.logged ? dayDeficit(d, t) : '',
-      d.weightKg ?? '',
-    ].join(','),
-  );
-  return [header.join(','), ...rows].join('\n');
-}

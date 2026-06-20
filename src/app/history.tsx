@@ -13,23 +13,19 @@ import {
   Card,
   Eyebrow,
   GlassSurface,
-  PrimaryButton,
   Screen,
   SectionLabel,
   Title,
 } from '@/components/ui/primitives';
 import { palette, radius, space, type as typo } from '@/constants/palette';
-import { exportCsv } from '@/lib/export-csv';
 import { gatherDailyRecords } from '@/lib/history';
 import {
   dayDeficit,
   summarizeHistory,
-  toCsv,
   type DayRecord,
   type HistorySummary,
   type HistoryTargets,
 } from '@/lib/history-stats';
-import { todayKey } from '@/lib/log-store';
 import { loadProfile } from '@/lib/profile-store';
 import { computeTargets } from '@/lib/targets';
 
@@ -45,7 +41,6 @@ export default function HistoryScreen() {
   const [rangeDays, setRangeDays] = useState(30);
   const [records, setRecords] = useState<DayRecord[]>([]);
   const [targets, setTargets] = useState<HistoryTargets | null>(null);
-  const [exporting, setExporting] = useState(false);
 
   const refresh = useCallback(async () => {
     const profile = await loadProfile();
@@ -78,16 +73,6 @@ export default function HistoryScreen() {
     }, [refresh]),
   );
 
-  const onExport = useCallback(async () => {
-    if (!targets || exporting) return;
-    setExporting(true);
-    try {
-      await exportCsv(`deficit-history-${todayKey()}.csv`, toCsv(records, targets));
-    } finally {
-      setExporting(false);
-    }
-  }, [records, targets, exporting]);
-
   if (loading) {
     return (
       <View style={st.loadingRoot}>
@@ -100,16 +85,7 @@ export default function HistoryScreen() {
 
   return (
     <Screen>
-      <View style={st.headerRow}>
-        <Eyebrow>Deficit</Eyebrow>
-        {targets && summary && summary.daysLogged > 0 ? (
-          <Pressable onPress={onExport} hitSlop={10} disabled={exporting}>
-            <Text style={st.exportLink}>
-              {exporting ? 'Exporting…' : '↓ Export CSV'}
-            </Text>
-          </Pressable>
-        ) : null}
-      </View>
+      <Eyebrow>Deficit</Eyebrow>
       <Title>Your journey</Title>
 
       <RangePills value={rangeDays} onChange={setRangeDays} />
@@ -124,18 +100,12 @@ export default function HistoryScreen() {
         <Card style={st.emptyCard}>
           <Text style={st.emptyTitle}>No history yet</Text>
           <Text style={st.emptyText}>
-            Log your meals on the Log tab — your trends, deficit, and an
-            exportable CSV will build up here, day by day.
+            Log your meals on the Log tab — your trends, deficit, and a
+            day-by-day breakdown will build up here.
           </Text>
         </Card>
       ) : (
-        <Journey
-          records={records}
-          targets={targets}
-          summary={summary}
-          onExport={onExport}
-          exporting={exporting}
-        />
+        <Journey records={records} targets={targets} summary={summary} />
       )}
     </Screen>
   );
@@ -145,14 +115,10 @@ function Journey({
   records,
   targets,
   summary,
-  onExport,
-  exporting,
 }: {
   records: DayRecord[];
   targets: HistoryTargets;
   summary: HistorySummary;
-  onExport: () => void;
-  exporting: boolean;
 }) {
   const kcalSeries = records.map((d) => (d.logged ? d.kcal : null));
   const deficitSeries = records.map((d) => (d.logged ? dayDeficit(d, targets) : 0));
@@ -271,18 +237,112 @@ function Journey({
         )}
       </Card>
 
-      <PrimaryButton
-        label={exporting ? 'Exporting…' : 'Export history as CSV'}
-        onPress={onExport}
-        disabled={exporting}
-        style={st.exportBtn}
-      />
+      {/* Day by day — the granular record, in-app and sleek */}
+      <SectionLabel>Day by day</SectionLabel>
+      <DayByDay records={records} targets={targets} />
+
       <Text style={st.footnote}>
-        Deficit uses your current maintenance ({targets.maintenanceKcal.toLocaleString()} kcal)
-        as the reference. Micronutrients aren’t tracked yet.
+        Deficit uses your current maintenance (
+        {targets.maintenanceKcal.toLocaleString()} kcal) as the reference.
+        Micronutrients aren’t tracked yet.
       </Text>
     </>
   );
+}
+
+/** The per-day record as a sleek in-app list (newest first), not a CSV dump. */
+function DayByDay({
+  records,
+  targets,
+}: {
+  records: DayRecord[];
+  targets: HistoryTargets;
+}) {
+  const logged = records.filter((d) => d.logged).reverse();
+  if (logged.length === 0) return null;
+  return (
+    <Card padded={false} style={st.dayCard}>
+      {logged.map((rec, i) => (
+        <DayRow key={rec.date} rec={rec} targets={targets} first={i === 0} />
+      ))}
+    </Card>
+  );
+}
+
+function DayRow({
+  rec,
+  targets,
+  first,
+}: {
+  rec: DayRecord;
+  targets: HistoryTargets;
+  first: boolean;
+}) {
+  const def = dayDeficit(rec, targets); // maintenance − intake
+  const over = rec.kcal > targets.targetKcal;
+  const fillPct = Math.min(100, (rec.kcal / targets.targetKcal) * 100);
+  const { weekday, day, month } = formatDay(rec.date);
+
+  return (
+    <View style={[st.dayRow, !first && st.dayRowBorder]}>
+      <View style={st.dayDate}>
+        <Text style={st.dayNum}>{day}</Text>
+        <Text style={st.dayMon}>{month}</Text>
+      </View>
+
+      <View style={st.dayMain}>
+        <View style={st.dayTopLine}>
+          <Text style={st.dayWeekday}>{weekday}</Text>
+          <Text style={st.dayKcal}>
+            {rec.kcal.toLocaleString()}
+            <Text style={st.dayKcalUnit}> kcal</Text>
+          </Text>
+        </View>
+        <View style={st.dayBarTrack}>
+          <View
+            style={[
+              st.dayBarFill,
+              {
+                width: `${fillPct}%`,
+                backgroundColor: over ? palette.danger : palette.accent,
+              },
+            ]}
+          />
+        </View>
+        <Text style={st.dayMacros}>
+          P{rec.proteinG} · C{rec.carbsG} · F{rec.fatG}
+          {rec.weightKg != null ? `   ·   ${rec.weightKg} kg` : ''}
+        </Text>
+      </View>
+
+      <View style={st.dayRight}>
+        <Text
+          style={[
+            st.dayDeficit,
+            { color: def >= 0 ? palette.good : palette.danger },
+          ]}
+        >
+          {def >= 0 ? '+' : ''}
+          {def.toLocaleString()}
+        </Text>
+        <Text style={st.dayDeficitLabel}>deficit</Text>
+      </View>
+    </View>
+  );
+}
+
+/** YYYY-MM-DD → { weekday: 'Thu', day: '19', month: 'Jun' } in local time. */
+function formatDay(date: string): {
+  weekday: string;
+  day: string;
+  month: string;
+} {
+  const d = new Date(`${date}T00:00:00`);
+  return {
+    weekday: d.toLocaleDateString('en-US', { weekday: 'short' }),
+    day: String(d.getDate()),
+    month: d.toLocaleDateString('en-US', { month: 'short' }),
+  };
 }
 
 /* ---------------- subcomponents ---------------- */
@@ -429,13 +489,6 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  exportLink: { color: palette.accent, fontSize: 14, fontWeight: '700' },
-
   rangeRow: { flexDirection: 'row', gap: space.sm, marginTop: space.lg },
   rangePill: {
     flex: 1,
@@ -535,7 +588,44 @@ const st = StyleSheet.create({
   },
   macroSub: { color: palette.textFaint, fontSize: 12, fontWeight: '500' },
 
-  exportBtn: { marginTop: space.xxl },
+  dayCard: { marginTop: space.xs, overflow: 'hidden' },
+  dayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    paddingVertical: space.md,
+    paddingHorizontal: space.lg,
+  },
+  dayRowBorder: { borderTopWidth: 1, borderTopColor: palette.hairline },
+  dayDate: { width: 40, alignItems: 'center' },
+  dayNum: { color: palette.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.5 },
+  dayMon: {
+    color: palette.textFaint,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  dayMain: { flex: 1, gap: 5 },
+  dayTopLine: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+  },
+  dayWeekday: { color: palette.textFaint, fontSize: 12, fontWeight: '600' },
+  dayKcal: { color: palette.text, fontSize: 15, fontWeight: '700' },
+  dayKcalUnit: { color: palette.textFaint, fontSize: 11, fontWeight: '600' },
+  dayBarTrack: {
+    height: 4,
+    borderRadius: radius.pill,
+    backgroundColor: palette.surface2,
+    overflow: 'hidden',
+  },
+  dayBarFill: { height: 4, borderRadius: radius.pill },
+  dayMacros: { color: palette.textFaint, fontSize: 11, letterSpacing: 0.2 },
+  dayRight: { alignItems: 'flex-end', minWidth: 52 },
+  dayDeficit: { fontSize: 15, fontWeight: '700', letterSpacing: -0.2 },
+  dayDeficitLabel: { color: palette.textDim, fontSize: 10, marginTop: 1 },
   footnote: {
     color: palette.textDim,
     fontSize: 12,

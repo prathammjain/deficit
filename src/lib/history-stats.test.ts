@@ -2,7 +2,6 @@ import {
   cumulativeDeficit,
   dayDeficit,
   summarizeHistory,
-  toCsv,
   type DayRecord,
   type HistoryTargets,
 } from './history-stats';
@@ -76,17 +75,5 @@ describe('summarizeHistory', () => {
   it('current streak counts back from the last day (broken by the gap)', () => {
     expect(s.currentStreak).toBe(1); // only 06-04 logged after the 06-03 gap
     expect(s.longestStreak).toBe(2); // 06-01..06-02
-  });
-});
-
-describe('toCsv', () => {
-  it('emits a header and one row per day with blanks for missed days', () => {
-    const csv = toCsv([day('2026-06-01', 2000, 84), day('2026-06-02', null)], T);
-    const lines = csv.split('\n');
-    expect(lines[0]).toBe(
-      'date,logged,calories_kcal,protein_g,carbs_g,fat_g,target_kcal,maintenance_kcal,deficit_kcal,weight_kg',
-    );
-    expect(lines[1]).toBe('2026-06-01,yes,2000,100,200,50,2000,2500,500,84');
-    expect(lines[2]).toBe('2026-06-02,no,,,,,2000,2500,,');
   });
 });
