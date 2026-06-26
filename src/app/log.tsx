@@ -667,7 +667,7 @@ const STATUS_COPY: Record<
 > = {
   'local-only': { dot: palette.textFaint, text: 'Local food table' },
   checking: { dot: palette.textFaint, text: 'Checking AI engine…' },
-  online: { dot: palette.good, text: 'AI-grounded · Gemini + FatSecret' },
+  online: { dot: palette.good, text: 'AI-grounded · USDA' },
   offline: { dot: palette.warn, text: 'AI engine offline — using local foods' },
 };
 
@@ -685,7 +685,7 @@ function EngineStatus() {
 
 const SOURCE_LABEL: Record<NonNullable<FoodItem['source']>, string> = {
   local: 'local',
-  fatsecret: 'FatSecret',
+  usda: 'USDA',
   ai: 'AI est.',
 };
 

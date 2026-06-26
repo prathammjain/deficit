@@ -15,7 +15,7 @@ export interface FoodItem {
   proteinG: number;
   carbsG: number;
   fatG: number;
-  source?: 'local' | 'fatsecret' | 'ai';
+  source?: 'local' | 'usda' | 'ai';
 }
 
 /**

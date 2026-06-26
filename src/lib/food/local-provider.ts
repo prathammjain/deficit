@@ -6,10 +6,9 @@
  * breakdown the user can verify and edit before logging. No network — this
  * ships as the default so logging works offline and before any API keys exist.
  *
- * The FatSecret + Gemini provider implements the SAME interface: its parseMeal
- * sends the text to Gemini (which normalizes Indian portions and custom
- * household recipes), looks the items up in FatSecret, and sanity-checks the
- * totals. The UI never changes.
+ * The Gemini provider implements the SAME interface: its parseMeal sends the
+ * text to Gemini (which normalizes Indian portions and custom household
+ * recipes) and returns itemized macros. The UI never changes.
  */
 
 import { INDIAN_FOODS, type IndianFood } from './indian-foods';

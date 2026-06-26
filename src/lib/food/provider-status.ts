@@ -3,7 +3,7 @@
  *
  * The remote provider falls back to the local table silently so logging never
  * breaks; this store surfaces that fact so the UI can tell the user whether
- * they're getting grounded AI (Gemini + FatSecret) or the offline Indian table.
+ * they're getting grounded AI (Gemini + USDA) or the offline Indian table.
  */
 
 import { useSyncExternalStore } from 'react';

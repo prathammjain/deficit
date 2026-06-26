@@ -1,91 +1,70 @@
-# `food` Edge Function — the hybrid AI food engine
+# `food` Edge Function — the USDA-grounded food engine
 
-This function is what makes **"Describe a meal"** real. It keeps the Gemini +
-FatSecret secrets server-side and exposes three actions to the app:
+This function powers **"Describe a meal."** It's **DB-anchored, AI-judged**:
+Gemini structures the free text, **USDA FoodData Central** supplies real candidate
+foods with measured macros, then Gemini picks the best match (or explicitly
+estimates), scales the portion, and attaches a confidence — so a guess is always
+flagged, never hidden.
 
 | action | body | returns |
 | --- | --- | --- |
-| `health` | `{ action: 'health' }` | `{ ok, gemini, fatsecret }` — readiness, no external calls |
-| `search` | `{ action: 'search', query, limit? }` | `FoodItem[]` (FatSecret) |
-| `parse` | `{ action: 'parse', text }` | `ParsedMeal` (Gemini → FatSecret → Gemini judge) |
+| `health` | `{ action: 'health' }` | `{ ok, gemini, usda }` — readiness, no model/DB call |
+| `parse` | `{ action: 'parse', text }` | `ParsedMeal` (items + measured macros + confidence + one-tap alternates) |
 
-The engine is **API-anchored, AI-judged**: Gemini structures the free text,
-FatSecret returns real candidate foods + macros, then Gemini picks the best
-candidate (or explicitly estimates) and attaches a confidence. When the two
-don't clearly agree, the item comes back `low` so the app flags it.
+Type-ahead **search** stays on the app's instant local Indian table; only the
+free-text path calls this function. Everything falls back to the local table if
+the function errors or isn't deployed, so logging never hard-fails.
 
-Until this is deployed **with both secrets set**, the app silently uses the
-local Indian table. The Log screen shows which engine is live (see "Verify").
+> **Why USDA and not FatSecret?** FatSecret's free tier IP-allowlists every
+> request (max 15 IPs, no CIDR/wildcard on Basic) and a Supabase Edge Function's
+> egress IP rotates across a large pool — so it's blocked on every call (verified:
+> `error code 21, Invalid IP address`). USDA FoodData Central is the government
+> reference dataset, free, and has **no IP lock**.
 
 ---
 
-## 1. Prerequisites
-
-- **Supabase CLI** — `npm i -g supabase` (or `brew install supabase/tap/supabase`)
-- A **Gemini API key** — https://aistudio.google.com/app/apikey
-- **FatSecret** OAuth2 client credentials (Platform API, "Basic" scope) —
-  https://platform.fatsecret.com/platform-api → register an app → Client ID +
-  Secret. (FatSecret IP-allowlists by default; either allowlist your function's
-  egress IP or disable the restriction in the FatSecret console.)
-
-## 2. Link the project (once)
+## Deploy (one-time)
 
 ```bash
-cd /path/to/deficit
-supabase login
-supabase link --project-ref <your-project-ref>   # ref is in the Supabase dashboard URL
-```
+supabase login   # already done if `supabase projects list` works
 
-## 3. Set the secrets
+# Keys (both free, both instant, neither IP-locked):
+#   Gemini → https://aistudio.google.com/app/apikey   (model: gemini-2.5-flash)
+#   USDA   → https://fdc.nal.usda.gov/api-key-signup
 
-```bash
 supabase secrets set \
-  GEMINI_API_KEY=... \
-  FATSECRET_CLIENT_ID=... \
-  FATSECRET_CLIENT_SECRET=...
+  GEMINI_API_KEY=YOUR_GEMINI_KEY \
+  USDA_API_KEY=YOUR_USDA_KEY \
+  --project-ref <project-ref>
+
+supabase functions deploy food --project-ref <project-ref> --no-verify-jwt
 ```
 
-## 4. Deploy
+## Verify
 
 ```bash
-supabase functions deploy food --no-verify-jwt
-```
-
-`--no-verify-jwt` lets the app call it with just the anon key (fine for a
-personal app). To require an authenticated session instead, deploy without that
-flag — `functions.invoke` already sends the user's JWT.
-
-## 5. Verify
-
-```bash
-# Health — should report both secrets present:
-curl -s -X POST "https://<project-ref>.functions.supabase.co/food" \
+# Health — expect {"ok":true,"gemini":true,"usda":true}
+curl -s -X POST "https://<project-ref>.supabase.co/functions/v1/food" \
   -H "Authorization: Bearer <SUPABASE_ANON_KEY>" \
-  -H "Content-Type: application/json" \
-  -d '{"action":"health"}'
-# => {"ok":true,"gemini":true,"fatsecret":true}
+  -H "Content-Type: application/json" -d '{"action":"health"}'
 
-# Parse a meal:
-curl -s -X POST "https://<project-ref>.functions.supabase.co/food" \
+# Parse a meal (grounded in USDA, portions scaled by the AI)
+curl -s -X POST "https://<project-ref>.supabase.co/functions/v1/food" \
   -H "Authorization: Bearer <SUPABASE_ANON_KEY>" \
   -H "Content-Type: application/json" \
   -d '{"action":"parse","text":"2 roti, dal tadka, 1 katori rice"}'
 ```
 
-**In the app:** open the **Log** tab. The status line under "Meals" reads:
-
-- 🟢 **AI-grounded · Gemini + FatSecret** — deployed, both secrets set, working.
-- 🟠 **AI engine offline — using local foods** — function unreachable or a secret
-  is missing (check `health`).
-- ⚪ **Local food table** — no cloud account configured (running locally).
-
-Grounded results also carry a small **FatSecret** / **AI est.** tag.
+**In the app:** the **Log** tab shows the engine status under "Meals":
+🟢 **AI-grounded · USDA** (live) · 🟠 offline (function unreachable / a key
+missing) · ⚪ Local food table (no cloud account). Grounded items carry a small
+**USDA** tag; anything the AI had to estimate is tagged **AI est.** + low
+confidence.
 
 ## Troubleshooting
 
-- `health` shows `fatsecret: false` → secret not set, or you set it on the wrong
-  project. Re-run step 3, then re-deploy.
-- `health` ok but `parse`/`search` 500s → usually FatSecret IP allowlisting, or
-  the FatSecret app lacks the `basic` scope. Check `supabase functions logs food`.
-- App stays 🟠 after deploy → confirm `EXPO_PUBLIC_SUPABASE_URL` points at the
-  same project you deployed to.
+- `usda:false` / `gemini:false` → that secret isn't set on this project.
+- Health ok but parse empty → a Gemini quota error (`429`, `limit: 0`) on the
+  model, or USDA returned no candidates. Check `supabase functions logs food`.
+- USDA free tier is rate-limited (~1k req/hour by default) — plenty for personal
+  use; the local table covers type-ahead search so keystrokes don't burn quota.
