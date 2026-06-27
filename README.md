@@ -1,56 +1,61 @@
-# Welcome to your Expo app 👋
+# Deficit
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Hallucination-resistant meal logging for fat loss. Log what you ate in plain
+language ("2 roti, mom's dal, 1 katori rice") and get calories, macros, and your
+deficit — with every number you can trust.
 
-## Get started
+## Why it exists
 
-1. Install dependencies
+Logging meals to a ChatGPT project works until you notice it silently invents
+numbers. Deficit fixes that with a **hybrid engine that grounds AI and a real
+food database in each other**: neither gets to make up a number alone.
 
-   ```bash
-   npm install
-   ```
+1. **Gemini** breaks your text into food items + normalised Indian portions
+   (katori, roti, bowl).
+2. **USDA FoodData Central** returns real candidate foods with *measured* macros.
+3. **Gemini judges** which candidate actually matches, scales the portion, and
+   attaches a **confidence** — `✓ good match`, `≈ likely`, or `⚠ check this`.
 
-2. Start the app
+A guess is always flagged and one tap away from correction (swap to another
+candidate). The trust signal follows the entry into your daily log and history,
+so you can always see which numbers were solid and which were estimates.
 
-   ```bash
-   npx expo start
-   ```
+Everything else — adaptive TDEE, weigh-ins, history dashboard — supports that
+core loop.
 
-In the output, you'll find options to open the app in a
+## Stack
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- **Expo / React Native** (iOS, Android, web) with `expo-router`
+- **Supabase** — magic-link auth, row-level-secured cloud sync, and the `food`
+  Edge Function (Deno) that runs the hybrid engine
+- Runs **fully local with no account** until you add Supabase keys
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Run it locally
 
 ```bash
-npm run reset-project
+npm install
+npm run web        # or: npm run ios / npm run android
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+That's enough to use the app against the built-in Indian food table. To turn on
+accounts, cloud sync, and the AI-grounded engine, see **[SETUP.md](SETUP.md)**.
 
-### Other setup steps
+## Develop
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```bash
+npm test           # jest unit tests (pure logic: TDEE, budget, log, history)
+npm run typecheck  # tsc --noEmit
+npm run lint
+```
 
-## Learn more
+## Deploy the web app
 
-To learn more about developing your project with Expo, look at the following resources:
+The app exports to a static PWA:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+npx expo export --platform web      # outputs ./dist
+```
 
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Host `./dist` anywhere static (EAS Hosting, Vercel, Netlify). After deploying,
+add the deployed URL to Supabase → Authentication → **URL Configuration →
+Redirect URLs** so magic links land back in the app.

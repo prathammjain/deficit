@@ -123,6 +123,14 @@ describe('portioned entries', () => {
     expect(e.unitKcal).toBe(150);
   });
 
+  it('carries the engine trust signal (source + confidence) onto the entry', () => {
+    const e = portionedEntry({ ...dal, source: 'usda' }, 1, 'low');
+    expect(e.source).toBe('usda');
+    expect(e.confidence).toBe('low');
+    // A direct pick (no confidence arg) leaves it unflagged.
+    expect(portionedEntry({ ...dal, source: 'local' }, 1).confidence).toBeUndefined();
+  });
+
   it('re-scales a logged entry when the quantity changes', async () => {
     const s = createMemoryStore();
     const date = '2026-06-06';

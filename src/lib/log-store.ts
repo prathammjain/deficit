@@ -6,6 +6,7 @@
  * (summaries) is split out so it can be unit-tested without any storage.
  */
 
+import type { Confidence, FoodItem } from './food';
 import { getJSON, kv, type KVStore, setJSON } from './kv';
 
 export interface LogEntry {
@@ -31,6 +32,12 @@ export interface LogEntry {
   unitProteinG?: number;
   unitCarbsG?: number;
   unitFatG?: number;
+
+  // --- Trust signal (carried from the hybrid engine; never hide a guess) ---
+  /** How sure the engine was about this match at log time. */
+  confidence?: Confidence;
+  /** Where the numbers came from: local table, USDA, or an AI estimate. */
+  source?: FoodItem['source'];
 }
 
 /** Minimal shape of a food-database item used to build a portioned entry. */
@@ -41,6 +48,7 @@ export interface FoodLike {
   proteinG: number;
   carbsG: number;
   fatG: number;
+  source?: FoodItem['source'];
 }
 
 const r = (n: number) => Math.round(n);
@@ -49,6 +57,7 @@ const r = (n: number) => Math.round(n);
 export function portionedEntry(
   food: FoodLike,
   quantity = 1,
+  confidence?: Confidence,
 ): Omit<LogEntry, 'id' | 'at'> {
   const q = Math.max(0.5, quantity);
   return {
@@ -63,6 +72,8 @@ export function portionedEntry(
     proteinG: r(food.proteinG * q),
     carbsG: r(food.carbsG * q),
     fatG: r(food.fatG * q),
+    source: food.source,
+    confidence,
   };
 }
 

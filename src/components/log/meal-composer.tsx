@@ -307,8 +307,8 @@ function DescribeMeal({
                 label={`Log ${items.length} item${items.length > 1 ? 's' : ''}`}
                 onPress={() =>
                   onLog(
-                    items.map(({ item, quantity }) =>
-                      portionedEntry(item, quantity),
+                    items.map(({ item, quantity, confidence }) =>
+                      portionedEntry(item, quantity, confidence),
                     ),
                   )
                 }

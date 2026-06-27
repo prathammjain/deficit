@@ -38,16 +38,23 @@ Estimated time: ~15 minutes.
 
 ---
 
-## 2. AI meal parsing (Gemini + FatSecret) — optional, enables describe-to-log accuracy
+## 2. AI meal parsing (Gemini + USDA) — optional, enables describe-to-log accuracy
 
 Without these, "Describe" mode uses the built-in Indian food table. With them,
-it uses Gemini to understand your wording and FatSecret for real nutrition.
+the engine grounds AI and a real food database in each other: Gemini structures
+your wording, **USDA FoodData Central** supplies measured macros for candidate
+foods, and Gemini then judges which candidate fits and how sure it is — so a
+guess is always flagged, never hidden.
+
+> We use USDA (not FatSecret) because Supabase Edge Functions have a rotating
+> egress IP, and FatSecret's free tier IP-allowlists every request. USDA's key
+> has no IP lock.
 
 ### Get the keys
 
 - **Gemini:** https://aistudio.google.com → **Get API key** (free tier).
-- **FatSecret:** https://platform.fatsecret.com → register → create an app →
-  copy **Client ID** and **Client Secret**. (Request "Basic" API access.)
+- **USDA:** https://fdc.nal.usda.gov/api-key-signup — instant free key from
+  api.data.gov. No IP allow-listing.
 
 ### Deploy the Edge Function
 
@@ -59,17 +66,13 @@ supabase login
 supabase link --project-ref YOUR-PROJECT-REF
 supabase secrets set \
   GEMINI_API_KEY=... \
-  FATSECRET_CLIENT_ID=... \
-  FATSECRET_CLIENT_SECRET=...
-supabase functions deploy food
+  USDA_API_KEY=...
+supabase functions deploy food --no-verify-jwt
 ```
 
-> FatSecret may require you to **allow-list the egress IP** of your functions
-> for the nutrition API. If lookups fail, check FatSecret's IP restrictions
-> setting first.
-
-Once deployed, the app automatically routes meal lookups through the function
-(with the local table as an automatic fallback if it ever errors).
+Check it's live: the app's log screen shows **"AI-grounded · USDA"** when the
+function is reachable and both keys are set; otherwise it quietly falls back to
+the local table (logging never hard-fails).
 
 ---
 
@@ -78,7 +81,7 @@ Once deployed, the app automatically routes meal lookups through the function
 | Piece                    | File                               |
 | ------------------------ | ---------------------------------- |
 | DB schema + RLS          | `supabase/schema.sql`              |
-| Gemini + FatSecret proxy | `supabase/functions/food/index.ts` |
+| Gemini + USDA engine     | `supabase/functions/food/index.ts` |
 | Supabase client (gated)  | `src/lib/supabase/client.ts`       |
 | Auth (magic link)        | `src/lib/supabase/auth.tsx`        |
 | Cloud-backed storage     | `src/lib/supabase/supabase-kv.ts`  |
