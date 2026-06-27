@@ -22,7 +22,12 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
         autoRefreshToken: true,
         // Web magic links land back on the app URL with tokens in the hash.
         detectSessionInUrl: Platform.OS === 'web',
-        flowType: 'pkce',
+        // Implicit (not PKCE): magic-link emails are usually opened in a
+        // different browser / in-app webview than the one that requested them,
+        // where PKCE's stored code-verifier is missing and sign-in silently
+        // bounces back to the login screen. Implicit carries the session in the
+        // link itself, so it completes regardless of which browser opens it.
+        flowType: 'implicit',
       },
     })
   : null;
