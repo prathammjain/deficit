@@ -52,6 +52,9 @@ async function gemini(prompt: string): Promise<any> {
       }),
     },
   );
+  // Throw on rate-limit / quota / server errors so the caller falls back to the
+  // local food table instead of silently returning an empty (blank) result.
+  if (!res.ok) throw new Error(`gemini ${res.status}`);
   const data = await res.json();
   const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
   try {
