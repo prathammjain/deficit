@@ -70,7 +70,7 @@ export const st = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.3,
   },
-  heroStatLabel: { color: palette.textFaint, fontSize: 11, marginTop: 3 },
+  heroStatLabel: { color: palette.textFaint, fontSize: 11, marginTop: space.xxs },
   heroStatDivider: {
     width: 1,
     height: 32,
@@ -87,8 +87,8 @@ export const st = StyleSheet.create({
   statBig: { ...typo.stat, fontSize: 24, color: palette.text },
   statUnit: { color: palette.textFaint, fontSize: 12, marginTop: 2 },
 
-  legend: { alignItems: 'flex-end', gap: 4 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legend: { alignItems: 'flex-end', gap: space.xs },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendLabel: { color: palette.textFaint, fontSize: 11 },
 
@@ -103,8 +103,8 @@ export const st = StyleSheet.create({
   },
   macroRow: { flexDirection: 'row', marginTop: space.lg },
   macroCell: { flex: 1 },
-  macroCellHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  macroDot: { width: 7, height: 7, borderRadius: 4 },
+  macroCellHead: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
+  macroDot: { width: 8, height: 8, borderRadius: 4 },
   macroLabel: { color: palette.textFaint, fontSize: 12 },
   macroValue: {
     color: palette.text,
@@ -137,7 +137,7 @@ export const st = StyleSheet.create({
     letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
-  dayMain: { flex: 1, gap: 5 },
+  dayMain: { flex: 1, gap: space.xs },
   dayTopLine: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -156,7 +156,7 @@ export const st = StyleSheet.create({
   dayMacros: { color: palette.textFaint, fontSize: 11, letterSpacing: 0.2 },
   dayRight: { alignItems: 'flex-end', minWidth: 52 },
   dayDeficit: { fontSize: 15, fontWeight: '700', letterSpacing: -0.2 },
-  dayDeficitLabel: { color: palette.textDim, fontSize: 10, marginTop: 1 },
+  dayDeficitLabel: { color: palette.textDim, fontSize: 10, marginTop: space.xxs },
   footnote: {
     color: palette.textDim,
     fontSize: 12,

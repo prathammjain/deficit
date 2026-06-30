@@ -63,6 +63,7 @@ export const palette = {
 
 /** 4px base spacing scale. */
 export const space = {
+  xxs: 2,
   xs: 4,
   sm: 8,
   md: 12,

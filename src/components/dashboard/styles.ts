@@ -51,7 +51,7 @@ export const st = StyleSheet.create({
   heroStatLabel: {
     color: palette.textFaint,
     fontSize: 12,
-    marginTop: 3,
+    marginTop: space.xxs,
     letterSpacing: 0.2,
   },
   heroStatDivider: {

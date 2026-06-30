@@ -2,8 +2,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import type { LogEntry } from '@/lib/log-store';
 
-import { SourceTag } from './engine-status';
-import { ConfidenceBadge, Stepper } from './meal-bits';
+import { Stepper } from './meal-bits';
 import { st } from './styles';
 
 export function MealRow({
@@ -19,13 +18,14 @@ export function MealRow({
   return (
     <View style={st.entryRow}>
       <View style={st.flex1}>
-        <View style={st.breakdownNameRow}>
-          <Text style={st.entryLabel}>{entry.label}</Text>
-          {/* Flag only the uncertain ones — a clean match stays quiet. */}
-          {entry.confidence && entry.confidence !== 'high' ? (
-            <ConfidenceBadge confidence={entry.confidence} />
+        <View style={st.entryTitleRow}>
+          <Text style={st.entryLabel} numberOfLines={1}>
+            {entry.label}
+          </Text>
+          {/* Quiet by default; flag only the genuinely-uncertain ones. */}
+          {entry.confidence === 'low' ? (
+            <Text style={st.entryFlag}>⚠</Text>
           ) : null}
-          <SourceTag source={entry.source} />
         </View>
         <Text style={st.entrySub}>
           {portioned

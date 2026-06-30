@@ -9,7 +9,6 @@ export const st = StyleSheet.create({
     alignItems: 'center',
     gap: space.sm,
     marginBottom: space.md,
-    paddingHorizontal: space.xs,
   },
   engineDot: { width: 7, height: 7, borderRadius: 4 },
   engineText: {
@@ -230,7 +229,14 @@ export const st = StyleSheet.create({
     borderBottomColor: palette.hairline,
     gap: space.md,
   },
-  entryLabel: { color: palette.text, fontSize: 15, fontWeight: '500' },
+  entryTitleRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
+  entryLabel: {
+    color: palette.text,
+    fontSize: 15,
+    fontWeight: '500',
+    flexShrink: 1,
+  },
+  entryFlag: { color: palette.warn, fontSize: 13 },
   entrySub: { color: palette.textFaint, fontSize: 13, marginTop: 2 },
   entryKcal: {
     color: palette.text,
