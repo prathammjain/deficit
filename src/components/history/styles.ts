@@ -132,7 +132,7 @@ export const st = StyleSheet.create({
   },
   dayMon: {
     color: palette.textFaint,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.6,
     textTransform: 'uppercase',
@@ -156,7 +156,7 @@ export const st = StyleSheet.create({
   dayMacros: { color: palette.textFaint, fontSize: 11, letterSpacing: 0.2 },
   dayRight: { alignItems: 'flex-end', minWidth: 52 },
   dayDeficit: { fontSize: 15, fontWeight: '700', letterSpacing: -0.2 },
-  dayDeficitLabel: { color: palette.textDim, fontSize: 10, marginTop: space.xxs },
+  dayDeficitLabel: { color: palette.textDim, fontSize: 11, marginTop: space.xxs },
   footnote: {
     color: palette.textDim,
     fontSize: 12,

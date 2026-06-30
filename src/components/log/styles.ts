@@ -20,7 +20,7 @@ export const st = StyleSheet.create({
   resultNameRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   sourceTag: {
     color: palette.textDim,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.4,
   },
