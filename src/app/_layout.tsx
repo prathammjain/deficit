@@ -1,6 +1,7 @@
 import '@/global.css';
 
 import { DarkTheme, ThemeProvider } from 'expo-router';
+import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 
@@ -15,6 +16,9 @@ export default function RootLayout() {
   // regardless of the device's light/dark setting.
   return (
     <AuthProvider>
+      <Head>
+        <title>Deficit — calorie tracking that doesn’t make up numbers</title>
+      </Head>
       <ThemeProvider value={DarkTheme}>
         <StatusBar style="light" />
         <AnimatedSplashOverlay />

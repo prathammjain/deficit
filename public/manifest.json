@@ -1,0 +1,18 @@
+{
+  "name": "Deficit — trustworthy calorie tracking",
+  "short_name": "Deficit",
+  "description": "Log meals in plain language — “2 roti, mom’s dal, 1 katori rice” — and get calories and macros you can trust. Built for Indian food.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F0D17",
+  "theme_color": "#0F0D17",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

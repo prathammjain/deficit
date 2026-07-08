@@ -32,3 +32,15 @@ create policy "own rows - update" on public.user_kv
 drop policy if exists "own rows - delete" on public.user_kv;
 create policy "own rows - delete" on public.user_kv
   for delete using (auth.uid() = user_id);
+
+-- Shared cache for the food Edge Function's parsed-meal results. Keyed on
+-- normalised meal text (user-independent), read/written only by the function
+-- via the service role: RLS is enabled with NO policies, so client keys get
+-- nothing and the service role (which bypasses RLS) is the only reader/writer.
+create table if not exists public.food_cache (
+  key        text        primary key,
+  value      jsonb       not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.food_cache enable row level security;

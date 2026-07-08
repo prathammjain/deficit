@@ -22,17 +22,29 @@
 // @ts-nocheck
 import { INDIAN_FOODS } from './_indian-foods.ts';
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
+// Browsers may only call this function from the deployed app or local dev.
+// Native apps and server-side callers send no Origin header, so CORS doesn't
+// apply to them — the auth gate below is what actually protects the engine.
+const ALLOWED_ORIGINS = ['https://deficit-cyan.vercel.app'];
+const isAllowedOrigin = (origin: string | null) =>
+  !!origin &&
+  (ALLOWED_ORIGINS.includes(origin) ||
+    /^http:\/\/localhost(:\d+)?$/.test(origin));
+
+const corsHeaders = (origin: string | null) => ({
+  ...(isAllowedOrigin(origin)
+    ? { 'Access-Control-Allow-Origin': origin! }
+    : {}),
+  Vary: 'Origin',
   'Access-Control-Allow-Headers':
     'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+});
 
-const json = (body: unknown, status = 200) =>
+const json = (body: unknown, status = 200, origin: string | null = null) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' },
   });
 
 const MODEL = 'gemini-2.5-flash';
@@ -256,28 +268,131 @@ function buildReason(
   return `Database ${Math.round(dbKcalTotal)} kcal vs AI estimate ~${Math.round(aiKcal)} kcal${portionNote}.`;
 }
 
+// ---- auth gate --------------------------------------------------------------
+// The function is deployed with --no-verify-jwt (platform verification breaks
+// CORS preflights and would accept the public anon key anyway), so this is the
+// real gate: the bearer token must belong to a signed-in Supabase user.
+// supabase-js v2 forwards the session token on functions.invoke automatically.
+
+async function isSignedInUser(req: Request): Promise<boolean> {
+  const token = (req.headers.get('Authorization') ?? '')
+    .replace(/^Bearer\s+/i, '')
+    .trim();
+  if (!token) return false;
+  const url = Deno.env.get('SUPABASE_URL');
+  const apikey =
+    Deno.env.get('SUPABASE_ANON_KEY') ??
+    Deno.env.get('SUPABASE_PUBLISHABLE_KEY');
+  if (!url || !apikey) return false;
+  try {
+    const res = await fetch(`${url}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${token}`, apikey },
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// ---- result cache -----------------------------------------------------------
+// Parsed meals are user-independent ("2 roti dal" is the same for everyone), so
+// results live in a shared `food_cache` table keyed on the normalised text.
+// The version prefix invalidates everything when the prompts/engine change.
+// Cache failures must never break parsing — every operation swallows errors.
+
+const ENGINE_VERSION = 'v1';
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+const cacheKey = (text: string) =>
+  `${ENGINE_VERSION}|${text.toLowerCase().replace(/\s+/g, ' ').trim()}`;
+
+function cacheEnv() {
+  const url = Deno.env.get('SUPABASE_URL');
+  const key =
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ??
+    Deno.env.get('SUPABASE_SECRET_KEY');
+  return url && key ? { url, key } : null;
+}
+
+async function cacheGet(key: string): Promise<unknown | null> {
+  const env = cacheEnv();
+  if (!env) return null;
+  try {
+    const res = await fetch(
+      `${env.url}/rest/v1/food_cache?key=eq.${encodeURIComponent(key)}&select=value,created_at`,
+      { headers: { apikey: env.key, Authorization: `Bearer ${env.key}` } },
+    );
+    if (!res.ok) return null;
+    const rows = await res.json();
+    const row = Array.isArray(rows) ? rows[0] : null;
+    if (!row) return null;
+    if (Date.now() - new Date(row.created_at).getTime() > CACHE_TTL_MS)
+      return null;
+    return row.value;
+  } catch {
+    return null;
+  }
+}
+
+async function cacheSet(key: string, value: unknown): Promise<void> {
+  const env = cacheEnv();
+  if (!env) return;
+  try {
+    await fetch(`${env.url}/rest/v1/food_cache`, {
+      method: 'POST',
+      headers: {
+        apikey: env.key,
+        Authorization: `Bearer ${env.key}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify([{ key, value, created_at: new Date() }]),
+    });
+  } catch {
+    // best-effort
+  }
+}
+
 // ---- handler --------------------------------------------------------------
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  const origin = req.headers.get('Origin');
+  if (req.method === 'OPTIONS')
+    return new Response('ok', { headers: corsHeaders(origin) });
   try {
+    if (!(await isSignedInUser(req))) {
+      return json({ error: 'sign in required' }, 401, origin);
+    }
+
     const { action, text } = await req.json();
 
     if (action === 'health') {
-      return json({
-        ok: true,
-        gemini: !!Deno.env.get('GEMINI_API_KEY')?.trim(),
-        usda: !!Deno.env.get('USDA_API_KEY')?.trim(),
-      });
+      return json(
+        {
+          ok: true,
+          gemini: !!Deno.env.get('GEMINI_API_KEY')?.trim(),
+          usda: !!Deno.env.get('USDA_API_KEY')?.trim(),
+        },
+        200,
+        origin,
+      );
     }
 
     if (action === 'parse') {
+      const key = cacheKey(String(text ?? ''));
+      const hit = await cacheGet(key);
+      if (hit) return json({ ...hit, cached: true }, 200, origin);
+
       const described = await geminiStructure(String(text ?? ''));
       if (described.length === 0) {
-        return json({
-          items: [],
-          total: { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 },
-        });
+        return json(
+          {
+            items: [],
+            total: { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 },
+          },
+          200,
+          origin,
+        );
       }
 
       // Real candidates per item: curated Indian table first, then USDA.
@@ -360,17 +475,20 @@ Deno.serve(async (req: Request) => {
         { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 },
       );
 
-      return json({
+      const result = {
         items,
         total,
         note: unmatched.length
           ? `Couldn’t match: ${unmatched.join(', ')}.`
           : undefined,
-      });
+      };
+      // Only cache useful results — empty/unmatched parses should retry fresh.
+      if (items.length > 0) await cacheSet(key, result);
+      return json(result, 200, origin);
     }
 
-    return json({ error: 'unknown action' }, 400);
+    return json({ error: 'unknown action' }, 400, origin);
   } catch (e) {
-    return json({ error: String((e as Error)?.message ?? e) }, 500);
+    return json({ error: String((e as Error)?.message ?? e) }, 500, origin);
   }
 });

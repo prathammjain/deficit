@@ -36,6 +36,23 @@ Estimated time: ~15 minutes.
 > The anon key is **meant** to be public; row-level security (from the schema)
 > is what keeps each user's data private.
 
+### Google sign-in (optional, web)
+
+The sign-in screen shows a **Continue with Google** button on web. To make it
+work:
+
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+   create an **OAuth client ID** (type: *Web application*):
+   - First configure the **OAuth consent screen** (External, app name
+     “Deficit”, your support email). No scopes beyond the defaults are needed.
+   - **Authorized redirect URI:**
+     `https://YOUR-PROJECT.supabase.co/auth/v1/callback`
+2. Supabase Dashboard → **Authentication → Providers → Google**: enable, paste
+   the **Client ID** and **Client secret**, save.
+3. That's it — no code or env changes. Users who previously signed in by magic
+   link keep their data: Supabase links providers with the same verified email
+   to one account.
+
 ---
 
 ## 2. AI meal parsing (Gemini + USDA) — optional, enables describe-to-log accuracy
