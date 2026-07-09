@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 
 import { palette, radius, space, type as typo } from '@/constants/palette';
 
-/** Shared styles for the History feature (journey dashboard + day-by-day list). */
+/** Shared styles for the History feature (journey dashboard + month calendar). */
 export const st = StyleSheet.create({
   loadingRoot: {
     flex: 1,
@@ -108,49 +108,6 @@ export const st = StyleSheet.create({
   },
   macroSub: { color: palette.textFaint, fontSize: 12, fontWeight: '500' },
 
-  dayCard: { marginTop: space.xs, overflow: 'hidden' },
-  dayRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    paddingVertical: space.md,
-    paddingHorizontal: space.lg,
-  },
-  dayRowBorder: { borderTopWidth: 1, borderTopColor: palette.hairline },
-  dayDate: { width: 40, alignItems: 'center' },
-  dayNum: {
-    color: palette.text,
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  dayMon: {
-    color: palette.textFaint,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-  },
-  dayMain: { flex: 1, gap: space.xs },
-  dayTopLine: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-  },
-  dayWeekday: { color: palette.textFaint, fontSize: 12, fontWeight: '600' },
-  dayKcal: { color: palette.text, fontSize: 15, fontWeight: '700' },
-  dayKcalUnit: { color: palette.textFaint, fontSize: 11, fontWeight: '600' },
-  dayBarTrack: {
-    height: 4,
-    borderRadius: radius.pill,
-    backgroundColor: palette.surface2,
-    overflow: 'hidden',
-  },
-  dayBarFill: { height: 4, borderRadius: radius.pill },
-  dayMacros: { color: palette.textFaint, fontSize: 11, letterSpacing: 0.2 },
-  dayRight: { alignItems: 'flex-end', minWidth: 52 },
-  dayDeficit: { fontSize: 15, fontWeight: '700', letterSpacing: -0.2 },
-  dayDeficitLabel: { color: palette.textDim, fontSize: 11, marginTop: space.xxs },
   footnote: {
     color: palette.textDim,
     fontSize: 12,

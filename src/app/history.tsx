@@ -81,7 +81,7 @@ export default function HistoryScreen() {
           <Text style={st.emptyTitle}>No history yet</Text>
           <Text style={st.emptyText}>
             Log your meals on the Log tab — your trends, deficit, and a
-            day-by-day breakdown will build up here.
+            day-by-day calendar will build up here.
           </Text>
         </Card>
       ) : (
