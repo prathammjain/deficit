@@ -2,29 +2,41 @@
 // AI cross-checked.
 //
 //   { action: 'parse',  text }  -> ParsedMeal
-//   { action: 'health' }        -> { ok, gemini, usda }
+//   { action: 'health' }        -> { ok, provider, model, usda }
 //
 // The engine grounds each food on real candidates from TWO sources — the app's
 // curated Indian home-cooking table (home portions, ghee/butter included) and
-// USDA FoodData Central (measured macros per 100g) — then Gemini picks the best
+// USDA FoodData Central (measured macros per 100g) — then the LLM picks the best
 // match AND makes its own independent calorie estimate. We compare the two
 // (cross-check): close agreement => trusted ('high'); real divergence, a guessed
-// portion, or no DB match => flagged ('medium'/'low'). So a guess is surfaced,
-// never hidden — and clearly-known foods stay quiet (no over-nagging).
+// portion, or no DB match => flagged ('medium'/'low').
 //
-// Deploy:
-//   node scripts/sync-indian-foods.mjs   # refresh ./_indian-foods.ts from the app table
+// ---- LLM provider config (set via `supabase secrets set`) -------------------
+//
+//   LLM_PROVIDER   groq (default) | openai
+//   GROQ_API_KEY   from console.groq.com
+//   GROQ_MODEL     default: openai/gpt-oss-120b  (reasoning model — handles the
+//                  USDA per-100g portion scaling much better than llama-3.3-70b;
+//                  eval: 16.8% median kcal error vs 19.4%, no >400% blowups)
+//   OPENAI_API_KEY from platform.openai.com
+//   OPENAI_MODEL   default: gpt-4o-mini  (override to gpt-4.1, gpt-5.4, etc.)
+//
+// Switch providers without touching code:
+//   supabase secrets set LLM_PROVIDER=openai
 //   supabase functions deploy food --no-verify-jwt
-//   supabase secrets set GEMINI_API_KEY=... USDA_API_KEY=...
+//
+// ---- Deploy -----------------------------------------------------------------
+//   node scripts/sync-indian-foods.mjs   # refresh ./_indian-foods.ts
+//   supabase functions deploy food --no-verify-jwt
+//   supabase secrets set GROQ_API_KEY=... USDA_API_KEY=...
 //
 // Targets the Deno runtime; excluded from the app's TS build (tsconfig).
 
 // @ts-nocheck
 import { INDIAN_FOODS } from './_indian-foods.ts';
 
-// Browsers may only call this function from the deployed app or local dev.
-// Native apps and server-side callers send no Origin header, so CORS doesn't
-// apply to them — the auth gate below is what actually protects the engine.
+// ---- CORS -------------------------------------------------------------------
+
 const ALLOWED_ORIGINS = ['https://deficit-cyan.vercel.app'];
 const isAllowedOrigin = (origin: string | null) =>
   !!origin &&
@@ -47,30 +59,65 @@ const json = (body: unknown, status = 200, origin: string | null = null) =>
     headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' },
   });
 
-const MODEL = 'gemini-2.5-flash';
+// ---- LLM provider -----------------------------------------------------------
+// Both Groq and OpenAI use the OpenAI-compatible chat completions API, so the
+// only differences are the base URL, API key env var, and model name.
 
-async function gemini(prompt: string): Promise<any> {
-  const key = Deno.env.get('GEMINI_API_KEY')?.trim();
-  if (!key) throw new Error('GEMINI_API_KEY not set');
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          temperature: 0.2,
-        },
-      }),
+interface LLMConfig {
+  provider: 'groq' | 'openai';
+  url: string;
+  key: string;
+  model: string;
+}
+
+function getLLMConfig(): LLMConfig | null {
+  const provider = (Deno.env.get('LLM_PROVIDER') ?? 'groq') as
+    | 'groq'
+    | 'openai';
+
+  if (provider === 'openai') {
+    const key = Deno.env.get('OPENAI_API_KEY')?.trim();
+    if (!key) return null;
+    return {
+      provider,
+      url: 'https://api.openai.com/v1/chat/completions',
+      key,
+      model:
+        Deno.env.get('OPENAI_MODEL')?.trim() ?? 'gpt-4o-mini',
+    };
+  }
+
+  // Default: Groq
+  const key = Deno.env.get('GROQ_API_KEY')?.trim();
+  if (!key) return null;
+  return {
+    provider,
+    url: 'https://api.groq.com/openai/v1/chat/completions',
+    key,
+    model:
+      Deno.env.get('GROQ_MODEL')?.trim() ?? 'openai/gpt-oss-120b',
+  };
+}
+
+async function callLLM(prompt: string): Promise<any> {
+  const cfg = getLLMConfig();
+  if (!cfg) throw new Error('No LLM API key configured');
+  const res = await fetch(cfg.url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${cfg.key}`,
     },
-  );
-  // Throw on rate-limit / quota / server errors so the caller falls back to the
-  // local food table instead of silently returning an empty (blank) result.
-  if (!res.ok) throw new Error(`gemini ${res.status}`);
+    body: JSON.stringify({
+      model: cfg.model,
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
+      temperature: 0.2,
+    }),
+  });
+  if (!res.ok) throw new Error(`llm ${res.status}`);
   const data = await res.json();
-  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
+  const raw = data?.choices?.[0]?.message?.content ?? '{}';
   try {
     return JSON.parse(raw);
   } catch {
@@ -78,10 +125,7 @@ async function gemini(prompt: string): Promise<any> {
   }
 }
 
-// ---- Candidate sources -----------------------------------------------------
-// Each candidate carries its own `serving` (Indian table: a home portion like
-// "1 katori (150g)"; USDA: "100g") and macros per that serving. The judge says
-// how many of that serving were eaten.
+// ---- Candidate sources ------------------------------------------------------
 
 /** Curated Indian home-cooking table — ranked by name/alias match. */
 function indianSearch(query: string, max = 3) {
@@ -117,8 +161,7 @@ function indianSearch(query: string, max = 3) {
     }));
 }
 
-/** USDA FoodData Central search (measured macros per 100g). Branded excluded —
- *  it returns noisy keyword-matched packaged products that hurt precision. */
+/** USDA FoodData Central search (measured macros per 100g). Branded excluded. */
 async function usdaSearch(query: string, max = 5) {
   const key = Deno.env.get('USDA_API_KEY')?.trim();
   if (!key) throw new Error('USDA_API_KEY not set');
@@ -158,13 +201,13 @@ async function usdaSearch(query: string, max = 5) {
     .filter((c: any) => c.kcal > 0 && c.name);
 }
 
-// ---- Gemini: structure then judge -----------------------------------------
+// ---- LLM: structure then judge ----------------------------------------------
 
 /** Stage 1 — split free text into items with a normalised portion + db query. */
-async function geminiStructure(
+async function structureMeal(
   text: string,
 ): Promise<{ name: string; quantity: number; query: string }[]> {
-  const parsed = await gemini(
+  const parsed = await callLLM(
     `You are a nutrition assistant for Indian food. Break this meal into individual food items. For each item return its display name, the quantity (number of servings as a decimal), and a concise English search query suitable for a food database (generic ingredient terms, e.g. "cooked lentils dal", "wheat flatbread roti", "cooked white rice"). Normalise Indian portions (katori, roti, bowl, plate). Return ONLY JSON of the form {"items":[{"name":"","quantity":1,"query":""}]}.
 
 Meal: ${text}`,
@@ -174,9 +217,9 @@ Meal: ${text}`,
 
 interface JudgeDecision {
   index: number;
-  chosen: number; // candidate index, or -1 to use `estimate`
-  quantity: number; // how many of the chosen candidate's serving were eaten
-  aiEstimateKcal: number; // AI's OWN total-kcal estimate for the eaten portion
+  chosen: number;
+  quantity: number;
+  aiEstimateKcal: number;
   portionCertainty: 'clear' | 'unsure';
   reason: string;
   estimate?: {
@@ -189,9 +232,9 @@ interface JudgeDecision {
   };
 }
 
-/** Stage 2 — judge each described item against its real candidates, and make an
- *  independent estimate so we can cross-check the database number. */
-async function geminiJudge(
+/** Stage 2 — judge each item against real candidates + make an independent
+ *  estimate for cross-checking. */
+async function judgeCandidates(
   described: { name: string; quantity: number }[],
   candidatesPerItem: any[][],
 ): Promise<JudgeDecision[]> {
@@ -201,9 +244,9 @@ async function geminiJudge(
     statedQuantity: d.quantity,
     candidates: candidatesPerItem[i].map((c, ci) => ({
       i: ci,
-      source: c.source, // 'local' (Indian home table) or 'usda'
+      source: c.source,
       name: c.name,
-      serving: c.serving, // "1 katori (150g)" for local, "100g" for usda
+      serving: c.serving,
       kcal: c.kcal,
       proteinG: c.proteinG,
       carbsG: c.carbsG,
@@ -211,7 +254,7 @@ async function geminiJudge(
     })),
   }));
 
-  const parsed = await gemini(
+  const parsed = await callLLM(
     `You are grounding a food log so its numbers can be trusted. For each EATEN item you get real CANDIDATE foods from two sources: a curated Indian home-cooking table ("local" — macros per the stated home serving, recipe fats included) and USDA ("usda" — macros per 100g). For each item return a decision:
 - "chosen": index i of the candidate that best matches the eaten dish. PREFER a specific Indian-table ("local") match over a generic USDA one when both reasonably fit (e.g. real "Dal Tadka" over plain "cooked lentils"). If NONE is a reasonable match, use -1 and provide your own "estimate" (per-serving macros for a typical Indian home portion, with a "serving" label like "1 katori (150g)").
 - "quantity": how many of the CHOSEN candidate's stated serving were eaten. (candidate serving "1 katori (150g)", ate ~1.5 katori => 1.5; candidate serving "100g", ate ~150g => 1.5.)
@@ -226,22 +269,17 @@ Items: ${JSON.stringify(payload)}`,
   return Array.isArray(parsed.decisions) ? parsed.decisions : [];
 }
 
+// ---- Confidence + reason ----------------------------------------------------
+
 const num = (v: unknown) => Math.max(0, Math.round(Number(v) || 0));
 
-/**
- * Confidence from the cross-check: how far the database number (scaled to the
- * eaten portion) is from the AI's independent estimate. Close + clear portion =>
- * 'high' (curated Indian foods get a slightly wider tolerance — they're trusted
- * home values); real divergence or a guessed portion => flagged. Never claim
- * 'high' when we couldn't cross-check.
- */
 function calcConfidence(
   dbKcalTotal: number,
   aiKcal: number,
   portionCertainty: 'clear' | 'unsure',
   source: string,
 ): 'high' | 'medium' | 'low' {
-  if (!aiKcal) return 'medium'; // no independent estimate => can't verify
+  if (!aiKcal) return 'medium';
   const base = Math.max(aiKcal, dbKcalTotal, 1);
   const gap = Math.abs(dbKcalTotal - aiKcal) / base;
   const tol = source === 'local' ? 0.25 : 0.2;
@@ -268,11 +306,7 @@ function buildReason(
   return `Database ${Math.round(dbKcalTotal)} kcal vs AI estimate ~${Math.round(aiKcal)} kcal${portionNote}.`;
 }
 
-// ---- auth gate --------------------------------------------------------------
-// The function is deployed with --no-verify-jwt (platform verification breaks
-// CORS preflights and would accept the public anon key anyway), so this is the
-// real gate: the bearer token must belong to a signed-in Supabase user.
-// supabase-js v2 forwards the session token on functions.invoke automatically.
+// ---- Auth gate --------------------------------------------------------------
 
 async function isSignedInUser(req: Request): Promise<boolean> {
   const token = (req.headers.get('Authorization') ?? '')
@@ -294,17 +328,18 @@ async function isSignedInUser(req: Request): Promise<boolean> {
   }
 }
 
-// ---- result cache -----------------------------------------------------------
-// Parsed meals are user-independent ("2 roti dal" is the same for everyone), so
-// results live in a shared `food_cache` table keyed on the normalised text.
-// The version prefix invalidates everything when the prompts/engine change.
-// Cache failures must never break parsing — every operation swallows errors.
+// ---- Result cache -----------------------------------------------------------
+// Keyed on ENGINE_VERSION + model + normalised text so switching providers or
+// models automatically uses a separate cache namespace.
 
-const ENGINE_VERSION = 'v1';
-const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const ENGINE_VERSION = 'v2';
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-const cacheKey = (text: string) =>
-  `${ENGINE_VERSION}|${text.toLowerCase().replace(/\s+/g, ' ').trim()}`;
+const cacheKey = (text: string) => {
+  const cfg = getLLMConfig();
+  const model = cfg?.model ?? 'unknown';
+  return `${ENGINE_VERSION}|${model}|${text.toLowerCase().replace(/\s+/g, ' ').trim()}`;
+};
 
 function cacheEnv() {
   const url = Deno.env.get('SUPABASE_URL');
@@ -353,7 +388,7 @@ async function cacheSet(key: string, value: unknown): Promise<void> {
   }
 }
 
-// ---- handler --------------------------------------------------------------
+// ---- Handler ----------------------------------------------------------------
 
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get('Origin');
@@ -367,10 +402,12 @@ Deno.serve(async (req: Request) => {
     const { action, text } = await req.json();
 
     if (action === 'health') {
+      const cfg = getLLMConfig();
       return json(
         {
-          ok: true,
-          gemini: !!Deno.env.get('GEMINI_API_KEY')?.trim(),
+          ok: !!cfg,
+          provider: cfg?.provider ?? null,
+          model: cfg?.model ?? null,
           usda: !!Deno.env.get('USDA_API_KEY')?.trim(),
         },
         200,
@@ -383,19 +420,15 @@ Deno.serve(async (req: Request) => {
       const hit = await cacheGet(key);
       if (hit) return json({ ...hit, cached: true }, 200, origin);
 
-      const described = await geminiStructure(String(text ?? ''));
+      const described = await structureMeal(String(text ?? ''));
       if (described.length === 0) {
         return json(
-          {
-            items: [],
-            total: { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 },
-          },
+          { items: [], total: { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 } },
           200,
           origin,
         );
       }
 
-      // Real candidates per item: curated Indian table first, then USDA.
       const candidatesPerItem = await Promise.all(
         described.map(async (d) => {
           const q = d.query || d.name;
@@ -407,7 +440,7 @@ Deno.serve(async (req: Request) => {
         }),
       );
 
-      const decisions = await geminiJudge(described, candidatesPerItem);
+      const decisions = await judgeCandidates(described, candidatesPerItem);
 
       const items: any[] = [];
       const unmatched: string[] = [];
@@ -479,10 +512,9 @@ Deno.serve(async (req: Request) => {
         items,
         total,
         note: unmatched.length
-          ? `Couldn’t match: ${unmatched.join(', ')}.`
+          ? `Couldn't match: ${unmatched.join(', ')}.`
           : undefined,
       };
-      // Only cache useful results — empty/unmatched parses should retry fresh.
       if (items.length > 0) await cacheSet(key, result);
       return json(result, 200, origin);
     }

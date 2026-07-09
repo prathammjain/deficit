@@ -30,7 +30,7 @@ export class RemoteFoodProvider implements FoodProvider {
         body: { action: 'health' },
       });
       if (error || !data?.ok) throw error ?? new Error('no data');
-      setProviderStatus(data.gemini && data.usda ? 'online' : 'offline');
+      setProviderStatus(data.provider && data.usda ? 'online' : 'offline');
     } catch {
       setProviderStatus('offline');
     }
