@@ -171,4 +171,24 @@ export const st = StyleSheet.create({
     marginTop: space.xl,
     lineHeight: 18,
   },
+
+  // ---- "This week" prediction card ----
+  weekTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  weekLabel: { ...typo.label, color: palette.textMuted },
+  weekValue: { ...typo.stat, color: palette.text, marginTop: space.sm },
+  weekGoal: { color: palette.textFaint, fontSize: 12, marginTop: space.xxs },
+  weekBody: {
+    color: palette.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: space.sm,
+  },
+  weekDots: { flexDirection: 'row', gap: space.xs + 2 },
+  weekDot: { width: 8, height: 8, borderRadius: 4 },
+  weekDotOn: { backgroundColor: palette.text },
+  weekDotOff: { borderWidth: 1, borderColor: palette.hairline },
 });

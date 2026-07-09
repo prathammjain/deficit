@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { AdaptiveCard } from '@/components/dashboard/adaptive-card';
 import { MacroTile } from '@/components/dashboard/macro-tile';
 import { st } from '@/components/dashboard/styles';
+import { WeekCard } from '@/components/dashboard/week-card';
 import { WeighInCard } from '@/components/dashboard/weigh-in-card';
 import { OnboardingFlow } from '@/components/onboarding-flow';
 import {
@@ -17,7 +18,11 @@ import {
   SectionLabel,
 } from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
-import { estimateAdaptiveTdee, type AdaptiveTdee } from '@/lib/adaptive-tdee';
+import {
+  estimateAdaptiveTdee,
+  type AdaptiveTdee,
+  type DailyDatum,
+} from '@/lib/adaptive-tdee';
 import { formatToday } from '@/lib/date';
 import { gatherHistory } from '@/lib/history';
 import { todayKey } from '@/lib/log-store';
@@ -27,6 +32,7 @@ import {
   type StoredProfile,
 } from '@/lib/profile-store';
 import { computeTargets, type ProfileInput } from '@/lib/targets';
+import { predictWeeklyLoss } from '@/lib/weekly-prediction';
 import { latestWeight, setWeight } from '@/lib/weight-store';
 
 export default function HomeScreen() {
@@ -34,17 +40,19 @@ export default function HomeScreen() {
   const [profile, setProfile] = useState<StoredProfile | null>(null);
   const [editing, setEditing] = useState(false);
   const [adaptive, setAdaptive] = useState<AdaptiveTdee | null>(null);
+  const [history, setHistory] = useState<DailyDatum[]>([]);
   const [lastWeight, setLastWeight] = useState<number | null>(null);
 
   const refresh = useCallback(async () => {
     const p = await loadProfile();
     setProfile(p);
     if (p) {
-      const [history, lw] = await Promise.all([
+      const [hist, lw] = await Promise.all([
         gatherHistory(21),
         latestWeight(),
       ]);
-      setAdaptive(estimateAdaptiveTdee(history));
+      setAdaptive(estimateAdaptiveTdee(hist));
+      setHistory(hist);
       setLastWeight(lw?.kg ?? null);
     }
     setLoading(false);
@@ -81,8 +89,9 @@ export default function HomeScreen() {
         setProfile(updated);
       }
       setLastWeight(kg);
-      const history = await gatherHistory(21);
-      setAdaptive(estimateAdaptiveTdee(history));
+      const hist = await gatherHistory(21);
+      setAdaptive(estimateAdaptiveTdee(hist));
+      setHistory(hist);
     },
     [profile],
   );
@@ -142,6 +151,16 @@ export default function HomeScreen() {
           </View>
         </View>
       </GlassSurface>
+
+      {/* This week — on pace to lose */}
+      <SectionLabel>This week</SectionLabel>
+      <WeekCard
+        prediction={predictWeeklyLoss(
+          history,
+          adaptive?.estimatedTdeeKcal ?? t.maintenanceKcal,
+        )}
+        goalRateKgWeek={t.appliedRateKgWeek}
+      />
 
       {/* Macros */}
       <SectionLabel>Macros</SectionLabel>
