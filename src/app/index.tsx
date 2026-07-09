@@ -9,6 +9,7 @@ import { WeighInCard } from '@/components/dashboard/weigh-in-card';
 import { OnboardingFlow } from '@/components/onboarding-flow';
 import {
   Card,
+  DotMatrix,
   Eyebrow,
   GlassSurface,
   Hairline,
@@ -117,7 +118,9 @@ export default function HomeScreen() {
       <GlassSurface padded style={st.heroCard}>
         <Text style={st.heroLabel}>Your daily target</Text>
         <View style={st.heroNumberRow}>
-          <Text style={st.heroNumber}>{t.targetKcal.toLocaleString()}</Text>
+          <DotMatrix style={st.heroNumber}>
+            {t.targetKcal.toLocaleString()}
+          </DotMatrix>
           <Text style={st.heroUnit}>kcal</Text>
         </View>
         <Hairline style={st.heroDivider} />

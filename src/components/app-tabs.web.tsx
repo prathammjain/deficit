@@ -11,8 +11,8 @@ import { Pressable, View, StyleSheet, Text } from 'react-native';
 import { GlassSurface } from '@/components/ui/primitives';
 import { palette, radius, shadow, space } from '@/constants/palette';
 
-/** Muted icon/label color on the dark glass bar. */
-const ON_DARK = 'rgba(255,255,255,0.55)';
+/** Muted icon/label color on the warm-white bar. */
+const INACTIVE = palette.textFaint;
 
 export default function AppTabs() {
   return (
@@ -50,7 +50,7 @@ export function TabButton({
         <Text
           style={[
             styles.tabIcon,
-            { color: isFocused ? palette.accentText : ON_DARK },
+            { color: isFocused ? palette.accentText : INACTIVE },
           ]}
         >
           {icon}
@@ -59,7 +59,7 @@ export function TabButton({
       <Text
         style={[
           styles.tabLabel,
-          { color: isFocused ? palette.accent : ON_DARK },
+          { color: isFocused ? palette.accent : INACTIVE },
         ]}
       >
         {label}

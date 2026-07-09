@@ -44,9 +44,8 @@ export const st = StyleSheet.create({
     marginBottom: space.lg,
   },
   remainingLabel: {
-    color: palette.textFaint,
-    fontSize: 13,
-    letterSpacing: 0.2,
+    ...typo.label,
+    color: palette.textMuted,
   },
   remaining: {
     ...typo.hero,
@@ -54,9 +53,8 @@ export const st = StyleSheet.create({
     color: palette.accent,
     marginTop: 2,
   },
-  consumedBox: { alignItems: 'flex-end', paddingTop: space.sm },
-  consumed: { color: palette.text, fontSize: 22, fontWeight: '600' },
-  consumedLabel: { color: palette.textFaint, fontSize: 13, marginTop: 2 },
+  consumed: { color: palette.text, fontSize: 16, fontWeight: '700' },
+  consumedLabel: { color: palette.textFaint, fontSize: 10, marginTop: 1 },
 
   macroLine: {
     flexDirection: 'row',

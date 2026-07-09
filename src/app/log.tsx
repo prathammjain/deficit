@@ -6,11 +6,12 @@ import { MacroChip } from '@/components/log/meal-bits';
 import { MealComposer } from '@/components/log/meal-composer';
 import { MealRow } from '@/components/log/meal-row';
 import { st } from '@/components/log/styles';
+import { ArcGauge } from '@/components/charts';
 import {
   Card,
+  DotMatrix,
   Eyebrow,
   GlassSurface,
-  ProgressBar,
   Screen,
   SectionLabel,
   Title,
@@ -124,25 +125,28 @@ export default function LogScreen() {
               <Text style={st.remainingLabel}>
                 {budget.isOver ? 'Over by' : 'Left to eat'}
               </Text>
-              <Text
+              <DotMatrix
                 style={[
                   st.remaining,
                   budget.isOver && { color: palette.danger },
                 ]}
               >
                 {Math.abs(budget.remainingKcal).toLocaleString()}
-              </Text>
+              </DotMatrix>
             </View>
-            <View style={st.consumedBox}>
+            <ArcGauge
+              fraction={budget.fraction}
+              size={96}
+              color={budget.isOver ? palette.danger : palette.accent}
+            >
               <Text style={st.consumed}>
                 {budget.consumedKcal.toLocaleString()}
               </Text>
               <Text style={st.consumedLabel}>
                 of {budget.targetKcal.toLocaleString()}
               </Text>
-            </View>
+            </ArcGauge>
           </View>
-          <ProgressBar fraction={budget.fraction} over={budget.isOver} />
           <View style={st.macroLine}>
             <MacroChip
               text={`P ${sum.proteinG}${proteinTarget ? ` / ${proteinTarget}` : ''}g`}

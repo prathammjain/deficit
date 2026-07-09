@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "deficit",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.prathammjain.deficit"
@@ -14,7 +14,7 @@
     "android": {
       "package": "com.prathammjain.deficit",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#EDEAE4",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -30,11 +30,11 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0F0D17",
+          "backgroundColor": "#EDEAE4",
           "android": {
             "image": "./assets/images/splash-icon.png",
             "imageWidth": 76,
-            "backgroundColor": "#0F0D17"
+            "backgroundColor": "#EDEAE4"
           }
         }
       ]

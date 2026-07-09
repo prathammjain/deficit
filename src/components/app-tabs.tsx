@@ -4,7 +4,7 @@ import { palette } from '@/constants/palette';
 import { Colors } from '@/constants/theme';
 
 export default function AppTabs() {
-  // Dark-only app: the deep charcoal theme is fixed, with the peach accent on
+  // Light-only app: the warm bone theme is fixed, with the orange accent on
   // the selected tab.
   const colors = Colors.dark;
 

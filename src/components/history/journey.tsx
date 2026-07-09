@@ -1,7 +1,12 @@
 import { Text, View } from 'react-native';
 
 import { BarChart, LineChart } from '@/components/charts';
-import { Card, GlassSurface, SectionLabel } from '@/components/ui/primitives';
+import {
+  Card,
+  DotMatrix,
+  GlassSurface,
+  SectionLabel,
+} from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
 import {
   dayDeficit,
@@ -35,9 +40,9 @@ export function Journey({
       <GlassSurface padded style={st.heroCard}>
         <Text style={st.heroLabel}>Total deficit maintained</Text>
         <View style={st.heroNumberRow}>
-          <Text style={st.heroNumber}>
+          <DotMatrix style={st.heroNumber}>
             {summary.totalDeficitKcal.toLocaleString()}
-          </Text>
+          </DotMatrix>
           <Text style={st.heroUnit}>kcal</Text>
         </View>
         <Text style={st.heroSub}>

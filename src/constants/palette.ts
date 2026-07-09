@@ -1,64 +1,69 @@
 /**
- * palette.ts — the Deficit design system.
+ * palette.ts — the Deficit design system: "Warm Instrument".
  *
- * Direction: warm, light, Apple-glass. A soft cream canvas, near-black warm
- * type, content on rounded warm-white cards lifted by soft shadows (not
- * borders), and Apple-style glass on the floating chrome (tab bar, search/add
- * bar, hero). One restrained peach/terracotta accent carries emphasis — the
- * filled gauge, the active control, the key number. Bold numerals, generous
- * negative space.
+ * Direction (see docs/superpowers/specs/2026-07-09-warm-instrument-redesign):
+ * a warm bone canvas with near-black warm ink, content on soft outlined
+ * warm-white cards (hairline + one low shadow). Near-monochrome: the ONLY hue
+ * in the app is one vermillion orange — attention, the key number, the action
+ * pill. Calm/good states are confident ink; loud means "look here". Macros are
+ * ink tints (protein darkest), not colors. Hero numbers render in a dot-matrix
+ * display face; everything else is a neutral grotesque with tiny utility
+ * labels over strong values.
  *
- * Existing color keys are kept so every screen keeps working off the same
- * tokens; only the values changed (dark → light) and `shadow` was added.
+ * Legacy keys (glass*, blob*, surface*Solid) are kept so every screen keeps
+ * compiling; their values are remapped into this system.
  */
 
+const INK = '25,23,21'; // #191715 warm ink, used at several alphas
+
 export const palette = {
-  // Canvas — deep charcoal→indigo night, lit from behind by color glows.
-  bg: '#0F0D17', // deep indigo-charcoal canvas
-  bgElevated: '#16131F',
+  // Canvas — warm bone, calm and unlit.
+  bg: '#EDEAE4',
+  bgElevated: '#F2F0EB',
 
-  // Frosted DARK glass — white at low alpha over the dark canvas, so the color
-  // glows bleed through. Solid variants for the rare opaque need.
-  surface: 'rgba(255,255,255,0.11)', // frosted dark-glass card
-  surfaceSolid: '#1A1726', // opaque dark panel
-  surface2: 'rgba(255,255,255,0.075)', // frosted inset / secondary fill
-  surface2Solid: '#221E30', // opaque inset
-  surfaceBorder: 'rgba(255,255,255,0.10)', // legacy alias for hairline
-  hairline: 'rgba(255,255,255,0.10)',
+  // Surfaces — raised warm-white cards and inset wells.
+  surface: '#F7F5F1', // raised card
+  surfaceSolid: '#F7F5F1',
+  surface2: '#E7E4DD', // inset well (inputs, tracks, pressed)
+  surface2Solid: '#E7E4DD',
+  surfaceBorder: `rgba(${INK},0.12)`, // legacy alias for hairline
+  hairline: `rgba(${INK},0.12)`,
 
-  // Glass — floating chrome (cards, tab bar, hero) with backdrop blur.
-  glass: 'rgba(255,255,255,0.12)',
-  glassBorder: 'rgba(255,255,255,0.24)', // crisp light edge
-  glassHighlight: 'rgba(255,255,255,0.38)', // top sheen
-  glassDark: 'rgba(255,255,255,0.10)', // tab bar (frosted on dark)
+  // Legacy glass keys — remapped to the outlined-card treatment.
+  glass: '#F7F5F1',
+  glassBorder: `rgba(${INK},0.12)`,
+  glassHighlight: 'rgba(255,255,255,0.85)',
+  glassDark: '#F7F5F1', // tab bar is warm white now
 
-  // Background color glows the frosted surfaces refract. Vivid on the dark base.
-  blobA: 'rgba(244,169,104,0.62)', // neon peach (accent)
-  blobB: 'rgba(123,108,246,0.58)', // indigo / violet
-  blobC: 'rgba(232,104,150,0.46)', // rose
+  // Background blobs are gone — the canvas is plain.
+  blobA: 'transparent',
+  blobB: 'transparent',
+  blobC: 'transparent',
 
-  // Text — near-white, warm.
-  text: '#F5F2EC',
-  textMuted: 'rgba(245,242,236,0.64)',
-  textFaint: 'rgba(245,242,236,0.44)',
-  textDim: 'rgba(245,242,236,0.26)',
+  // Text — warm ink steps.
+  text: '#191715',
+  textMuted: `rgba(${INK},0.60)`,
+  textFaint: `rgba(${INK},0.38)`,
+  textDim: `rgba(${INK},0.24)`,
 
-  // The one accent — neon peach/amber, glowing on dark.
-  accent: '#F4A968',
-  accentSoft: 'rgba(244,169,104,0.22)',
-  accentBorder: 'rgba(244,169,104,0.55)',
-  accentText: '#221404', // dark text/icon on an accent fill
-  accentGlow: 'rgba(244,169,104,0.45)', // for hero-card glow
+  // The one color in the app — vermillion, sampled from the reference.
+  accent: '#F4511E',
+  accentSoft: 'rgba(244,81,30,0.10)',
+  accentBorder: 'rgba(244,81,30,0.45)',
+  accentText: '#FFFFFF',
+  accentGlow: 'rgba(244,81,30,0.25)',
 
-  // Macro + semantic — brightened to read on dark glass.
-  carb: '#CDBB95', // warm taupe
-  fat: '#F2AC63', // amber
-  protein: '#7FCBA8', // sage
-  warn: '#E8B45C',
-  danger: '#F26A60',
-  negative: '#F26A60',
-  good: '#76D89D',
-  positive: '#76D89D',
+  // Macros are ink tints, not hues: protein carries the most weight.
+  protein: '#191715',
+  carb: `rgba(${INK},0.55)`,
+  fat: `rgba(${INK},0.30)`,
+
+  // Semantics: attention = orange, calm/good = ink. No green, no red.
+  warn: '#F4511E',
+  danger: '#F4511E',
+  negative: '#F4511E',
+  good: '#191715',
+  positive: '#191715',
 } as const;
 
 /** 4px base spacing scale. */
@@ -73,7 +78,7 @@ export const space = {
   xxxl: 48,
 } as const;
 
-/** Corner radii. Soft and rounded, Apple-like. */
+/** Corner radii. Soft cards, full pills for actions. */
 export const radius = {
   sm: 12,
   md: 16,
@@ -83,45 +88,51 @@ export const radius = {
 } as const;
 
 /**
- * Elevation shadows for the dark theme. RN keys; react-native-web maps these to
- * box-shadow. Deep near-black drops give frosted cards their lift off the night
- * canvas (the crisp light borders + color glows do the rest).
+ * Light-canvas elevation: one soft low umbra per level (plus the hairline
+ * border cards carry). Warm-tinted so shadows don't go blue on the bone bg.
  */
 export const shadow = {
   soft: {
-    shadowColor: '#000000',
-    shadowOpacity: 0.28,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+    shadowColor: '#3D3831',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   card: {
-    shadowColor: '#000000',
-    shadowOpacity: 0.4,
-    shadowRadius: 28,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 8,
+    shadowColor: '#3D3831',
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
   raised: {
-    shadowColor: '#000000',
-    shadowOpacity: 0.5,
-    shadowRadius: 40,
-    shadowOffset: { width: 0, height: 20 },
-    elevation: 14,
+    shadowColor: '#3D3831',
+    shadowOpacity: 0.14,
+    shadowRadius: 28,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 8,
   },
 } as const;
 
-/** Type tokens used across screens for a consistent hierarchy. */
+/**
+ * Type tokens — the references' voice: tiny utility labels over strong values,
+ * heavy tight titles, and a dot-matrix display face for hero numerals only.
+ * (Faces load in global.css on web: Inter app-wide, Doto via [data-font].)
+ */
 export const type = {
-  /** Wide-tracked uppercase micro-label. */
+  /** Wide-tracked uppercase micro-label — brand + section markers. */
   eyebrow: { fontSize: 11, fontWeight: '700' as const, letterSpacing: 1.6 },
-  title: { fontSize: 28, fontWeight: '800' as const, letterSpacing: -0.5 },
+  /** Sentence-case card label — the "Current range" pattern. */
+  label: { fontSize: 12, fontWeight: '500' as const, letterSpacing: 0.1 },
+  /** The "167 km" value under a label. */
+  value: { fontSize: 17, fontWeight: '700' as const, letterSpacing: -0.2 },
+  title: { fontSize: 32, fontWeight: '800' as const, letterSpacing: -0.5 },
   heading: { fontSize: 20, fontWeight: '700' as const, letterSpacing: -0.2 },
   body: { fontSize: 15, fontWeight: '400' as const },
-  label: { fontSize: 13, fontWeight: '600' as const },
-  /** The single big number. Bold + tight tracking reads premium on light. */
-  hero: { fontSize: 64, fontWeight: '800' as const, letterSpacing: -2 },
-  stat: { fontSize: 26, fontWeight: '700' as const, letterSpacing: -0.5 },
+  /** The dot-matrix hero numeral (pair with the DotMatrix primitive). */
+  hero: { fontSize: 64, fontWeight: '900' as const, letterSpacing: 1 },
+  stat: { fontSize: 24, fontWeight: '700' as const, letterSpacing: -0.4 },
 } as const;
 
 export const maxContentWidth = 480;

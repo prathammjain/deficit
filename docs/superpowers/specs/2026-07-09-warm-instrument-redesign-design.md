@@ -22,13 +22,21 @@ changes.
 
 1. **Dot-matrix heroes: yes** — Doto font, numerals on exactly three surfaces:
    Home daily target, Log "left to eat" (accent orange), History total deficit.
-   Everything else stays Plus Jakarta Sans.
-2. **Accent: `#F04E23`** burnt orange — the only color.
-3. **Surfaces: soft-outlined cards** (hairline border + one soft shadow), not
+2. **Accent: `#F4511E`** — vermillion orange sampled from the charging
+   reference; the only color.
+3. **Typography stolen from the refs** — app font swaps Plus Jakarta Sans →
+   **Inter** (neutral grotesque, the refs' voice). Scale from the refs:
+   - `label`: 12px / medium / sentence case, muted — "Current range"
+   - `value`: 17px / 700 — "167 km", "43min"
+   - `title`: 32px / 800 / −0.5 tracking — the "Disorder" weight
+   - `eyebrow` (brand only): 11px caps, wide tracking
+   - `hero`: Doto, ~84px, numerals only
+   - `body` 15px / `heading` 20px 700 / `stat` 24px 700
+4. **Surfaces: soft-outlined cards** (hairline border + one soft shadow), not
    full neumorphic extrusion.
-4. **Macros: ink tints** — protein = ink 100%, carbs = ink ~55%, fat = ink
+5. **Macros: ink tints** — protein = ink 100%, carbs = ink ~55%, fat = ink
    ~30%. History split bar becomes grayscale.
-5. **Light-only.** Dark mode is dropped; status bar flips to dark-on-light.
+6. **Light-only.** Dark mode is dropped; status bar flips to dark-on-light.
 
 ## Palette (same token keys in `src/constants/palette.ts`, new values)
 
@@ -42,8 +50,8 @@ text        #191715      warm ink
 textMuted   rgba(25,23,21,0.60)
 textFaint   rgba(25,23,21,0.38)
 textDim     rgba(25,23,21,0.24)
-accent      #F04E23      the one orange; accentText #FFFFFF
-accentSoft  rgba(240,78,35,0.10)
+accent      #F4511E      the one orange (sampled from ref 1); accentText #FFFFFF
+accentSoft  rgba(244,81,30,0.10)
 protein     ink 100% · carb ink 55% · fat ink 30%   (tints, not hues)
 good        ink (calm)  · danger/warn/negative → accent orange (attention)
 shadow      single soft low umbra, rgba-black at low opacity
@@ -59,8 +67,9 @@ badges: high = quiet ink outline, medium/low = orange tint/outline.
 
 1. **Tokens** — rewrite palette values (keys unchanged), light shadow set,
    fix the stale "warm light" doc comment to describe the real direction.
-2. **Fonts** — load Doto (numerals) alongside Plus Jakarta Sans; add a
-   `type.heroDisplay` token. Fallback stack degrades to Jakarta bold.
+2. **Fonts** — swap the app family to Inter (400/600/700/800) and load Doto
+   for hero numerals; add a `type.heroDisplay` token. Fallback degrades to
+   the platform sans, then Inter bold for heroes if Doto fails to load.
 3. **Primitives** (`src/components/ui/primitives.tsx`, same APIs) —
    `GlassSurface`/`Card` → outlined soft card; `GlassBackdrop` → plain
    canvas; `PrimaryButton` → orange pill w/ white text; `ProgressBar` →

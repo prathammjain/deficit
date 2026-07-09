@@ -1,6 +1,6 @@
 import '@/global.css';
 
-import { DarkTheme, ThemeProvider } from 'expo-router';
+import { DefaultTheme, ThemeProvider } from 'expo-router';
 import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
@@ -11,16 +11,28 @@ import { SignInScreen } from '@/components/sign-in-screen';
 import { palette } from '@/constants/palette';
 import { AuthProvider, useAuth } from '@/lib/supabase/auth';
 
+// "Warm Instrument": light-only — bone canvas, warm ink, one orange accent.
+const NavTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: palette.accent,
+    background: palette.bg,
+    card: palette.surface,
+    text: palette.text,
+    border: palette.hairline,
+  },
+};
+
 export default function RootLayout() {
-  // The app is dark-only (deep charcoal glass), so the theme is fixed
-  // regardless of the device's light/dark setting.
+  // Light-only skin, fixed regardless of the device's light/dark setting.
   return (
     <AuthProvider>
       <Head>
         <title>Deficit — calorie tracking that doesn’t make up numbers</title>
       </Head>
-      <ThemeProvider value={DarkTheme}>
-        <StatusBar style="light" />
+      <ThemeProvider value={NavTheme}>
+        <StatusBar style="dark" />
         <AnimatedSplashOverlay />
         <AuthGate>
           <AppTabs />

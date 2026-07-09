@@ -1,5 +1,7 @@
 /**
- * charts.tsx — tiny, bespoke SVG charts tuned for the dark-glass dashboard.
+ * charts.tsx — tiny, bespoke SVG charts tuned for the warm-instrument
+ * dashboard: thin ink lines on faint hairlines, the single accent for the
+ * "eaten" series, orange only where attention is due (surplus bars).
  *
  * Deliberately not a charting library: a `LineChart` (area + line + optional
  * target line, with gaps for unlogged days) and a signed `BarChart` (deficit
@@ -7,8 +9,8 @@
  * onLayout so they fill whatever card they sit in.
  */
 
-import { useId, useState } from 'react';
-import { View, type LayoutChangeEvent } from 'react-native';
+import { useId, useState, type ReactNode } from 'react';
+import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Svg, {
   Circle,
   Defs,
@@ -20,6 +22,72 @@ import Svg, {
 } from 'react-native-svg';
 
 import { palette } from '@/constants/palette';
+
+/**
+ * ArcGauge — the reference's "48%" moment: a thin open arc sweeping with the
+ * fraction, content (the number) centered inside. Gauge opens at the bottom.
+ */
+export function ArcGauge({
+  fraction,
+  size = 96,
+  strokeWidth = 3,
+  color = palette.accent,
+  trackColor = palette.surface2,
+  children,
+}: {
+  fraction: number;
+  size?: number;
+  strokeWidth?: number;
+  color?: string;
+  trackColor?: string;
+  children?: ReactNode;
+}) {
+  const f = Math.max(0, Math.min(1, fraction));
+  const START = 225; // degrees, 0 = top, clockwise — opens at the bottom
+  const SWEEP = 270;
+  const r = (size - strokeWidth) / 2;
+  const c = size / 2;
+  const polar = (deg: number) => {
+    const rad = ((deg - 90) * Math.PI) / 180;
+    return { x: c + r * Math.cos(rad), y: c + r * Math.sin(rad) };
+  };
+  const arc = (from: number, to: number) => {
+    const s = polar(from);
+    const e = polar(to);
+    const large = to - from > 180 ? 1 : 0;
+    return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`;
+  };
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Svg width={size} height={size} style={StyleSheet.absoluteFill as any}>
+        <Path
+          d={arc(START, START + SWEEP)}
+          stroke={trackColor}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+        />
+        {f > 0 ? (
+          <Path
+            d={arc(START, START + SWEEP * f)}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeLinecap="round"
+          />
+        ) : null}
+      </Svg>
+      {children}
+    </View>
+  );
+}
 
 export function LineChart({
   values,
@@ -89,7 +157,7 @@ export function LineChart({
         <Svg width={w} height={height}>
           <Defs>
             <LinearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={color} stopOpacity={0.3} />
+              <Stop offset="0" stopColor={color} stopOpacity={0.14} />
               <Stop offset="1" stopColor={color} stopOpacity={0} />
             </LinearGradient>
           </Defs>
@@ -110,7 +178,7 @@ export function LineChart({
               key={i}
               d={d}
               stroke={color}
-              strokeWidth={2.5}
+              strokeWidth={2}
               fill="none"
               strokeLinejoin="round"
               strokeLinecap="round"

@@ -33,16 +33,10 @@ export const st = StyleSheet.create({
 
   heroCard: {
     marginTop: space.xl,
-    shadowColor: palette.accent,
-    shadowOpacity: 0.3,
-    shadowRadius: 40,
-    shadowOffset: { width: 0, height: 16 },
   },
   heroLabel: {
+    ...typo.label,
     color: palette.textMuted,
-    fontSize: 14,
-    fontWeight: '600',
-    letterSpacing: 0.2,
   },
   heroNumberRow: {
     flexDirection: 'row',
@@ -53,7 +47,7 @@ export const st = StyleSheet.create({
   heroNumber: { ...typo.hero, fontSize: 48, color: palette.text },
   heroUnit: { color: palette.textFaint, fontSize: 16, fontWeight: '600' },
   heroSub: {
-    color: palette.accent,
+    color: palette.textMuted,
     fontSize: 13,
     fontWeight: '600',
     marginTop: 2,

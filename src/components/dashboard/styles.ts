@@ -19,17 +19,10 @@ export const st = StyleSheet.create({
 
   heroCard: {
     marginTop: space.lg,
-    // peach glow that lifts the focal card off the dark canvas
-    shadowColor: palette.accent,
-    shadowOpacity: 0.3,
-    shadowRadius: 40,
-    shadowOffset: { width: 0, height: 16 },
   },
   heroLabel: {
+    ...typo.label,
     color: palette.textMuted,
-    fontSize: 14,
-    fontWeight: '600',
-    letterSpacing: 0.2,
   },
   heroNumberRow: {
     flexDirection: 'row',
