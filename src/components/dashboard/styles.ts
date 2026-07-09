@@ -16,6 +16,11 @@ export const st = StyleSheet.create({
     alignItems: 'center',
   },
   editLink: { color: palette.accent, fontSize: 14, fontWeight: '600' },
+  dateLine: {
+    ...typo.label,
+    color: palette.textFaint,
+    marginTop: space.xs,
+  },
 
   heroCard: {
     marginTop: space.lg,

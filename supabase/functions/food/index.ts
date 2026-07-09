@@ -431,11 +431,14 @@ Deno.serve(async (req: Request) => {
 
       const candidatesPerItem = await Promise.all(
         described.map(async (d) => {
-          const q = d.query || d.name;
-          const [indian, usda] = await Promise.all([
-            Promise.resolve(indianSearch(q, 3)),
-            usdaSearch(q, 5),
-          ]);
+          const usdaQuery = d.query || d.name;
+          // The curated Indian table is keyed on real dish names ("Paneer
+          // Paratha"), so match it on the display name — the generic USDA
+          // query ("wheat flatbread") would miss those entries. Fall back to
+          // the query only when the name finds nothing.
+          const byName = indianSearch(d.name, 3);
+          const indian = byName.length ? byName : indianSearch(usdaQuery, 3);
+          const usda = await usdaSearch(usdaQuery, 5);
           return [...indian, ...usda];
         }),
       );

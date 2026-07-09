@@ -73,3 +73,40 @@ export async function gatherDailyRecords(
     }),
   );
 }
+
+/**
+ * Every calendar day of the month containing `anchor` (day 1 → month end), in
+ * order, with full macro breakdown + weigh-in. Powers the History calendar,
+ * which lets the user pick any day and see that day's totals and deficit.
+ */
+export async function gatherMonthRecords(
+  anchor: Date,
+  store: KVStore = kv,
+): Promise<DayRecord[]> {
+  const year = anchor.getFullYear();
+  const month = anchor.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const dates: string[] = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    dates.push(todayKey(new Date(year, month, d)));
+  }
+
+  const weights = await loadWeights(store);
+  const weightByDate = new Map(weights.map((w) => [w.date, w.kg]));
+
+  return Promise.all(
+    dates.map(async (date): Promise<DayRecord> => {
+      const s = summarize(await loadDay(date, store));
+      return {
+        date,
+        logged: s.count > 0,
+        kcal: s.kcal,
+        proteinG: s.proteinG,
+        carbsG: s.carbsG,
+        fatG: s.fatG,
+        weightKg: weightByDate.get(date) ?? null,
+      };
+    }),
+  );
+}

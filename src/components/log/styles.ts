@@ -32,6 +32,11 @@ export const st = StyleSheet.create({
   },
   flex1: { flex: 1 },
   pressed: { opacity: 0.7 },
+  dateLine: {
+    ...typo.label,
+    color: palette.textFaint,
+    marginTop: space.xs,
+  },
 
   noProfile: { marginTop: space.xl },
   noProfileText: { color: palette.textMuted, fontSize: 15, lineHeight: 21 },

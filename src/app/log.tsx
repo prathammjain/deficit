@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
 import { computeBudget } from '@/lib/budget';
+import { formatToday } from '@/lib/date';
 import { probeProvider } from '@/lib/food';
 import {
   addEntry,
@@ -111,6 +112,7 @@ export default function LogScreen() {
     <Screen>
       <Eyebrow>Today</Eyebrow>
       <Title>Daily log</Title>
+      <Text style={st.dateLine}>{formatToday()}</Text>
 
       {budget == null ? (
         <Card style={st.noProfile}>

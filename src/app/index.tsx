@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
 import { estimateAdaptiveTdee, type AdaptiveTdee } from '@/lib/adaptive-tdee';
+import { formatToday } from '@/lib/date';
 import { gatherHistory } from '@/lib/history';
 import { todayKey } from '@/lib/log-store';
 import {
@@ -114,6 +115,7 @@ export default function HomeScreen() {
           <Text style={st.editLink}>Edit</Text>
         </Pressable>
       </View>
+      <Text style={st.dateLine}>{formatToday()}</Text>
       {/* Hero balance card — the focal point, lifted by an accent glow */}
       <GlassSurface padded style={st.heroCard}>
         <Text style={st.heroLabel}>Your daily target</Text>

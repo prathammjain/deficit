@@ -15,7 +15,7 @@ import {
   type HistoryTargets,
 } from '@/lib/history-stats';
 
-import { DayByDay } from './day-by-day';
+import { MonthCalendar } from './month-calendar';
 import { st } from './styles';
 
 export function Journey({
@@ -158,9 +158,9 @@ export function Journey({
         )}
       </Card>
 
-      {/* Day by day — the granular record, in-app and sleek */}
-      <SectionLabel>Day by day</SectionLabel>
-      <DayByDay records={records} targets={targets} />
+      {/* Calendar — pick any day to see its totals, macros, and deficit */}
+      <SectionLabel>Calendar</SectionLabel>
+      <MonthCalendar targets={targets} />
 
       <Text style={st.footnote}>
         Deficit uses your current maintenance (
