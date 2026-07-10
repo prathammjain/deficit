@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { PrimaryButton, Screen, webBlur } from '@/components/ui/primitives';
+import { PrimaryButton, Screen } from '@/components/ui/primitives';
 import { palette, radius, space, type as typo } from '@/constants/palette';
 import { useAuth } from '@/lib/supabase/auth';
 
@@ -201,13 +201,12 @@ const st = StyleSheet.create({
     marginTop: space.xxl,
     backgroundColor: palette.surface,
     borderWidth: 1,
-    borderColor: palette.glassBorder,
+    borderColor: palette.hairline,
     borderRadius: radius.md,
     paddingHorizontal: space.lg,
     paddingVertical: space.lg,
     color: palette.text,
     fontSize: 16,
-    ...webBlur(16),
   },
   googleBtn: {
     flexDirection: 'row',

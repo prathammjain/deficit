@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { DotMatrix, GlassBackdrop, webBlur } from '@/components/ui/primitives';
+import { DotMatrix } from '@/components/ui/primitives';
 import {
   maxContentWidth,
   palette,
@@ -122,7 +122,6 @@ export function OnboardingFlow({
 
   return (
     <View style={styles.root}>
-      <GlassBackdrop />
       <SafeAreaView style={styles.safe}>
         {/* Progress */}
         <View style={styles.progressTrack}>
@@ -505,7 +504,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: palette.hairline,
-    ...webBlur(16),
   },
   optionCardSelected: {
     borderColor: palette.accentBorder,
@@ -522,7 +520,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderWidth: 1,
     borderColor: palette.hairline,
-    ...webBlur(16),
   },
   listOptionSelected: {
     borderColor: palette.accentBorder,
@@ -589,6 +586,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
   },
-  nextBtnDisabled: { backgroundColor: palette.surface2Solid, opacity: 0.6 },
+  nextBtnDisabled: { backgroundColor: palette.surface2, opacity: 0.6 },
   nextText: { color: palette.accentText, fontSize: 17, fontWeight: '700' },
 });

@@ -9,9 +9,6 @@
  * ink tints (protein darkest), not colors. Hero numbers render in a dot-matrix
  * display face; everything else is a neutral grotesque with tiny utility
  * labels over strong values.
- *
- * Legacy keys (glass*, blob*, surface*Solid) are kept so every screen keeps
- * compiling; their values are remapped into this system.
  */
 
 const INK = '25,23,21'; // #191715 warm ink, used at several alphas
@@ -19,26 +16,11 @@ const INK = '25,23,21'; // #191715 warm ink, used at several alphas
 export const palette = {
   // Canvas — warm bone, calm and unlit.
   bg: '#EDEAE4',
-  bgElevated: '#F2F0EB',
 
   // Surfaces — raised warm-white cards and inset wells.
   surface: '#F7F5F1', // raised card
-  surfaceSolid: '#F7F5F1',
   surface2: '#E7E4DD', // inset well (inputs, tracks, pressed)
-  surface2Solid: '#E7E4DD',
-  surfaceBorder: `rgba(${INK},0.12)`, // legacy alias for hairline
   hairline: `rgba(${INK},0.12)`,
-
-  // Legacy glass keys — remapped to the outlined-card treatment.
-  glass: '#F7F5F1',
-  glassBorder: `rgba(${INK},0.12)`,
-  glassHighlight: 'rgba(255,255,255,0.85)',
-  glassDark: '#F7F5F1', // tab bar is warm white now
-
-  // Background blobs are gone — the canvas is plain.
-  blobA: 'transparent',
-  blobB: 'transparent',
-  blobC: 'transparent',
 
   // Text — warm ink steps.
   text: '#191715',
@@ -51,7 +33,6 @@ export const palette = {
   accentSoft: 'rgba(244,81,30,0.10)',
   accentBorder: 'rgba(244,81,30,0.45)',
   accentText: '#FFFFFF',
-  accentGlow: 'rgba(244,81,30,0.25)',
 
   // Macros are ink tints, not hues: protein carries the most weight.
   protein: '#191715',

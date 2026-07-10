@@ -46,3 +46,6 @@ example
 # generated native folders
 /ios
 /android
+
+# personal notes (stay local)
+thoughts.md

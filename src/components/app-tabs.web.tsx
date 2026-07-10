@@ -117,7 +117,7 @@ export function TabButton({
 export function BottomTabList(props: TabListProps) {
   return (
     <View style={styles.tabBarOuter} pointerEvents="box-none">
-      <GlassSurface dark style={styles.tabBar}>
+      <GlassSurface style={styles.tabBar}>
         <View {...props} style={styles.tabRow}>
           {props.children}
         </View>

@@ -66,6 +66,8 @@ export function ArcGauge({
         justifyContent: 'center',
       }}
     >
+      {/* react-native-svg types its style prop narrower than RN's ViewStyle;
+          the cast bridges the two for a plain absolute-fill. */}
       <Svg width={size} height={size} style={StyleSheet.absoluteFill as any}>
         <Path
           d={arc(START, START + SWEEP)}

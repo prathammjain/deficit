@@ -17,7 +17,7 @@ export const st = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: palette.surface,
     borderWidth: 1,
-    borderColor: palette.glassBorder,
+    borderColor: palette.hairline,
     alignItems: 'center',
   },
   rangePillActive: {

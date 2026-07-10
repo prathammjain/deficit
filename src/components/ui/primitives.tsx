@@ -9,7 +9,6 @@
 
 import { ReactNode } from 'react';
 import {
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -29,25 +28,6 @@ import {
   space,
   type,
 } from '@/constants/palette';
-
-/** Web backdrop-blur (no-op off web). Kept for callers; surfaces are opaque
- *  in this skin so it rarely has a visible effect. */
-export const webBlur = (px: number) =>
-  Platform.OS === 'web'
-    ? ({
-        backdropFilter: `blur(${px}px)`,
-        WebkitBackdropFilter: `blur(${px}px)`,
-      } as any)
-    : null;
-
-/**
- * The canvas behind every screen. The old dark skin painted blurred color
- * blobs here; the bone canvas is deliberately plain and calm, so this renders
- * nothing. Kept as a component so screens/onboarding don't change.
- */
-export function GlassBackdrop() {
-  return null;
-}
 
 export function Screen({
   children,
@@ -139,17 +119,14 @@ export function Card({
 /**
  * The raised surface for headline cards and floating chrome (hero, search
  * bar, tab bar). Same outlined-card language as Card, one step more lifted.
- * (`dark` is a legacy prop from the glass skin; accepted and ignored.)
  */
 export function GlassSurface({
   children,
   style,
-  dark: _dark = false,
   padded = false,
 }: {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
-  dark?: boolean;
   padded?: boolean;
 }) {
   return (
@@ -186,25 +163,6 @@ export function PrimaryButton({
       <Text style={[s.primaryBtnText, disabled && s.primaryBtnTextDisabled]}>
         {label}
       </Text>
-    </Pressable>
-  );
-}
-
-export function GhostButton({
-  label,
-  onPress,
-  style,
-}: {
-  label: string;
-  onPress: () => void;
-  style?: StyleProp<ViewStyle>;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [s.ghostBtn, pressed && s.pressed, style]}
-    >
-      <Text style={s.ghostBtnText}>{label}</Text>
     </Pressable>
   );
 }
@@ -290,13 +248,6 @@ const s = StyleSheet.create({
     letterSpacing: 0.2,
   },
   primaryBtnTextDisabled: { color: palette.textFaint },
-  ghostBtn: {
-    paddingVertical: space.lg,
-    paddingHorizontal: space.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ghostBtnText: { color: palette.textMuted, fontSize: 15, fontWeight: '500' },
   pressed: { opacity: 0.7 },
   track: {
     height: 3,

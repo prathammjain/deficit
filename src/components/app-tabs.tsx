@@ -1,16 +1,13 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
 import { palette } from '@/constants/palette';
-import { Colors } from '@/constants/theme';
 
 export default function AppTabs() {
   // Light-only app: the warm bone theme is fixed, with the orange accent on
   // the selected tab.
-  const colors = Colors.dark;
-
   return (
     <NativeTabs
-      backgroundColor={colors.background}
+      backgroundColor={palette.bg}
       indicatorColor={palette.accentSoft}
       labelStyle={{ selected: { color: palette.accent } }}
     >
