@@ -1,11 +1,11 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
 import type { PropsWithChildren } from 'react';
 
-const TITLE = 'Deficit — calorie tracking that doesn’t make up numbers';
+const TITLE = 'Deficit: calorie tracking that doesn’t make up numbers';
 const DESCRIPTION =
-  'Log meals in plain language — “2 roti, mom’s dal, 1 katori rice” — and get ' +
-  'calories and macros you can trust. AI grounded on real food data, built for ' +
-  'Indian food.';
+  'Log meals in plain language, like “2 roti, mom’s dal, 1 katori rice”, and ' +
+  'get calories and macros you can trust. AI grounded on real food data, ' +
+  'built for Indian food.';
 const URL = 'https://deficit-cyan.vercel.app';
 
 /**

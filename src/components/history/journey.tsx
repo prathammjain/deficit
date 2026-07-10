@@ -54,7 +54,7 @@ export function Journey({
             label={`of ${summary.daysInRange} days logged`}
           />
           <View style={st.heroStatDivider} />
-          <HeroStat value={`${summary.currentStreak}🔥`} label="day streak" />
+          <HeroStat value={`${summary.currentStreak}`} label="day streak" />
           <View style={st.heroStatDivider} />
           <HeroStat
             value={

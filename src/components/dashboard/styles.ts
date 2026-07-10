@@ -15,7 +15,6 @@ export const st = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  editLink: { color: palette.accent, fontSize: 14, fontWeight: '600' },
   dateLine: {
     ...typo.label,
     color: palette.textFaint,
@@ -179,7 +178,12 @@ export const st = StyleSheet.create({
     alignItems: 'center',
   },
   weekLabel: { ...typo.label, color: palette.textMuted },
-  weekValue: { ...typo.stat, color: palette.text, marginTop: space.sm },
+  weekValue: {
+    ...typo.stat,
+    color: palette.text,
+    marginTop: space.sm,
+    fontVariant: ['tabular-nums'],
+  },
   weekGoal: { color: palette.textFaint, fontSize: 12, marginTop: space.xxs },
   weekBody: {
     color: palette.textMuted,

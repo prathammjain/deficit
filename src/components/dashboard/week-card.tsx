@@ -55,12 +55,12 @@ export function WeekCard({
         </>
       ) : state === 'building' ? (
         <Text style={st.weekBody}>
-          {loggedDays} of 7 days logged — log {5 - loggedDays} more to see
+          {loggedDays} of 7 days logged. Log {5 - loggedDays} more to see
           your weekly prediction.
         </Text>
       ) : (
         <Text style={st.weekBody}>
-          Starting fresh — log today to begin a new week.
+          Starting fresh. Log today to begin a new week.
         </Text>
       )}
     </Card>

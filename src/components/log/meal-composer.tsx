@@ -50,7 +50,7 @@ export function MealComposer({
         <Text style={st.searchIcon}>⌕</Text>
         <TextInput
           style={st.searchInput}
-          placeholder="Add a food — roti, dal, paneer…"
+          placeholder="Add a food. Try roti, dal, paneer"
           placeholderTextColor={palette.textDim}
           value={query}
           onChangeText={setQuery}
@@ -207,7 +207,7 @@ function DescribeMeal({
     <Card style={st.describeCard}>
       <TextInput
         style={st.describeInput}
-        placeholder="“2 roti, mom’s dal, 1 katori rice, salad” — say it your way"
+        placeholder="“2 roti, mom’s dal, 1 katori rice, salad”. Say it your way."
         placeholderTextColor={palette.textDim}
         value={text}
         onChangeText={setText}

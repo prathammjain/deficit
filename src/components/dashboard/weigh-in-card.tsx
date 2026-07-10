@@ -44,7 +44,7 @@ export function WeighInCard({
       <Text style={st.weighHint}>
         {last != null
           ? `Last logged ${last} kg. Weigh in each morning for the best read.`
-          : 'Weigh in each morning — same time, same conditions.'}
+          : 'Weigh in each morning, same time, same conditions.'}
       </Text>
     </GlassSurface>
   );

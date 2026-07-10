@@ -29,7 +29,7 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <Head>
-        <title>Deficit — calorie tracking that doesn’t make up numbers</title>
+        <title>Deficit: calorie tracking that doesn’t make up numbers</title>
       </Head>
       <ThemeProvider value={NavTheme}>
         <StatusBar style="dark" />

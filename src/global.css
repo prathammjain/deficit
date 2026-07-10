@@ -43,3 +43,21 @@ body {
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* Focused text fields get the accent underline (the number-field language
+   from onboarding), instead of the browser's default ring. */
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: inset 0 -2px 0 0 #f4511e;
+}
+
+/* Gentle hover feedback on anything pressable (desktop only). */
+[role='button'] {
+  transition: opacity 0.15s ease;
+}
+@media (hover: hover) {
+  [role='button']:hover {
+    opacity: 0.88;
+  }
+}

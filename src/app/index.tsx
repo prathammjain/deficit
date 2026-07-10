@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { AdaptiveCard } from '@/components/dashboard/adaptive-card';
@@ -8,6 +8,7 @@ import { st } from '@/components/dashboard/styles';
 import { WeekCard } from '@/components/dashboard/week-card';
 import { WeighInCard } from '@/components/dashboard/weigh-in-card';
 import { OnboardingFlow } from '@/components/onboarding-flow';
+import { Monogram } from '@/components/ui/monogram';
 import {
   Card,
   DotMatrix,
@@ -31,14 +32,15 @@ import {
   saveProfile,
   type StoredProfile,
 } from '@/lib/profile-store';
+import { useAuth } from '@/lib/supabase/auth';
 import { computeTargets, type ProfileInput } from '@/lib/targets';
 import { predictWeeklyLoss } from '@/lib/weekly-prediction';
 import { latestWeight, setWeight } from '@/lib/weight-store';
 
 export default function HomeScreen() {
+  const { session } = useAuth();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<StoredProfile | null>(null);
-  const [editing, setEditing] = useState(false);
   const [adaptive, setAdaptive] = useState<AdaptiveTdee | null>(null);
   const [history, setHistory] = useState<DailyDatum[]>([]);
   const [lastWeight, setLastWeight] = useState<number | null>(null);
@@ -74,7 +76,6 @@ export default function HomeScreen() {
   const handleComplete = useCallback(
     async (input: ProfileInput) => {
       await saveProfile(input);
-      setEditing(false);
       await refresh();
     },
     [refresh],
@@ -104,14 +105,9 @@ export default function HomeScreen() {
     );
   }
 
-  if (!profile || editing) {
-    return (
-      <OnboardingFlow
-        initial={profile ?? undefined}
-        onComplete={handleComplete}
-        onCancel={profile ? () => setEditing(false) : undefined}
-      />
-    );
+  // First-run setup. Editing an existing profile lives on the Profile screen.
+  if (!profile) {
+    return <OnboardingFlow onComplete={handleComplete} />;
   }
 
   const t = computeTargets(profile);
@@ -120,8 +116,12 @@ export default function HomeScreen() {
     <Screen>
       <View style={st.headerRow}>
         <Eyebrow>Deficit</Eyebrow>
-        <Pressable onPress={() => setEditing(true)} hitSlop={10}>
-          <Text style={st.editLink}>Edit</Text>
+        <Pressable
+          onPress={() => router.push('/profile')}
+          hitSlop={8}
+          accessibilityLabel="Open profile"
+        >
+          <Monogram letter={session?.user?.email} size={34} />
         </Pressable>
       </View>
       <Text style={st.dateLine}>{formatToday()}</Text>
@@ -193,7 +193,7 @@ export default function HomeScreen() {
         />
       </Card>
 
-      {t.safetyNote ? <Text style={st.safety}>⚠︎ {t.safetyNote}</Text> : null}
+      {t.safetyNote ? <Text style={st.safety}>{t.safetyNote}</Text> : null}
 
       <Text style={st.disclaimer}>
         An estimate, not medical advice. Consult a professional for medical

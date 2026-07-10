@@ -38,10 +38,10 @@ export const st = StyleSheet.create({
     marginTop: space.xs,
   },
 
-  noProfile: { marginTop: space.xl },
+  noProfile: { marginTop: space.lg },
   noProfileText: { color: palette.textMuted, fontSize: 15, lineHeight: 21 },
 
-  summaryCard: { marginTop: space.xl },
+  summaryCard: { marginTop: space.lg },
   summaryTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -58,7 +58,12 @@ export const st = StyleSheet.create({
     color: palette.accent,
     marginTop: 2,
   },
-  consumed: { color: palette.text, fontSize: 16, fontWeight: '700' },
+  consumed: {
+    color: palette.text,
+    fontSize: 16,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
   consumedLabel: { color: palette.textFaint, fontSize: 10, marginTop: 1 },
 
   macroLine: {
@@ -107,7 +112,12 @@ export const st = StyleSheet.create({
   resultRowBorder: { borderTopWidth: 1, borderTopColor: palette.hairline },
   resultName: { color: palette.text, fontSize: 15, fontWeight: '600' },
   resultSub: { color: palette.textFaint, fontSize: 12, marginTop: 2 },
-  resultKcal: { color: palette.text, fontSize: 15, fontWeight: '700' },
+  resultKcal: {
+    color: palette.text,
+    fontSize: 15,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
   resultAdd: { color: palette.accent, fontSize: 18, fontWeight: '700' },
 
   secondaryRow: { flexDirection: 'row', gap: space.sm, marginTop: space.md },
@@ -239,7 +249,12 @@ export const st = StyleSheet.create({
     fontWeight: '500',
     flexShrink: 1,
   },
-  entryFlag: { color: palette.warn, fontSize: 13 },
+  entryFlagDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: palette.warn,
+  },
   entrySub: { color: palette.textFaint, fontSize: 13, marginTop: 2 },
   entryKcal: {
     color: palette.text,
@@ -247,6 +262,7 @@ export const st = StyleSheet.create({
     fontWeight: '700',
     minWidth: 44,
     textAlign: 'right',
+    fontVariant: ['tabular-nums'],
   },
   removeBtn: { paddingHorizontal: space.xs },
   removeText: { color: palette.textFaint, fontSize: 15 },

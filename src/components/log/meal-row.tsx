@@ -23,9 +23,7 @@ export function MealRow({
             {entry.label}
           </Text>
           {/* Quiet by default; flag only the genuinely-uncertain ones. */}
-          {entry.confidence === 'low' ? (
-            <Text style={st.entryFlag}>⚠</Text>
-          ) : null}
+          {entry.confidence === 'low' ? <View style={st.entryFlagDot} /> : null}
         </View>
         <Text style={st.entrySub}>
           {portioned

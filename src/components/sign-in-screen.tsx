@@ -54,9 +54,10 @@ export function SignInScreen() {
   };
 
   return (
-    <Screen>
+    <Screen contentStyle={st.grow}>
       <View style={st.wrap}>
         <Text style={st.brand}>DEFICIT</Text>
+        <Text style={st.tagline}>Calorie tracking you can trust.</Text>
 
         {sent ? (
           <>
@@ -65,6 +66,9 @@ export function SignInScreen() {
               We sent a sign-in link to{'\n'}
               <Text style={st.email}>{email.trim()}</Text>. Open it on this
               device to continue.
+            </Text>
+            <Text style={st.sentHint}>
+              Didn’t get it? Check your spam folder.
             </Text>
             <Text
               style={st.resend}
@@ -102,7 +106,7 @@ export function SignInScreen() {
               </>
             ) : null}
             <Text style={st.body}>
-              Enter your email and we’ll send a magic link — no password needed.
+              Enter your email and we’ll send a magic link. No password needed.
             </Text>
             <TextInput
               style={st.input}
@@ -129,6 +133,9 @@ export function SignInScreen() {
           </>
         )}
       </View>
+      <Text style={st.footer}>
+        Deficit provides estimates, not medical advice.
+      </Text>
     </Screen>
   );
 }
@@ -158,11 +165,29 @@ function GoogleLogo() {
 }
 
 const st = StyleSheet.create({
+  grow: { flexGrow: 1 },
   wrap: { flex: 1, justifyContent: 'center', minHeight: 420 },
   brand: {
     ...typo.eyebrow,
     color: palette.accent,
+  },
+  tagline: {
+    color: palette.textMuted,
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: space.sm,
     marginBottom: space.xxl,
+  },
+  sentHint: {
+    color: palette.textFaint,
+    fontSize: 13,
+    marginTop: space.lg,
+  },
+  footer: {
+    color: palette.textDim,
+    fontSize: 12,
+    textAlign: 'center',
+    paddingBottom: space.lg,
   },
   title: { ...typo.title, color: palette.text },
   body: {

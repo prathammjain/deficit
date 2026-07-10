@@ -63,6 +63,7 @@ export const st = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: -0.3,
+    fontVariant: ['tabular-nums'],
   },
   heroStatLabel: { color: palette.textFaint, fontSize: 11, marginTop: space.xxs },
   heroStatDivider: {
@@ -78,7 +79,12 @@ export const st = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: space.md,
   },
-  statBig: { ...typo.stat, fontSize: 24, color: palette.text },
+  statBig: {
+    ...typo.stat,
+    fontSize: 24,
+    color: palette.text,
+    fontVariant: ['tabular-nums'],
+  },
   statUnit: { color: palette.textFaint, fontSize: 12, marginTop: 2 },
 
   legend: { alignItems: 'flex-end', gap: space.xs },
@@ -105,6 +111,7 @@ export const st = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     marginTop: 4,
+    fontVariant: ['tabular-nums'],
   },
   macroSub: { color: palette.textFaint, fontSize: 12, fontWeight: '500' },
 
@@ -182,7 +189,12 @@ export const st = StyleSheet.create({
     marginTop: space.md,
     marginBottom: space.sm,
   },
-  calSumKcal: { color: palette.text, fontSize: 20, fontWeight: '800' },
+  calSumKcal: {
+    color: palette.text,
+    fontSize: 20,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
+  },
   calSumKcalUnit: {
     color: palette.textFaint,
     fontSize: 13,
@@ -199,6 +211,7 @@ export const st = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     marginTop: 4,
+    fontVariant: ['tabular-nums'],
   },
   calEmpty: {
     color: palette.textMuted,

@@ -13,7 +13,7 @@ const STATUS_COPY: Record<ProviderStatus, { dot: string; text: string }> = {
   'local-only': { dot: palette.textFaint, text: 'Local food table' },
   checking: { dot: palette.textFaint, text: 'Checking AI engine…' },
   online: { dot: palette.good, text: 'AI-grounded · USDA' },
-  offline: { dot: palette.warn, text: 'AI engine offline — using local foods' },
+  offline: { dot: palette.warn, text: 'AI engine offline, using local foods' },
 };
 
 /** A quiet line that tells the user which food engine is actually answering. */

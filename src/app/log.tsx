@@ -177,7 +177,7 @@ export default function LogScreen() {
         ))}
         {meals.length === 0 ? (
           <Text style={st.empty}>
-            Nothing logged yet — add your first meal above.
+            Nothing logged yet. Add your first meal above.
           </Text>
         ) : null}
       </View>

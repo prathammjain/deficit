@@ -32,9 +32,9 @@ export function AdaptiveCard({
       <Card>
         <Text style={st.adaptiveLead}>Learning your real maintenance</Text>
         <Text style={st.adaptiveBody}>
-          The formula is a starting estimate. Keep logging meals and weighing in
-          — after about a week I’ll back out your true expenditure from the data
-          and fine-tune this target.
+          The formula is a starting estimate. Keep logging meals and weighing
+          in. After about a week I’ll back out your true expenditure from the
+          data and fine-tune this target.
         </Text>
         <View style={st.adaptiveProgressRow}>
           <Text style={st.adaptiveProgressText}>{days}/7 days logged</Text>

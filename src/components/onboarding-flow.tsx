@@ -18,8 +18,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { GlassBackdrop, webBlur } from '@/components/ui/primitives';
-import { maxContentWidth, palette } from '@/constants/palette';
+import { DotMatrix, GlassBackdrop, webBlur } from '@/components/ui/primitives';
+import {
+  maxContentWidth,
+  palette,
+  radius,
+  shadow,
+  type as typo,
+} from '@/constants/palette';
 import {
   ACTIVITY_FACTORS,
   computeTargets,
@@ -35,13 +41,13 @@ const ACTIVITY_OPTIONS: {
   hint: string;
 }[] = [
   { value: 'sedentary', title: 'Sedentary', hint: 'Desk job, little exercise' },
-  { value: 'light', title: 'Light', hint: 'Light exercise 1–3 days/week' },
-  { value: 'moderate', title: 'Moderate', hint: 'Exercise 3–5 days/week' },
-  { value: 'active', title: 'Active', hint: 'Hard exercise 6–7 days/week' },
+  { value: 'light', title: 'Light', hint: 'Light exercise 1 to 3 days a week' },
+  { value: 'moderate', title: 'Moderate', hint: 'Exercise 3 to 5 days a week' },
+  { value: 'active', title: 'Active', hint: 'Hard exercise 6 to 7 days a week' },
   {
     value: 'very_active',
     title: 'Very active',
-    hint: 'Physical job or 2x/day training',
+    hint: 'Physical job or training twice a day',
   },
 ];
 
@@ -53,6 +59,7 @@ const RATE_OPTIONS: { value: number; title: string; hint: string }[] = [
 ];
 
 type StepId =
+  | 'welcome'
   | 'sex'
   | 'age'
   | 'height'
@@ -60,7 +67,7 @@ type StepId =
   | 'activity'
   | 'rate'
   | 'review';
-const STEPS: StepId[] = [
+const QUESTION_STEPS: StepId[] = [
   'sex',
   'age',
   'height',
@@ -81,8 +88,23 @@ export function OnboardingFlow({
 }) {
   const [draft, setDraft] = useState<Draft>(initial ?? {});
   const [index, setIndex] = useState(0);
-  const step = STEPS[index];
-  const isLast = index === STEPS.length - 1;
+  // Fresh users get a branded welcome first; editing jumps straight in.
+  const steps = useMemo<StepId[]>(
+    () => (initial ? QUESTION_STEPS : ['welcome', ...QUESTION_STEPS]),
+    [initial],
+  );
+  const step = steps[index];
+  const isLast = index === steps.length - 1;
+  // Question numbering excludes the welcome step.
+  const stepLabel = `Step ${initial ? index + 1 : index} of ${QUESTION_STEPS.length}`;
+  const nextLabel =
+    step === 'welcome'
+      ? 'Get started'
+      : isLast
+        ? initial
+          ? 'Save'
+          : 'Start tracking'
+        : 'Next';
 
   const set = (patch: Draft) => setDraft((d) => ({ ...d, ...patch }));
 
@@ -107,7 +129,7 @@ export function OnboardingFlow({
           <View
             style={[
               styles.progressFill,
-              { width: `${((index + 1) / STEPS.length) * 100}%` },
+              { width: `${((index + 1) / steps.length) * 100}%` },
             ]}
           />
         </View>
@@ -116,11 +138,22 @@ export function OnboardingFlow({
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
+          {step === 'welcome' && (
+            <View style={styles.welcomeWrap}>
+              <Text style={styles.welcomeBrand}>DEFICIT</Text>
+              <Text style={styles.title}>Let’s build your plan</Text>
+              <Text style={styles.hint}>
+                A daily calorie target built from your numbers, grounded in
+                real food data. It takes about a minute.
+              </Text>
+            </View>
+          )}
+
           {step === 'sex' && (
             <Question
-              eyebrow={`Step ${index + 1} of ${STEPS.length}`}
+              eyebrow={stepLabel}
               title="What's your biological sex?"
-              hint="Used by the Mifflin-St Jeor formula — it changes the calorie math."
+              hint="Used by the Mifflin-St Jeor formula. It changes the calorie math."
             >
               <OptionRow>
                 <OptionCard
@@ -139,7 +172,7 @@ export function OnboardingFlow({
 
           {step === 'age' && (
             <Question
-              eyebrow={`Step ${index + 1} of ${STEPS.length}`}
+              eyebrow={stepLabel}
               title="How old are you?"
               hint="Years."
             >
@@ -154,7 +187,7 @@ export function OnboardingFlow({
 
           {step === 'height' && (
             <Question
-              eyebrow={`Step ${index + 1} of ${STEPS.length}`}
+              eyebrow={stepLabel}
               title="How tall are you?"
               hint="Centimetres."
             >
@@ -169,7 +202,7 @@ export function OnboardingFlow({
 
           {step === 'weight' && (
             <Question
-              eyebrow={`Step ${index + 1} of ${STEPS.length}`}
+              eyebrow={stepLabel}
               title="What's your current weight?"
               hint="Kilograms. You can update this any time."
             >
@@ -184,9 +217,9 @@ export function OnboardingFlow({
 
           {step === 'activity' && (
             <Question
-              eyebrow={`Step ${index + 1} of ${STEPS.length}`}
+              eyebrow={stepLabel}
               title="How active are you?"
-              hint="Be honest — overestimating is the most common mistake."
+              hint="Be honest. Overestimating is the most common mistake."
             >
               <View style={styles.stack}>
                 {ACTIVITY_OPTIONS.map((o) => (
@@ -205,9 +238,9 @@ export function OnboardingFlow({
 
           {step === 'rate' && (
             <Question
-              eyebrow={`Step ${index + 1} of ${STEPS.length}`}
+              eyebrow={stepLabel}
               title="How fast do you want to lose?"
-              hint="We cap the pace for safety — faster isn't better, and it costs muscle."
+              hint="We cap the pace for safety. Faster is not better, and it costs muscle."
             >
               <View style={styles.stack}>
                 {RATE_OPTIONS.map((o) => (
@@ -238,7 +271,7 @@ export function OnboardingFlow({
             disabled={!canAdvance}
             onPress={next}
           >
-            <Text style={styles.nextText}>{isLast ? 'Start' : 'Next'}</Text>
+            <Text style={styles.nextText}>{nextLabel}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -257,7 +290,9 @@ function ReviewStep({ draft }: { draft: Draft }) {
     >
       {t ? (
         <View style={styles.previewCard}>
-          <Text style={styles.previewNumber}>{t.targetKcal}</Text>
+          <DotMatrix style={styles.previewNumber}>
+            {t.targetKcal.toLocaleString()}
+          </DotMatrix>
           <Text style={styles.previewUnit}>kcal / day</Text>
           <View style={styles.previewMacros}>
             <Text style={styles.previewMacro}>P {t.proteinG}g</Text>
@@ -267,7 +302,7 @@ function ReviewStep({ draft }: { draft: Draft }) {
             <Text style={styles.previewMacro}>F {t.fatG}g</Text>
           </View>
           {t.safetyNote ? (
-            <Text style={styles.previewSafety}>⚠︎ {t.safetyNote}</Text>
+            <Text style={styles.previewSafety}>{t.safetyNote}</Text>
           ) : null}
         </View>
       ) : (
@@ -281,6 +316,8 @@ function ReviewStep({ draft }: { draft: Draft }) {
 
 function stepIsValid(step: StepId, d: Draft): boolean {
   switch (step) {
+    case 'welcome':
+      return true;
     case 'sex':
       return d.sex === 'male' || d.sex === 'female';
     case 'age':
@@ -424,14 +461,14 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: palette.bg },
   safe: { flex: 1 },
   progressTrack: {
-    height: 4,
-    backgroundColor: palette.surface,
+    height: 3,
+    backgroundColor: palette.surface2,
     marginHorizontal: 24,
     marginTop: 8,
-    borderRadius: 2,
+    borderRadius: radius.pill,
     overflow: 'hidden',
   },
-  progressFill: { height: 4, backgroundColor: palette.accent },
+  progressFill: { height: 3, backgroundColor: palette.accent },
   content: {
     paddingHorizontal: 24,
     paddingTop: 32,
@@ -441,12 +478,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     flexGrow: 1,
   },
-  eyebrow: {
-    color: palette.textFaint,
-    fontSize: 12,
-    letterSpacing: 3,
-    fontWeight: '600',
-  },
+  eyebrow: { ...typo.eyebrow, color: palette.textFaint },
+  welcomeWrap: { flex: 1, justifyContent: 'center' },
+  welcomeBrand: { ...typo.eyebrow, color: palette.accent, marginBottom: 16 },
   title: {
     color: palette.text,
     fontSize: 28,
@@ -470,11 +504,11 @@ const styles = StyleSheet.create({
     paddingVertical: 28,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: palette.glassBorder,
+    borderColor: palette.hairline,
     ...webBlur(16),
   },
   optionCardSelected: {
-    borderColor: palette.accent,
+    borderColor: palette.accentBorder,
     backgroundColor: palette.accentSoft,
   },
   optionLabel: { color: palette.textMuted, fontSize: 18, fontWeight: '700' },
@@ -487,11 +521,11 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     paddingHorizontal: 18,
     borderWidth: 1,
-    borderColor: palette.glassBorder,
+    borderColor: palette.hairline,
     ...webBlur(16),
   },
   listOptionSelected: {
-    borderColor: palette.accent,
+    borderColor: palette.accentBorder,
     backgroundColor: palette.accentSoft,
   },
   listTitle: { color: palette.textMuted, fontSize: 17, fontWeight: '700' },
@@ -518,15 +552,10 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: palette.surface,
     borderWidth: 1,
-    borderColor: palette.glassBorder,
-    ...webBlur(18),
+    borderColor: palette.hairline,
+    ...shadow.card,
   },
-  previewNumber: {
-    color: palette.text,
-    fontSize: 64,
-    fontWeight: '600',
-    letterSpacing: -3,
-  },
+  previewNumber: { ...typo.hero, fontSize: 56, color: palette.text },
   previewUnit: { color: palette.textFaint, fontSize: 16, marginTop: 4 },
   previewMacros: { flexDirection: 'row', gap: 8, marginTop: 16 },
   previewMacro: { color: palette.text, fontSize: 15, fontWeight: '600' },
@@ -556,7 +585,7 @@ const styles = StyleSheet.create({
   nextBtn: {
     flex: 1,
     backgroundColor: palette.accent,
-    borderRadius: 16,
+    borderRadius: radius.pill,
     paddingVertical: 16,
     alignItems: 'center',
   },

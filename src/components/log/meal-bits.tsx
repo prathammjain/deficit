@@ -28,7 +28,7 @@ export function Stepper({
         hitSlop={8}
         style={st.stepBtn}
       >
-        <Text style={st.stepText}>＋</Text>
+        <Text style={st.stepText}>+</Text>
       </Pressable>
     </View>
   );
@@ -37,7 +37,7 @@ export function Stepper({
 const CONFIDENCE: Record<Confidence, { label: string; color: string }> = {
   high: { label: '✓ good match', color: palette.good },
   medium: { label: '≈ likely', color: palette.textFaint },
-  low: { label: '⚠ check this', color: palette.warn },
+  low: { label: 'check this', color: palette.warn },
 };
 
 /** A tiny trust signal on each parsed item — never hide a guess. */
