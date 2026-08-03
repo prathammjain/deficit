@@ -23,7 +23,7 @@ function detectIOS(): boolean {
  *
  * - Android / Chrome: triggers the browser's native install prompt.
  * - iOS / Safari: shows a one-line instruction ("Share -> Add to Home Screen").
- * - Desktop browsers: same as Android when supported, otherwise the instruction.
+ * - Desktop / unsupported: shows the same manual instruction.
  */
 export function AddToHomeScreenButton() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(
@@ -55,16 +55,7 @@ export function AddToHomeScreenButton() {
   if (Platform.OS !== 'web') return null;
   if (installed) return null;
 
-  // iOS / Safari: no beforeinstallprompt — show the manual instruction.
-  if (isIOS && !deferred) {
-    return (
-      <Text style={s.iosHint}>
-        {'Tap the Share button below, then "Add to Home Screen".'}
-      </Text>
-    );
-  }
-
-  // Android / desktop with install prompt support.
+  // Browser supports the install prompt (Android Chrome, Edge, etc.)
   if (deferred) {
     return (
       <Pressable
@@ -76,7 +67,14 @@ export function AddToHomeScreenButton() {
     );
   }
 
-  return null;
+  // iOS / Safari / unsupported: always show the manual instruction.
+  return (
+    <Text style={s.hint}>
+      {isIOS
+        ? 'Tap the Share button below, then "Add to Home Screen".'
+        : 'Open in Chrome or Edge, then use the browser menu: "Install app" or "Add to Home Screen".'}
+    </Text>
+  );
 }
 
 const s = StyleSheet.create({
@@ -90,7 +88,7 @@ const s = StyleSheet.create({
   },
   btnText: { color: palette.text, fontSize: 15, fontWeight: '600' },
   pressed: { opacity: 0.7 },
-  iosHint: {
+  hint: {
     color: palette.textMuted,
     fontSize: 13,
     lineHeight: 19,
