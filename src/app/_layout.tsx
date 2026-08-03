@@ -7,7 +7,6 @@ import { ActivityIndicator, Platform, View } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
-import { InstallBanner } from '@/components/install-banner';
 import { SignInScreen } from '@/components/sign-in-screen';
 import { palette } from '@/constants/palette';
 import { AuthProvider, useAuth } from '@/lib/supabase/auth';
@@ -45,7 +44,6 @@ export default function RootLayout() {
         <AuthGate>
           <AppTabs />
         </AuthGate>
-        <InstallBanner />
       </ThemeProvider>
     </AuthProvider>
   );

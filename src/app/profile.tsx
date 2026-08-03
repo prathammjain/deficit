@@ -17,6 +17,7 @@ import {
 import Constants from 'expo-constants';
 
 import { OnboardingFlow } from '@/components/onboarding-flow';
+import { AddToHomeScreenButton } from '@/components/add-to-home-screen';
 import { Monogram } from '@/components/ui/monogram';
 import {
   Card,
@@ -182,6 +183,9 @@ export default function ProfileScreen() {
           </Pressable>
         </>
       ) : null}
+
+      <SectionLabel>Quick access</SectionLabel>
+      <AddToHomeScreenButton />
 
       <Text style={s.version}>Deficit v{version}</Text>
     </Screen>
