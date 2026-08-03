@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { palette, radius, space } from '@/constants/palette';
 
@@ -8,8 +8,12 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-function detectIOS(): boolean {
-  if (Platform.OS !== 'web') return false;
+function isWeb(): boolean {
+  return typeof window !== 'undefined' && typeof navigator !== 'undefined';
+}
+
+function isIOS(): boolean {
+  if (!isWeb()) return false;
   const ua = navigator.userAgent;
   return (
     /iPad|iPhone|iPod/.test(ua) ||
@@ -18,8 +22,8 @@ function detectIOS(): boolean {
 }
 
 /**
- * addTo-home-screen.tsx — a button that creates a home-screen shortcut to the
- * PWA. Web-only, renders nothing on native.
+ * add-to-home-screen.tsx — a button that creates a home-screen shortcut to the
+ * PWA. Always renders on web so it's visible regardless of browser detection.
  *
  * - Android / Chrome: triggers the browser's native install prompt.
  * - iOS / Safari: shows a one-line instruction ("Share -> Add to Home Screen").
@@ -30,10 +34,9 @@ export function AddToHomeScreenButton() {
     null,
   );
   const [installed, setInstalled] = useState(false);
-  const isIOS = useMemo(() => detectIOS(), []);
 
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
+    if (!isWeb()) return;
 
     const handler = (e: Event) => {
       e.preventDefault();
@@ -52,7 +55,7 @@ export function AddToHomeScreenButton() {
     }
   }, [deferred]);
 
-  if (Platform.OS !== 'web') return null;
+  if (!isWeb()) return null;
   if (installed) return null;
 
   // Browser supports the install prompt (Android Chrome, Edge, etc.)
@@ -70,7 +73,7 @@ export function AddToHomeScreenButton() {
   // iOS / Safari / unsupported: always show the manual instruction.
   return (
     <Text style={s.hint}>
-      {isIOS
+      {isIOS()
         ? 'Tap the Share button below, then "Add to Home Screen".'
         : 'Open in Chrome or Edge, then use the browser menu: "Install app" or "Add to Home Screen".'}
     </Text>
