@@ -2,14 +2,16 @@ import '@/global.css';
 
 import { DefaultTheme, ThemeProvider } from 'expo-router';
 import Head from 'expo-router/head';
-import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, View } from 'react-native';
+import { useEffect } from 'react';
+import { ActivityIndicator, Platform, View } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
+import { InstallBanner } from '@/components/install-banner';
 import { SignInScreen } from '@/components/sign-in-screen';
 import { palette } from '@/constants/palette';
 import { AuthProvider, useAuth } from '@/lib/supabase/auth';
+import { StatusBar } from 'expo-status-bar';
 
 // "Warm Instrument": light-only — bone canvas, warm ink, one orange accent.
 const NavTheme = {
@@ -25,11 +27,17 @@ const NavTheme = {
 };
 
 export default function RootLayout() {
+  // Register the service worker on web so the browser can prompt "Add to Home Screen".
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }, []);
+
   // Light-only skin, fixed regardless of the device's light/dark setting.
   return (
     <AuthProvider>
       <Head>
-        <title>Deficit: calorie tracking that doesn’t make up numbers</title>
+        <title>Deficit: calorie tracking that doesn't make up numbers</title>
       </Head>
       <ThemeProvider value={NavTheme}>
         <StatusBar style="dark" />
@@ -37,6 +45,7 @@ export default function RootLayout() {
         <AuthGate>
           <AppTabs />
         </AuthGate>
+        <InstallBanner />
       </ThemeProvider>
     </AuthProvider>
   );
