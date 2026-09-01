@@ -103,6 +103,45 @@ describe('log-store', () => {
     await addEntry('2026-06-06', { label: 'A', kcal: 100 }, s);
     expect(await loadDay('2026-06-07', s)).toEqual([]);
   });
+
+  it('does not drop the previous entry when adds overlap', async () => {
+    const s = createMemoryStore();
+    const date = '2026-06-06';
+    // The UI fires several un-awaited adds in the same tick (rapid taps, or a
+    // duplicated press event). Without serialization the last write wins and
+    // the earlier entry is silently lost.
+    await Promise.all([
+      addEntry(date, { label: 'A', kcal: 100 }, s),
+      addEntry(date, { label: 'B', kcal: 200 }, s),
+      addEntry(date, { label: 'C', kcal: 300 }, s),
+    ]);
+    const stored = (await loadDay(date, s)).map((e) => e.label);
+    expect(stored).toHaveLength(3);
+    expect(stored.sort()).toEqual(['A', 'B', 'C']);
+  });
+
+  it('keeps an earlier entry when a later add overlaps an update', async () => {
+    const s = createMemoryStore();
+    const date = '2026-06-06';
+    const food = {
+      name: 'Dal Tadka',
+      serving: '1 katori',
+      kcal: 150,
+      proteinG: 8,
+      carbsG: 20,
+      fatG: 4,
+    };
+    await addEntry(date, portionedEntry(food, 1), s);
+    const [existing] = await loadDay(date, s);
+
+    await Promise.all([
+      addEntry(date, { label: 'Chai', kcal: 80 }, s),
+      updateEntryQuantity(date, existing.id, 2, s),
+    ]);
+    const stored = (await loadDay(date, s)).map((e) => e.label);
+    expect(stored).toEqual(['Dal Tadka', 'Chai']);
+    expect((await loadDay(date, s))[0].quantity).toBe(2);
+  });
 });
 
 describe('portioned entries', () => {
