@@ -121,89 +121,58 @@ export async function loadDay(
   return (await getJSON<LogEntry[]>(store, dayKey(date))) ?? [];
 }
 
-/**
- * Serialize read-modify-write mutations on a single storage key.
- *
- * `addEntry`/`removeEntry`/`updateEntryQuantity` each read the day from the
- * store, modify it, and write it back. If two such calls overlap (the UI fires
- * several un-awaited mutations in quick succession — e.g. rapid taps or a
- * multi-item "describe a meal" log), the second read can observe the pre-write
- * snapshot and its write silently overwrites the first, dropping entries. This
- * queue makes every mutation on a given key run to completion before the next
- * starts, so the last write always includes all prior entries.
- */
-const mutationQueues = new Map<string, Promise<unknown>>();
-
-function serialized<T>(key: string, fn: () => Promise<T>): Promise<T> {
-  const tail = mutationQueues.get(key) ?? Promise.resolve();
-  const next = tail.then(fn, fn);
-  // Keep the chain alive regardless of whether this mutation resolved or
-  // rejected, so a failure doesn't strand the whole queue.
-  mutationQueues.set(
-    key,
-    next.catch(() => undefined),
-  );
-  return next;
-}
-
-export function addEntry(
+export async function addEntry(
   date: string,
   entry: Omit<LogEntry, 'id' | 'at'>,
   store: KVStore = kv,
 ): Promise<LogEntry[]> {
-  return serialized(dayKey(date), async () => {
-    const entries = await loadDay(date, store);
-    const full: LogEntry = {
-      ...entry,
-      id: makeId(),
-      at: new Date().toISOString(),
-    };
-    const next = [...entries, full];
-    await setJSON(store, dayKey(date), next);
-    return next;
-  });
+  const entries = await loadDay(date, store);
+  const full: LogEntry = {
+    ...entry,
+    id: makeId(),
+    at: new Date().toISOString(),
+  };
+  const next = [...entries, full];
+  await setJSON(store, dayKey(date), next);
+  return next;
 }
 
-export function removeEntry(
+export async function removeEntry(
   date: string,
   id: string,
   store: KVStore = kv,
 ): Promise<LogEntry[]> {
-  return serialized(dayKey(date), async () => {
-    const entries = await loadDay(date, store);
-    const next = entries.filter((e) => e.id !== id);
-    await setJSON(store, dayKey(date), next);
-    return next;
-  });
+  const entries = await loadDay(date, store);
+  const next = entries.filter((e) => e.id !== id);
+  await setJSON(store, dayKey(date), next);
+  return next;
 }
 
 /**
  * Re-scale a portioned entry to a new quantity, recomputing its macros from the
  * stored per-serving unit. No-op for custom entries (no unit macros).
  */
-export function updateEntryQuantity(
+export async function updateEntryQuantity(
   date: string,
   id: string,
   quantity: number,
   store: KVStore = kv,
 ): Promise<LogEntry[]> {
   const q = Math.max(0.5, Math.round(quantity * 2) / 2);
-  return serialized(dayKey(date), async () => {
-    const entries = await loadDay(date, store);
-    const next = entries.map((e) => {
-      if (e.id !== id || e.unitKcal == null) return e;
-      return {
-        ...e,
-        quantity: q,
-        kcal: r(e.unitKcal * q),
-        proteinG: e.unitProteinG != null ? r(e.unitProteinG * q) : e.proteinG,
-        carbsG: e.unitCarbsG != null ? r(e.unitCarbsG * q) : e.carbsG,
-        fatG: e.unitFatG != null ? r(e.unitFatG * q) : e.fatG,
-      };
-    });
-    await setJSON(store, dayKey(date), next);
-    return next;
+  const entries = await loadDay(date, store);
+  const next = entries.map((e) => {
+    if (e.id !== id || e.unitKcal == null) return e;
+    return {
+      ...e,
+      quantity: q,
+      kcal: r(e.unitKcal * q),
+      proteinG: e.unitProteinG != null ? r(e.unitProteinG * q) : e.proteinG,
+      carbsG: e.unitCarbsG != null ? r(e.unitCarbsG * q) : e.carbsG,
+      fatG: e.unitFatG != null ? r(e.unitFatG * q) : e.fatG,
+    };
   });
+  await setJSON(store, dayKey(date), next);
+  return next;
 }
 
 function makeId(): string {

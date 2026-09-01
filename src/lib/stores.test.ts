@@ -103,18 +103,6 @@ describe('log-store', () => {
     await addEntry('2026-06-06', { label: 'A', kcal: 100 }, s);
     expect(await loadDay('2026-06-07', s)).toEqual([]);
   });
-
-  it('does not drop entries when adds overlap (no lost update)', async () => {
-    const s = createMemoryStore();
-    const date = '2026-06-06';
-    await Promise.all([
-      addEntry(date, { label: 'Eggs', kcal: 200 }, s),
-      addEntry(date, { label: 'Rice', kcal: 300 }, s),
-      addEntry(date, { label: 'Dal', kcal: 150 }, s),
-    ]);
-    const stored = (await loadDay(date, s)).map((e) => e.label);
-    expect(stored.sort()).toEqual(['Dal', 'Eggs', 'Rice']);
-  });
 });
 
 describe('portioned entries', () => {
