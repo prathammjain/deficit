@@ -7,6 +7,15 @@
  * which persists it. No storage logic lives here — this component is just UI.
  */
 
+/**
+ * onboarding-flow.tsx — the stepped questionnaire (white paper §11.2).
+ *
+ * One question per screen with a progress bar, Back/Next, and a live target
+ * preview on the final step (the "aha" moment lands before the user even
+ * finishes). On completion it hands a fully-formed ProfileInput to the caller,
+ * which persists it. No storage logic lives here — this component is just UI.
+ */
+
 import { useMemo, useState } from 'react';
 import {
   Pressable,
@@ -140,11 +149,19 @@ export function OnboardingFlow({
           {step === 'welcome' && (
             <View style={styles.welcomeWrap}>
               <Text style={styles.welcomeBrand}>DEFICIT</Text>
-              <Text style={styles.title}>Let’s build your plan</Text>
-              <Text style={styles.hint}>
-                A daily calorie target built from your numbers, grounded in
-                real food data. It takes about a minute.
+              <Text style={styles.title}>
+                Calorie tracking that does not lie to you
               </Text>
+              <Text style={styles.hint}>
+                Log meals in plain language. A hybrid engine checks AI
+                against real food data, so every number is one you can
+                trust, not one it made up.
+              </Text>
+              <View style={styles.proofRow}>
+                <ProofLine text="No signup. Nothing leaves your device." />
+                <ProofLine text="Works for Indian home cooked meals" />
+                <ProofLine text="Takes about a minute to set up" />
+              </View>
             </View>
           )}
 
@@ -367,6 +384,15 @@ function Question({
   );
 }
 
+function ProofLine({ text }: { text: string }) {
+  return (
+    <View style={styles.proofLine}>
+      <View style={styles.proofDot} />
+      <Text style={styles.proofText}>{text}</Text>
+    </View>
+  );
+}
+
 function OptionRow({ children }: { children: React.ReactNode }) {
   return <View style={styles.optionRow}>{children}</View>;
 }
@@ -480,6 +506,15 @@ const styles = StyleSheet.create({
   eyebrow: { ...typo.eyebrow, color: palette.textFaint },
   welcomeWrap: { flex: 1, justifyContent: 'center' },
   welcomeBrand: { ...typo.eyebrow, color: palette.accent, marginBottom: 16 },
+  proofRow: { marginTop: 28, gap: 12 },
+  proofLine: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  proofDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: palette.accent,
+  },
+  proofText: { color: palette.textMuted, fontSize: 14, lineHeight: 19 },
   title: {
     color: palette.text,
     fontSize: 28,
