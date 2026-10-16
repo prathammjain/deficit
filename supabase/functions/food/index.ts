@@ -112,7 +112,9 @@ async function callLLM(prompt: string): Promise<any> {
       model: cfg.model,
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: 'json_object' },
-      temperature: 0.2,
+      // Selection + portion arithmetic, not prose: identical meals should give
+      // identical numbers rather than drifting between runs.
+      temperature: 0,
     }),
   });
   if (!res.ok) throw new Error(`llm ${res.status}`);
@@ -161,23 +163,39 @@ function indianSearch(query: string, max = 3) {
     }));
 }
 
-/** USDA FoodData Central search (measured macros per 100g). Branded excluded. */
+/**
+ * USDA FoodData Central search (measured macros per 100g). Branded excluded.
+ *
+ * Returns `null` when USDA itself is unavailable (no key, HTTP error, rate
+ * limit, network failure) as distinct from `[]`, which means "USDA answered
+ * and had no match". The caller needs that difference: an unavailable USDA
+ * means the parse is only half-grounded, which must not be cached or
+ * presented with the same confidence as a fully grounded one. Previously a
+ * missing key threw and failed the whole request (the client then silently
+ * fell back to the local heuristic), while an HTTP error returned `[]` and was
+ * indistinguishable from a genuine no-match.
+ */
 async function usdaSearch(query: string, max = 5) {
   const key = Deno.env.get('USDA_API_KEY')?.trim();
-  if (!key) throw new Error('USDA_API_KEY not set');
-  const res = await fetch(
-    `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${key}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query,
-        pageSize: max,
-        dataType: ['Foundation', 'SR Legacy', 'Survey (FNDDS)'],
-      }),
-    },
-  );
-  if (!res.ok) return [];
+  if (!key) return null;
+  let res: Response;
+  try {
+    res = await fetch(
+      `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${key}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query,
+          pageSize: max,
+          dataType: ['Foundation', 'SR Legacy', 'Survey (FNDDS)'],
+        }),
+      },
+    );
+  } catch {
+    return null;
+  }
+  if (!res.ok) return null;
   const data = await res.json();
   const foods = Array.isArray(data?.foods) ? data.foods : [];
   return foods
@@ -279,7 +297,10 @@ function calcConfidence(
   portionCertainty: 'clear' | 'unsure',
   source: string,
 ): 'high' | 'medium' | 'low' {
-  if (!aiKcal) return 'medium';
+  // The independent AI estimate IS the cross-check. Without it the database
+  // number has no corroboration at all, so it is a guess and must be labelled
+  // one — this used to report 'medium', which reads as "roughly checked".
+  if (!aiKcal) return 'low';
   const base = Math.max(aiKcal, dbKcalTotal, 1);
   const gap = Math.abs(dbKcalTotal - aiKcal) / base;
   const tol = source === 'local' ? 0.25 : 0.2;
@@ -429,6 +450,18 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      // `degraded` means this parse hit an infrastructure or judge FAILURE —
+      // USDA unavailable, or the model returned no usable decision for an
+      // item. Such a run still answers (logging must never hard-fail) but it
+      // is flagged to the user and never cached, because a retry once USDA is
+      // back can do genuinely better.
+      //
+      // It deliberately does NOT cover an honest low-confidence call (the
+      // database and the AI really disagree, or the dish is in neither table).
+      // Those are correct, reproducible results that the UI already flags, so
+      // caching them is right.
+      let degraded = false;
+
       const candidatesPerItem = await Promise.all(
         described.map(async (d) => {
           const usdaQuery = d.query || d.name;
@@ -439,7 +472,8 @@ Deno.serve(async (req: Request) => {
           const byName = indianSearch(d.name, 3);
           const indian = byName.length ? byName : indianSearch(usdaQuery, 3);
           const usda = await usdaSearch(usdaQuery, 5);
-          return [...indian, ...usda];
+          if (usda === null) degraded = true;
+          return [...indian, ...(usda ?? [])];
         }),
       );
 
@@ -450,6 +484,13 @@ Deno.serve(async (req: Request) => {
       described.forEach((d, i) => {
         const candidates = candidatesPerItem[i] ?? [];
         const decision = decisions.find((x) => x.index === i) ?? decisions[i];
+        // The model can return fewer decisions than items, or omit/misnumber
+        // the index. Falling back to the first candidate then presented an
+        // unjudged guess — often a generic USDA 100g row — as a normal match.
+        // It still gets shown (dropping the food would be worse), but only as
+        // an explicitly unverified 'low', and it degrades the run.
+        const judged = !!decision;
+        if (!judged) degraded = true;
         const quantity = decision?.quantity || d.quantity || 1;
         const chosen = decision?.chosen ?? (candidates.length ? 0 : -1);
         const aiKcal = num(decision?.aiEstimateKcal);
@@ -459,23 +500,27 @@ Deno.serve(async (req: Request) => {
         if (chosen >= 0 && candidates[chosen]) {
           const picked = candidates[chosen];
           const dbKcalTotal = picked.kcal * quantity;
-          const confidence = calcConfidence(
-            dbKcalTotal,
-            aiKcal,
-            portionCertainty,
-            picked.source,
-          );
+          const confidence = judged
+            ? calcConfidence(
+                dbKcalTotal,
+                aiKcal,
+                portionCertainty,
+                picked.source,
+              )
+            : 'low';
           items.push({
             item: { ...picked, name: d.name || picked.name },
             quantity,
             confidence,
-            reason: buildReason(
-              confidence,
-              dbKcalTotal,
-              aiKcal,
-              portionCertainty,
-              decision?.reason,
-            ),
+            reason: judged
+              ? buildReason(
+                  confidence,
+                  dbKcalTotal,
+                  aiKcal,
+                  portionCertainty,
+                  decision?.reason,
+                )
+              : 'Not cross-checked — verify this portion.',
             alternates: candidates.filter((_, ci) => ci !== chosen),
           });
         } else if (decision?.estimate) {
@@ -498,6 +543,8 @@ Deno.serve(async (req: Request) => {
           });
         } else {
           unmatched.push(d.name);
+          // The total is missing a food the user said they ate.
+          degraded = true;
         }
       });
 
@@ -511,14 +558,27 @@ Deno.serve(async (req: Request) => {
         { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 },
       );
 
+      const notes: string[] = [];
+      if (unmatched.length) notes.push(`Couldn't match: ${unmatched.join(', ')}.`);
+      if (degraded) {
+        notes.push(
+          'Grounding was incomplete for this meal — the numbers are less reliable than usual. Re-run it in a minute for a better match.',
+        );
+      }
+
       const result = {
         items,
         total,
-        note: unmatched.length
-          ? `Couldn't match: ${unmatched.join(', ')}.`
-          : undefined,
+        note: notes.length ? notes.join(' ') : undefined,
       };
-      if (items.length > 0) await cacheSet(key, result);
+
+      // Cache only fully grounded results. The cache lives for 7 days and is
+      // shared across users, so caching a degraded parse froze a bad number
+      // for that phrase for a week: the same meal typed again returned the
+      // same wrong calories, while a phrase first parsed while USDA was
+      // healthy stayed accurate. That is what made the engine look like it
+      // was "sometimes right, sometimes wildly off".
+      if (items.length > 0 && !degraded) await cacheSet(key, result);
       return json(result, 200, origin);
     }
 
