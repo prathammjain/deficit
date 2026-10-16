@@ -114,10 +114,13 @@ export function remaining(targetKcal: number, consumedKcal: number): number {
   return targetKcal - consumedKcal;
 }
 
-export async function loadDay(
-  date: string,
-  store: KVStore = kv,
-): Promise<LogEntry[]> {
+/**
+ * Read a day straight from the store, bypassing the mutation queue.
+ *
+ * Only for use *inside* a queued mutation: a serialized read there would wait
+ * on the very mutation that issued it and deadlock the key's queue.
+ */
+async function readDay(date: string, store: KVStore): Promise<LogEntry[]> {
   return (await getJSON<LogEntry[]>(store, dayKey(date))) ?? [];
 }
 
@@ -147,13 +150,32 @@ function serialized<T>(key: string, fn: () => Promise<T>): Promise<T> {
   return next;
 }
 
+/**
+ * Read a day's entries, queued behind any in-flight mutation on that day.
+ *
+ * The queue matters as much for reads as for writes. The log screen reloads
+ * the day on every focus (`useFocusEffect`), so a tab switch moments after a
+ * tap would otherwise fire an unqueued read that observes the pre-write
+ * snapshot. Resolving last, its `setMeals` overwrote the mutation's correct
+ * result and the meal vanished from the list while the store still held it —
+ * until the next add returned the full array and everything reappeared.
+ * Queueing reads makes resolution order match issue order, so the UI's last
+ * write of state is always the freshest view of the store.
+ */
+export function loadDay(
+  date: string,
+  store: KVStore = kv,
+): Promise<LogEntry[]> {
+  return serialized(dayKey(date), () => readDay(date, store));
+}
+
 export function addEntry(
   date: string,
   entry: Omit<LogEntry, 'id' | 'at'>,
   store: KVStore = kv,
 ): Promise<LogEntry[]> {
   return serialized(dayKey(date), async () => {
-    const entries = await loadDay(date, store);
+    const entries = await readDay(date, store);
     const full: LogEntry = {
       ...entry,
       id: makeId(),
@@ -171,7 +193,7 @@ export function removeEntry(
   store: KVStore = kv,
 ): Promise<LogEntry[]> {
   return serialized(dayKey(date), async () => {
-    const entries = await loadDay(date, store);
+    const entries = await readDay(date, store);
     const next = entries.filter((e) => e.id !== id);
     await setJSON(store, dayKey(date), next);
     return next;
@@ -190,7 +212,7 @@ export function updateEntryQuantity(
 ): Promise<LogEntry[]> {
   const q = Math.max(0.5, Math.round(quantity * 2) / 2);
   return serialized(dayKey(date), async () => {
-    const entries = await loadDay(date, store);
+    const entries = await readDay(date, store);
     const next = entries.map((e) => {
       if (e.id !== id || e.unitKcal == null) return e;
       return {

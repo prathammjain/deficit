@@ -1,4 +1,4 @@
-import { createMemoryStore, getJSON, setJSON } from './kv';
+import { createMemoryStore, getJSON, setJSON, type KVStore } from './kv';
 import {
   clearProfile,
   hasProfile,
@@ -26,6 +26,25 @@ const SAMPLE: ProfileInput = {
   activityLevel: 'moderate',
   goalRateKgWeek: 0.5,
 };
+
+/** Wrap a store so every operation takes a tick — mimics a network round trip. */
+function slowStore(inner: KVStore, ms = 20): KVStore {
+  const wait = () => new Promise((r) => setTimeout(r, ms));
+  return {
+    async get(k) {
+      await wait();
+      return inner.get(k);
+    },
+    async set(k, v) {
+      await wait();
+      return inner.set(k, v);
+    },
+    async remove(k) {
+      await wait();
+      return inner.remove(k);
+    },
+  };
+}
 
 describe('kv json helpers', () => {
   it('round-trips a value', async () => {
@@ -141,6 +160,23 @@ describe('log-store', () => {
     const stored = (await loadDay(date, s)).map((e) => e.label);
     expect(stored).toEqual(['Dal Tadka', 'Chai']);
     expect((await loadDay(date, s))[0].quantity).toBe(2);
+  });
+
+  it('a read during an in-flight write sees the post-write state', async () => {
+    // The log screen reloads the day on every focus. Against a slow store (a
+    // Supabase round trip is ~1s) a tab switch moments after a tap fires that
+    // read mid-write; unqueued, it returned the pre-write snapshot and its
+    // setMeals wiped the just-added meal from the list while the store still
+    // held it — the next add then made everything reappear.
+    const s = slowStore(createMemoryStore());
+    const date = '2026-06-06';
+
+    const writing = addEntry(date, { label: 'Dal', kcal: 150 }, s);
+    await new Promise((r) => setTimeout(r, 5));
+    const reloaded = await loadDay(date, s);
+
+    expect(await writing).toHaveLength(1);
+    expect(reloaded.map((e) => e.label)).toEqual(['Dal']);
   });
 });
 
