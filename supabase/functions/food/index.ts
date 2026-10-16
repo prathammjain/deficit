@@ -127,6 +127,70 @@ async function callLLM(prompt: string): Promise<any> {
   }
 }
 
+// ---- Provider liveness ------------------------------------------------------
+// A configured key is not a working key. `health` used to report `ok` from the
+// mere presence of a key string, so an expired, revoked or quota-exhausted key
+// left the app showing "AI-grounded · USDA" while every parse failed and fell
+// back to the local table. Probe the provider for real instead.
+
+let liveness: { at: number; ok: boolean; detail: string } | null = null;
+const LIVENESS_TTL_MS = 5 * 60 * 1000;
+
+async function checkLLMLive(): Promise<{ ok: boolean; detail: string }> {
+  if (liveness && Date.now() - liveness.at < LIVENESS_TTL_MS) {
+    return { ok: liveness.ok, detail: liveness.detail };
+  }
+
+  const cfg = getLLMConfig();
+  let result: { ok: boolean; detail: string };
+
+  if (!cfg) {
+    result = { ok: false, detail: 'no API key configured' };
+  } else {
+    try {
+      const res = await fetch(cfg.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${cfg.key}`,
+        },
+        body: JSON.stringify({
+          model: cfg.model,
+          messages: [{ role: 'user', content: 'ping' }],
+          max_tokens: 1,
+        }),
+      });
+      if (res.ok) {
+        result = { ok: true, detail: 'ok' };
+      } else if (res.status === 401 || res.status === 403) {
+        result = {
+          ok: false,
+          detail: `${cfg.provider} rejected the API key (${res.status}) — expired or revoked`,
+        };
+      } else if (res.status === 429) {
+        result = {
+          ok: false,
+          detail: `${cfg.provider} quota or rate limit exhausted (429)`,
+        };
+      } else if (res.status === 404) {
+        result = {
+          ok: false,
+          detail: `${cfg.provider} does not serve model "${cfg.model}" (404) — retired or renamed`,
+        };
+      } else {
+        // Any other status still proves the key authenticated, so don't blame
+        // the key: a reasoning model may simply reject this tiny probe body.
+        result = { ok: true, detail: `${cfg.provider} ${res.status} on probe` };
+      }
+    } catch {
+      result = { ok: false, detail: `${cfg.provider} unreachable` };
+    }
+  }
+
+  liveness = { at: Date.now(), ...result };
+  return result;
+}
+
 // ---- Candidate sources ------------------------------------------------------
 
 /** Curated Indian home-cooking table — ranked by name/alias match. */
@@ -424,12 +488,19 @@ Deno.serve(async (req: Request) => {
 
     if (action === 'health') {
       const cfg = getLLMConfig();
+      const live = await checkLLMLive();
       return json(
         {
-          ok: !!cfg,
+          // `ok` now means the provider actually answered, not merely that a
+          // key is present — so a dead key shows the app as offline instead of
+          // claiming AI grounding it cannot deliver.
+          ok: !!cfg && live.ok,
           provider: cfg?.provider ?? null,
           model: cfg?.model ?? null,
           usda: !!Deno.env.get('USDA_API_KEY')?.trim(),
+          // Human-readable reason, for diagnosing a dead engine from the
+          // browser's network tab without redeploying.
+          llm: live.detail,
         },
         200,
         origin,
