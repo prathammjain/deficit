@@ -1,12 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { palette, radius, space } from '@/constants/palette';
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt(): Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
+import { promptInstall, useInstallPrompt } from '@/lib/install-prompt';
 
 function isWeb(): boolean {
   return typeof window !== 'undefined' && typeof navigator !== 'undefined';
@@ -16,50 +12,35 @@ function isIOS(): boolean {
   if (!isWeb()) return false;
   const ua = navigator.userAgent;
   return (
-    /iPad|iPhone|iPod/.test(ua) ||
-    (ua.includes('Mac') && 'ontouchend' in window)
+    /iPad|iPhone|iPod/.test(ua) || (ua.includes('Mac') && 'ontouchend' in window)
   );
 }
 
 /**
  * add-to-home-screen.tsx — a button that creates a home-screen shortcut to the
- * PWA. Always renders on web so it's visible regardless of browser detection.
+ * PWA.
  *
  * - Android / Chrome: triggers the browser's native install prompt.
  * - iOS / Safari: shows a one-line instruction ("Share -> Add to Home Screen").
- * - Desktop / unsupported: shows the same manual instruction.
+ *   Safari implements no install prompt at all, so this is the only route.
+ * - Desktop / unsupported: the same manual instruction.
+ *
+ * The prompt itself is captured at page load by an inline script in +html.tsx
+ * and read through lib/install-prompt.ts. This component must not listen for
+ * `beforeinstallprompt` itself: it mounts on the Profile screen, long after
+ * Chrome has fired and discarded that event.
  */
 export function AddToHomeScreenButton() {
-  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(
-    null,
-  );
-  const [installed, setInstalled] = useState(false);
+  const { prompt, installed } = useInstallPrompt();
 
-  useEffect(() => {
-    if (!isWeb()) return;
-
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferred(e as BeforeInstallPromptEvent);
-    };
-
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+  const handlePress = useCallback(() => {
+    void promptInstall();
   }, []);
 
-  const handlePress = useCallback(async () => {
-    if (deferred) {
-      await deferred.prompt();
-      const { outcome } = await deferred.userChoice;
-      if (outcome === 'accepted') setInstalled(true);
-    }
-  }, [deferred]);
+  if (!isWeb() || installed) return null;
 
-  if (!isWeb()) return null;
-  if (installed) return null;
-
-  // Browser supports the install prompt (Android Chrome, Edge, etc.)
-  if (deferred) {
+  // The browser has offered a native install prompt (Android Chrome, Edge).
+  if (prompt) {
     return (
       <Pressable
         onPress={handlePress}
@@ -70,12 +51,13 @@ export function AddToHomeScreenButton() {
     );
   }
 
-  // iOS / Safari / unsupported: always show the manual instruction.
+  // No prompt available — iOS, Safari, an already-dismissed prompt, or a
+  // browser that does not support installing. Say how to do it by hand.
   return (
     <Text style={s.hint}>
       {isIOS()
-        ? 'Tap the Share button below, then "Add to Home Screen".'
-        : 'Open in Chrome or Edge, then use the browser menu: "Install app" or "Add to Home Screen".'}
+        ? 'Tap the Share button below, then “Add to Home Screen”.'
+        : 'Open in Chrome or Edge, then use the browser menu: “Install app” or “Add to Home Screen”.'}
     </Text>
   );
 }

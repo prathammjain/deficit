@@ -49,6 +49,22 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="apple-mobile-web-app-title" content="Deficit" />
 
         <ScrollViewStyleReset />
+
+        {/* Capture the install prompt before the bundle parses.
+            Chrome fires `beforeinstallprompt` once, early, and never replays
+            it, so a listener that only exists while some screen is mounted
+            misses it for good — which is exactly how the Add to Home Screen
+            button came to be permanently dead. Inline rather than in the
+            bundle because the bundle is ~2.3MB and Chrome can fire first.
+            src/lib/install-prompt.ts is the React-side view of this. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var w=window;w.__deficitInstall={prompt:null,installed:false};
+function n(){w.dispatchEvent(new Event('deficit:installchange'))}
+w.addEventListener('beforeinstallprompt',function(e){e.preventDefault();w.__deficitInstall.prompt=e;n()});
+w.addEventListener('appinstalled',function(){w.__deficitInstall.prompt=null;w.__deficitInstall.installed=true;n()});})();`,
+          }}
+        />
       </head>
       <body>{children}</body>
     </html>
