@@ -34,6 +34,7 @@
 
 // @ts-nocheck
 import { INDIAN_FOODS } from './_indian-foods.ts';
+import { ifctSearch } from './ifct.ts';
 
 // ---- CORS -------------------------------------------------------------------
 
@@ -337,13 +338,14 @@ async function judgeCandidates(
   }));
 
   const parsed = await callLLM(
-    `You are grounding a food log so its numbers can be trusted. For each EATEN item you get real CANDIDATE foods from two sources: a curated Indian home-cooking table ("local" — macros per the stated home serving, recipe fats included) and USDA ("usda" — macros per 100g). For each item return a decision:
+    `You are grounding a food log so its numbers can be trusted. For each EATEN item you get real CANDIDATE foods from three sources: a curated Indian home-cooking table ("local" — macros per the stated home serving, recipe fats included), IFCT 2017 ("ifct" — Indian lab-measured macros per 100g of a single raw ingredient), and USDA ("usda" — macros per 100g). For each item return a decision:
 - "chosen": index i of the candidate that best matches the eaten dish. PREFER a specific Indian-table ("local") match over a generic USDA one when both reasonably fit (e.g. real "Dal Tadka" over plain "cooked lentils"). If NONE is a reasonable match, use -1 and provide your own "estimate" (per-serving macros for a typical Indian home portion, with a "serving" label like "1 katori (150g)").
+- RAW vs AS-EATEN. Every candidate's "serving" says which it is. An "ifct" candidate labelled "100g raw (uncooked weight)" is the dry/uncooked ingredient, NOT the cooked food on the plate: 100g of cooked rice is roughly 33g raw. Never treat a raw candidate's 100g as 100g eaten. For a cooked dish prefer a "local" candidate, or an "ifct" one already labelled "100g cooked"; pick a raw "ifct" candidate only when the food really is eaten raw or uncooked (fruit, salad, nuts, curd, a measured weight of dry grain). A candidate labelled "100g cooked" is ALREADY converted — do not adjust it again.
 - "quantity": how many of the CHOSEN candidate's stated serving were eaten. (candidate serving "1 katori (150g)", ate ~1.5 katori => 1.5; candidate serving "100g", ate ~150g => 1.5.)
 - "aiEstimateKcal": your OWN independent best estimate of the TOTAL calories for the eaten portion, from your knowledge of the dish. Do NOT just copy the candidate — this is an independent cross-check.
 - "portionCertainty": "clear" if the eaten portion is well specified, "unsure" if you had to guess it.
 - "reason": one short clause, e.g. "matched dal tadka, 1.5 katori".
-Portion reference (use unless grams are given): 1 roti/chapati≈45g, 1 paratha≈80g, 1 naan≈90g, 1 katori (dal/curry/sabzi/rice)≈150g, 1 bowl≈200g, 1 idli≈40g, 1 dosa≈90g, 1 glass≈250ml.
+Portion reference (use unless grams are given): 1 roti/chapati≈40g, 1 paratha≈80g, 1 naan≈90g, 1 katori (dal/curry/sabzi/rice)≈150g, 1 bowl≈200g, 1 idli≈40g, 1 dosa≈90g, 1 glass≈250ml.
 Return ONLY JSON: {"decisions":[{"index":0,"chosen":0,"quantity":1.5,"aiEstimateKcal":220,"portionCertainty":"clear","reason":"","estimate":null}]}.
 
 Items: ${JSON.stringify(payload)}`,
@@ -417,7 +419,7 @@ async function isSignedInUser(req: Request): Promise<boolean> {
 // Keyed on ENGINE_VERSION + model + normalised text so switching providers or
 // models automatically uses a separate cache namespace.
 
-const ENGINE_VERSION = 'v2';
+const ENGINE_VERSION = 'v3';
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const cacheKey = (text: string) => {
@@ -542,9 +544,19 @@ Deno.serve(async (req: Request) => {
           // the query only when the name finds nothing.
           const byName = indianSearch(d.name, 3);
           const indian = byName.length ? byName : indianSearch(usdaQuery, 3);
+          // IFCT is keyed on generic ingredient English ("Red gram, dal"),
+          // which is how structureMeal writes `query` — the mirror image of
+          // the curated dish table, keyed on dish names and matched on `name`.
+          const byQuery = ifctSearch(usdaQuery, 3);
+          const ifct = byQuery.length ? byQuery : ifctSearch(d.name, 3);
           const usda = await usdaSearch(usdaQuery, 5);
           if (usda === null) degraded = true;
-          return [...indian, ...(usda ?? [])];
+          // local first, so the curated table keeps the low indices the
+          // "PREFER local" rule relies on; IFCT ahead of USDA so the Indian
+          // ingredient is seen before the generic one. IFCT is compiled in
+          // with no network and no key, so it can never be unavailable and
+          // must never set `degraded`.
+          return [...indian, ...ifct, ...(usda ?? [])];
         }),
       );
 

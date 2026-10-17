@@ -31,6 +31,7 @@ export function EngineStatus() {
 const SOURCE_LABEL: Record<NonNullable<FoodItem['source']>, string> = {
   local: 'local',
   usda: 'USDA',
+  ifct: 'IFCT',
   ai: 'AI est.',
 };
 
