@@ -80,6 +80,12 @@ const isCooked = (name: string) => /\b(boiled|omlet)\b/i.test(name);
  * Ranked IFCT matches. Scoring is `indianSearch`'s, so an IFCT candidate is
  * structurally indistinguishable from a curated one apart from source,
  * serving and state.
+ *
+ * `max` caps distinct FOODS, not returned rows: a staple with a cooked yield
+ * comes back twice, once per reading, so a grain or legume query can return up
+ * to 2 x max. Everything else — fish, meat, vegetables, nuts — returns one row
+ * per food, so the widening is confined to exactly the foods where raw vs
+ * cooked is ambiguous.
  */
 export function ifctSearch(query: string, max = 3) {
   const q = String(query ?? '')
@@ -106,26 +112,53 @@ export function ifctSearch(query: string, max = 3) {
     .filter((x) => x.s > 0)
     .sort((a, b) => b.s - a.s)
     .slice(0, max)
-    .map(({ f }) => {
+    .flatMap(({ f }) => {
+      const scale = (y: number) => ({
+        kcal: Math.round(f.kcal / y),
+        proteinG: Math.round(f.proteinG / y),
+        carbsG: Math.round(f.carbsG / y),
+        fatG: Math.round(f.fatG / y),
+      });
+      const base = { name: String(f.name), source: 'ifct' as const };
       const y = COOKED_YIELD[f.code];
-      const cooked = !!y || isCooked(f.name);
-      return {
-        id: `ifct-${f.code}`,
-        name: String(f.name),
-        // The serving text is what the judge reads, and what the user sees if
-        // they open the alternates list — so it has to say which weight it is.
-        serving: y
-          ? '100g cooked'
-          : cooked
-            ? '100g'
-            : '100g raw (uncooked weight)',
-        state: cooked ? ('as-eaten' as const) : ('raw' as const),
-        kcal: Math.round(f.kcal / (y ?? 1)),
-        proteinG: Math.round(f.proteinG / (y ?? 1)),
-        carbsG: Math.round(f.carbsG / (y ?? 1)),
-        fatG: Math.round(f.fatG / (y ?? 1)),
-        source: 'ifct' as const,
-      };
+
+      if (!y) {
+        const cooked = isCooked(f.name);
+        return [{
+          ...base,
+          id: `ifct-${f.code}`,
+          // The serving text is what the judge reads, and what the user sees
+          // if they open the alternates list — so it must say which weight
+          // this is.
+          serving: cooked ? '100g' : '100g raw (uncooked weight)',
+          state: cooked ? ('as-eaten' as const) : ('raw' as const),
+          ...scale(1),
+        }];
+      }
+
+      // A staple that absorbs water is genuinely two readings of one food, and
+      // which one applies depends on what the user said: "1 katori rice" is
+      // cooked, "100g dry rice" is raw. Offering only the cooked row made the
+      // judge undercount a weighed-out dry portion ~3x, and contradicted the
+      // prompt, which tells it to pick a raw candidate for "a measured weight
+      // of dry grain". So offer both and let it choose. Cooked comes first:
+      // it is much the commoner way people log these.
+      return [
+        {
+          ...base,
+          id: `ifct-${f.code}-cooked`,
+          serving: '100g cooked',
+          state: 'as-eaten' as const,
+          ...scale(y),
+        },
+        {
+          ...base,
+          id: `ifct-${f.code}-raw`,
+          serving: '100g raw (uncooked weight)',
+          state: 'raw' as const,
+          ...scale(1),
+        },
+      ];
     });
 }
 

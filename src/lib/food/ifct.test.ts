@@ -87,10 +87,28 @@ describe('cooked-yield conversion', () => {
 
   it('converts dal to a cooked weight', () => {
     const [dal] = ifctSearch('toor dal');
-    expect(dal.id).toBe('ifct-B021'); // proves the alias map is wired, not just present
+    expect(dal.id).toBe('ifct-B021-cooked'); // alias map is wired, not just present
     expect(dal.state).toBe('as-eaten');
     expect(dal.kcal).toBeGreaterThanOrEqual(110);
     expect(dal.kcal).toBeLessThanOrEqual(150);
+  });
+
+  it('offers a yielded staple as both readings of one food', () => {
+    // Logging "100g dry toor dal" must not be answered with the cooked
+    // figure: that undercounts by the yield factor, ~2.5x here. Both rows
+    // are the same food, so the judge picks the reading the user described.
+    const dal = ifctSearch('toor dal', 1);
+    expect(dal).toHaveLength(2);
+
+    const cooked = dal.find((c) => c.state === 'as-eaten')!;
+    const raw = dal.find((c) => c.state === 'raw')!;
+    expect(cooked.name).toBe(raw.name);
+    expect(cooked.serving).toBe('100g cooked');
+    expect(raw.serving).toContain('raw');
+    expect(raw.kcal).toBe(331); // the book's per-100g figure, unscaled
+    expect(cooked.kcal).toBe(Math.round(331 / 2.5));
+    // Cooked first: much the commoner way these are logged.
+    expect(dal[0].state).toBe('as-eaten');
   });
 
   it('leaves an unconverted staple labelled raw', () => {
@@ -128,11 +146,17 @@ describe('ifctSearch', () => {
     expect(ifctSearch('   ')).toEqual([]);
   });
 
-  it('respects the limit', () => {
-    expect(ifctSearch('rice', 2)).toHaveLength(2);
+  it('caps distinct foods, not rows', () => {
+    // A yielded staple returns two rows, so the cap is on foods: a grain
+    // query can come back with up to 2 x max rows.
+    const r = ifctSearch('rice', 2);
+    const foods = new Set(r.map((c) => c.id.replace(/-(cooked|raw)$/, '')));
+    expect(foods.size).toBe(2);
+    expect(r.length).toBeLessThanOrEqual(4);
   });
 
   it('prefixes ids so they cannot collide with the curated table', () => {
-    for (const c of ifctSearch('bajra')) expect(c.id).toMatch(/^ifct-[A-S]\d{3}$/);
+    for (const c of ifctSearch('bajra'))
+      expect(c.id).toMatch(/^ifct-[A-S]\d{3}(-cooked|-raw)?$/);
   });
 });
