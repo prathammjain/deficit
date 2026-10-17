@@ -35,6 +35,7 @@
 // @ts-nocheck
 import { INDIAN_FOODS } from './_indian-foods.ts';
 import { ifctSearch } from './ifct.ts';
+import { servingMultiplier } from './portion.ts';
 
 // ---- CORS -------------------------------------------------------------------
 
@@ -289,9 +290,12 @@ async function usdaSearch(query: string, max = 5) {
 /** Stage 1 — split free text into items with a normalised portion + db query. */
 async function structureMeal(
   text: string,
-): Promise<{ name: string; quantity: number; query: string }[]> {
+): Promise<
+  { name: string; quantity: number; query: string; grams?: number | null }[]
+> {
   const parsed = await callLLM(
-    `You are a nutrition assistant for Indian food. Break this meal into individual food items. For each item return its display name, the quantity (number of servings as a decimal), and a concise English search query suitable for a food database (generic ingredient terms, e.g. "cooked lentils dal", "wheat flatbread roti", "cooked white rice"). Normalise Indian portions (katori, roti, bowl, plate). Return ONLY JSON of the form {"items":[{"name":"","quantity":1,"query":""}]}.
+    `You are a nutrition assistant for Indian food. Break this meal into individual food items. For each item return its display name, the quantity (number of servings as a decimal), a concise English search query suitable for a food database (generic ingredient terms, e.g. "cooked lentils dal", "wheat flatbread roti", "cooked white rice"), and "grams". Normalise Indian portions (katori, roti, bowl, plate).
+"grams" is the edible weight of the WHOLE eaten amount in grams, and ONLY when the text states a measurable amount — a weight, a volume, or a standard kitchen measure. "150 ml milk" => 150. "100 gram paneer" => 100. "1 tablespoon ghee" => 14. "2 teaspoons sugar" => 8. "1 glass lassi" => 250. If the text gives no such amount — "dal", "2 roti", "a bowl of rice" — return null, do NOT guess a typical portion. Return ONLY JSON of the form {"items":[{"name":"","quantity":1,"query":"","grams":null}]}.
 
 Meal: ${text}`,
   );
@@ -419,7 +423,7 @@ async function isSignedInUser(req: Request): Promise<boolean> {
 // Keyed on ENGINE_VERSION + model + normalised text so switching providers or
 // models automatically uses a separate cache namespace.
 
-const ENGINE_VERSION = 'v3';
+const ENGINE_VERSION = 'v4';
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const cacheKey = (text: string) => {
@@ -582,7 +586,14 @@ Deno.serve(async (req: Request) => {
 
         if (chosen >= 0 && candidates[chosen]) {
           const picked = candidates[chosen];
-          const dbKcalTotal = picked.kcal * quantity;
+          // For a per-100g candidate the multiplier is just grams / 100, and
+          // this is where the engine was losing worst: "150 ml milk" came back
+          // as quantity 6 (414 kcal for ~100 kcal of milk) and "1 tablespoon
+          // ghee" as a full 100g — 876 kcal, reported 'high' because the AI
+          // cross-check repeated the same portion mistake. When stage 1 found
+          // an explicit amount, do the arithmetic instead of asking for it.
+          const scaled = servingMultiplier(picked.serving, d.grams, quantity);
+          const dbKcalTotal = picked.kcal * scaled;
           const confidence = judged
             ? calcConfidence(
                 dbKcalTotal,
@@ -593,7 +604,7 @@ Deno.serve(async (req: Request) => {
             : 'low';
           items.push({
             item: { ...picked, name: d.name || picked.name },
-            quantity,
+            quantity: scaled,
             confidence,
             reason: judged
               ? buildReason(
