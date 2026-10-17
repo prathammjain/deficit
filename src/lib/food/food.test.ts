@@ -3,7 +3,7 @@ import {
   extractQuantity,
   splitSegments,
 } from './local-provider';
-import { totalMacros, type FoodItem } from './types';
+import { swapParsedItem, totalMacros, type FoodItem } from './types';
 
 const provider = new LocalFoodProvider();
 
@@ -124,5 +124,73 @@ describe('totalMacros', () => {
     ]);
     expect(total.kcal).toBe(390); // 240 + 150
     expect(total.proteinG).toBe(14); // 6 + 8
+  });
+});
+
+describe('swapParsedItem', () => {
+  const katori = {
+    id: 'dal-tadka',
+    name: 'Dal Tadka',
+    serving: '1 katori (150g)',
+    kcal: 150,
+    proteinG: 8,
+    carbsG: 20,
+    fatG: 4,
+    source: 'local' as const,
+  };
+  const perHundredRaw = {
+    id: 'ifct-B021-raw',
+    name: 'Red gram, dal',
+    serving: '100g raw (uncooked weight)',
+    kcal: 331,
+    proteinG: 22,
+    carbsG: 55,
+    fatG: 2,
+    source: 'ifct' as const,
+  };
+  const sameServing = { ...katori, id: 'dal-makhani', name: 'Dal Makhani', kcal: 280 };
+
+  const parsed = {
+    item: katori,
+    quantity: 1.5,
+    confidence: 'low' as const,
+    alternates: [perHundredRaw, sameServing],
+  };
+
+  it('resets the portion when the serving changes', () => {
+    // 1.5 used to carry over onto a per-100g raw row: 1.5 x 331 = 497 kcal
+    // logged for what was 1.5 katori, and badged 'high'.
+    const out = swapParsedItem(parsed, perHundredRaw);
+    expect(out.quantity).toBe(1);
+    expect(out.item.id).toBe('ifct-B021-raw');
+  });
+
+  it('does not claim high confidence for a portion nobody confirmed', () => {
+    const out = swapParsedItem(parsed, perHundredRaw);
+    expect(out.confidence).toBe('medium');
+    expect(out.reason).toContain('Portion reset');
+    expect(out.reason).toContain('100g raw');
+  });
+
+  it('keeps the portion when the serving is identical', () => {
+    // Swapping Dal Tadka for Dal Makhani, both "1 katori (150g)": 1.5 still
+    // means 1.5 katori, so resetting it would silently cut the entry.
+    const out = swapParsedItem(parsed, sameServing);
+    expect(out.quantity).toBe(1.5);
+    expect(out.confidence).toBe('high');
+    expect(out.reason).toBeUndefined();
+  });
+
+  it('offers the replaced food back, without duplicating the chosen one', () => {
+    const out = swapParsedItem(parsed, perHundredRaw);
+    const ids = (out.alternates ?? []).map((a) => a.id);
+    expect(ids).toContain('dal-tadka'); // the one it replaced
+    expect(ids).not.toContain('ifct-B021-raw'); // now the chosen item
+  });
+
+  it('leaves the original item untouched', () => {
+    const before = JSON.stringify(parsed);
+    swapParsedItem(parsed, perHundredRaw);
+    expect(JSON.stringify(parsed)).toBe(before);
   });
 });

@@ -61,6 +61,39 @@ export interface FoodProvider {
   parseMeal?(text: string): Promise<ParsedMeal>;
 }
 
+/**
+ * Swap a parsed item's matched food for one of its alternates. Pure.
+ *
+ * `quantity` is a multiplier of the CHOSEN candidate's own serving string, so
+ * it only means the same thing after a swap when the new candidate measures
+ * the same way. "1 piece" -> "1 piece" keeps 2 rotis as 2; "1 katori (150g)"
+ * -> "100g raw (uncooked weight)" does not, and carrying it over there logged
+ * 1.5x a raw per-100g figure as though it were 1.5 katori — roughly triple the
+ * real intake, under a 'high' badge.
+ *
+ * So the quantity transfers only on an identical serving, and the confidence
+ * follows it: picking the food is the user confirming the MATCH, never the
+ * portion. When the serving changes, the portion falls back to a bare default
+ * and stays flagged, with a reason saying why, so it reads as the guess it is.
+ */
+export function swapParsedItem(item: ParsedItem, alt: FoodItem): ParsedItem {
+  const sameServing = alt.serving === item.item.serving;
+  return {
+    ...item,
+    item: alt,
+    quantity: sameServing ? item.quantity : 1,
+    confidence: sameServing ? 'high' : 'medium',
+    reason: sameServing
+      ? undefined
+      : `Portion reset to 1 — serving is now “${alt.serving}”.`,
+    // The food it replaced stays available, so a swap is never a dead end.
+    alternates: [
+      item.item,
+      ...(item.alternates ?? []).filter((a) => a.id !== alt.id),
+    ],
+  };
+}
+
 /** Sum a list of (item × quantity) into a single macro total. Pure. */
 export function totalMacros(
   items: { item: FoodItem; quantity: number }[],

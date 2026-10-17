@@ -3,7 +3,12 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { Card, GlassSurface, PrimaryButton } from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
-import { foodProvider, type FoodItem, type ParsedItem } from '@/lib/food';
+import {
+  foodProvider,
+  swapParsedItem,
+  type FoodItem,
+  type ParsedItem,
+} from '@/lib/food';
 import { portionedEntry, type LogEntry } from '@/lib/log-store';
 
 import { EngineStatus, SourceTag } from './engine-status';
@@ -173,24 +178,12 @@ function DescribeMeal({
     );
   const removeItem = (idx: number) =>
     setItems((arr) => arr.filter((_, i) => i !== idx));
-  // Swap a wrong match for one of its alternates — the chosen food becomes
-  // user-confirmed ('high'), and the one it replaced moves into the alternates.
+  // Swap a wrong match for one of its alternates. The rules live in
+  // swapParsedItem so they can be tested — getting them wrong logs a
+  // fabricated number under a confident badge.
   const swapItem = (idx: number, alt: FoodItem) => {
     setItems((arr) =>
-      arr.map((it, i) => {
-        if (i !== idx) return it;
-        const others = [
-          it.item,
-          ...(it.alternates ?? []).filter((a) => a.id !== alt.id),
-        ];
-        return {
-          ...it,
-          item: alt,
-          confidence: 'high',
-          reason: undefined,
-          alternates: others,
-        };
-      }),
+      arr.map((it, i) => (i === idx ? swapParsedItem(it, alt) : it)),
     );
     setExpanded(null);
   };
