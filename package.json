@@ -48,6 +48,7 @@
     "lint:fix": "expo lint --fix",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
+    "ifct": "python3 scripts/import-ifct.py",
     "test": "jest"
   },
   "private": true
