@@ -218,13 +218,46 @@ describe('portioned entries', () => {
     expect(next[0].quantity).toBe(2.5);
   });
 
-  it('clamps quantity to a 0.5 minimum and half-step', async () => {
+  it('ignores a non-positive quantity instead of inventing one', async () => {
+    // This used to floor 0 UP to 0.5 — for a weighed food that is 50 g.
     const s = createMemoryStore();
     const date = '2026-06-06';
     await addEntry(date, portionedEntry(dal, 1), s);
     const [entry] = await loadDay(date, s);
-    const next = await updateEntryQuantity(date, entry.id, 0, s);
-    expect(next[0].quantity).toBe(0.5);
+    for (const bad of [0, -1, NaN]) {
+      const next = await updateEntryQuantity(date, entry.id, bad, s);
+      expect(next[0].quantity).toBe(1);
+      expect(next[0].kcal).toBe(150);
+    }
+  });
+
+  // Half a tablespoon of sugar against a USDA per-100g row: the composer
+  // showed 0.07 -> 27 kcal, and tapping Log saved 0.5 -> 193 kcal and 50 g of
+  // carbs, because the quantity was floored to 0.5 on the way into the log.
+  const sugar = {
+    name: 'sugar',
+    serving: '100g',
+    kcal: 386,
+    proteinG: 0,
+    carbsG: 100,
+    fatG: 0,
+  };
+
+  it('logs a weighed quantity exactly, not floored to 0.5', () => {
+    const e = portionedEntry(sugar, 0.07);
+    expect(e.quantity).toBe(0.07);
+    expect(e.kcal).toBe(27); // what the composer showed — not 193
+    expect(e.carbsG).toBe(7); // not 50
+  });
+
+  it('saves an edited weighed quantity exactly', async () => {
+    const s = createMemoryStore();
+    const date = '2026-06-06';
+    await addEntry(date, portionedEntry(sugar, 0.1), s);
+    const [entry] = await loadDay(date, s);
+    const next = await updateEntryQuantity(date, entry.id, 0.05, s);
+    expect(next[0].quantity).toBe(0.05);
+    expect(next[0].kcal).toBe(19); // 386 x 0.05, not rounded up to 0.5
   });
 
   it('leaves custom (non-portioned) entries untouched', async () => {

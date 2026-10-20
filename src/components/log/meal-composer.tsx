@@ -10,6 +10,12 @@ import {
   type ParsedItem,
 } from '@/lib/food';
 import { portionedEntry, type LogEntry } from '@/lib/log-store';
+import {
+  isWeighed,
+  quantityLabel,
+  stepperLabel,
+  stepQuantity,
+} from '@/lib/quantity';
 
 import { EngineStatus, SourceTag } from './engine-status';
 import { ConfidenceBadge, Stepper } from './meal-bits';
@@ -168,11 +174,11 @@ function DescribeMeal({
     setBusy(false);
   };
 
-  const setQty = (idx: number, q: number) =>
+  const stepItem = (idx: number, dir: 1 | -1) =>
     setItems((arr) =>
       arr.map((it, i) =>
         i === idx
-          ? { ...it, quantity: Math.max(0.5, Math.round(q * 2) / 2) }
+          ? { ...it, quantity: stepQuantity(it.item.serving, it.quantity, dir) }
           : it,
       ),
     );
@@ -239,7 +245,10 @@ function DescribeMeal({
                       <SourceTag source={it.item.source} />
                     </View>
                     <Text style={st.breakdownSub}>
-                      {it.item.serving} ·{' '}
+                      {isWeighed(it.item.serving)
+                        ? quantityLabel(it.item.serving, it.quantity)
+                        : it.item.serving}{' '}
+                      ·{' '}
                       {Math.round(it.item.kcal * it.quantity)} kcal
                       {canSwap ? (
                         <Text style={st.changeHint}>
@@ -249,8 +258,8 @@ function DescribeMeal({
                     </Text>
                   </Pressable>
                   <Stepper
-                    value={it.quantity}
-                    onChange={(q) => setQty(idx, q)}
+                    label={stepperLabel(it.item.serving, it.quantity)}
+                    onStep={(dir) => stepItem(idx, dir)}
                   />
                   <Pressable onPress={() => removeItem(idx)} hitSlop={8}>
                     <Text style={st.removeText}>✕</Text>

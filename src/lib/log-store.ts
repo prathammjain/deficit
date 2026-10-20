@@ -53,13 +53,22 @@ export interface FoodLike {
 
 const r = (n: number) => Math.round(n);
 
+/** A real amount: positive and finite. */
+const isAmount = (q: number) => Number.isFinite(q) && q > 0;
+/** Strip float noise (0.15000000000000002) before it reaches storage. */
+const tidy = (q: number) => Math.round(q * 1e4) / 1e4;
+
 /** Build a portioned (quantity-editable) entry from a food item. */
 export function portionedEntry(
   food: FoodLike,
   quantity = 1,
   confidence?: Confidence,
 ): Omit<LogEntry, 'id' | 'at'> {
-  const q = Math.max(0.5, quantity);
+  // Saved exactly as given. This was Math.max(0.5, quantity), which for a
+  // weighed serving is a 50 g floor: the composer showed 7 g of sugar at
+  // 27 kcal and tapping Log saved 50 g at 193 kcal. Only something that is
+  // not an amount at all falls back to one serving.
+  const q = isAmount(quantity) ? tidy(quantity) : 1;
   return {
     label: food.name,
     serving: food.serving,
@@ -210,11 +219,16 @@ export function updateEntryQuantity(
   quantity: number,
   store: KVStore = kv,
 ): Promise<LogEntry[]> {
-  const q = Math.max(0.5, Math.round(quantity * 2) / 2);
+  // The caller has already moved the value along the right grid — 5 g for a
+  // weighed serving, half a serving otherwise (lib/quantity.ts) — so it is
+  // saved as-is. Re-rounding to half-steps here is what turned a 5 g edit on a
+  // weighed food into 50 g. A non-amount is ignored rather than replaced.
+  const valid = isAmount(quantity);
+  const q = tidy(quantity);
   return serialized(dayKey(date), async () => {
     const entries = await readDay(date, store);
     const next = entries.map((e) => {
-      if (e.id !== id || e.unitKcal == null) return e;
+      if (!valid || e.id !== id || e.unitKcal == null) return e;
       return {
         ...e,
         quantity: q,

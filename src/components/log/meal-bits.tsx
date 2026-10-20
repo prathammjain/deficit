@@ -5,26 +5,29 @@ import type { Confidence } from '@/lib/food';
 
 import { st } from './styles';
 
-/** ± quantity control shared by the describe-breakdown and logged rows. */
+/**
+ * ± quantity control shared by the describe-breakdown and logged rows.
+ *
+ * Deliberately dumb: it shows a label and reports a direction. What a press
+ * means depends on the serving — 5 g for a weighed food, half a serving for a
+ * countable one — so callers work it out with stepQuantity in lib/quantity.ts.
+ * This used to add a flat 0.5, which for a weighed food is 50 g.
+ */
 export function Stepper({
-  value,
-  onChange,
+  label,
+  onStep,
 }: {
-  value: number;
-  onChange: (v: number) => void;
+  label: string;
+  onStep: (dir: 1 | -1) => void;
 }) {
   return (
     <View style={st.stepper}>
-      <Pressable
-        onPress={() => onChange(value - 0.5)}
-        hitSlop={8}
-        style={st.stepBtn}
-      >
+      <Pressable onPress={() => onStep(-1)} hitSlop={8} style={st.stepBtn}>
         <Text style={st.stepText}>−</Text>
       </Pressable>
-      <Text style={st.stepQty}>{value}</Text>
+      <Text style={st.stepQty}>{label}</Text>
       <Pressable
-        onPress={() => onChange(value + 0.5)}
+        onPress={() => onStep(1)}
         hitSlop={8}
         style={st.stepBtn}
       >

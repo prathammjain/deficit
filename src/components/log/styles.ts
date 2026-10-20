@@ -282,7 +282,12 @@ export const st = StyleSheet.create({
     color: palette.text,
     fontSize: 14,
     fontWeight: '600',
-    minWidth: 24,
+    // Wide enough for "1000 g" / "250 ml". The stepper is right-aligned, so a
+    // label that resizes as it steps ("100 g" -> "5 g") would slide the −
+    // button out from under a thumb mid-tap. Tabular digits keep the number
+    // itself from shimmying inside that width.
+    minWidth: 52,
     textAlign: 'center',
+    fontVariant: ['tabular-nums'],
   },
 });

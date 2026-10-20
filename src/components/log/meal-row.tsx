@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 
 import type { LogEntry } from '@/lib/log-store';
+import { quantityLabel, stepperLabel, stepQuantity } from '@/lib/quantity';
 
 import { Stepper } from './meal-bits';
 import { st } from './styles';
@@ -27,14 +28,19 @@ export function MealRow({
         </View>
         <Text style={st.entrySub}>
           {portioned
-            ? `${entry.quantity} × ${entry.serving}`
+            ? quantityLabel(entry.serving, entry.quantity as number)
             : entry.proteinG
               ? `${entry.proteinG}g protein`
               : 'custom'}
         </Text>
       </View>
       {portioned ? (
-        <Stepper value={entry.quantity as number} onChange={onQty} />
+        <Stepper
+          label={stepperLabel(entry.serving, entry.quantity as number)}
+          onStep={(dir) =>
+            onQty(stepQuantity(entry.serving, entry.quantity as number, dir))
+          }
+        />
       ) : null}
       <Text style={st.entryKcal}>{entry.kcal}</Text>
       <Pressable onPress={onRemove} hitSlop={10} style={st.removeBtn}>
