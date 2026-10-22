@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Grain: food tracking for people who care about every gram</title>
+    <meta
+      name="description"
+      content="Type what you ate in plain English. Grain works out the calories and macros from real nutrition data, for lifters and athletes who count every gram."
+    />
+    <meta name="theme-color" content="#FCFAF6" />
+
+    <meta property="og:title" content="Grain: food tracking for people who care about every gram" />
+    <meta
+      property="og:description"
+      content="Don't scan your food. Describe it. Grain works out calories and macros from real nutrition data."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://getgrain.fit" />
+    <meta property="og:image" content="https://getgrain.fit/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Grain: food tracking for people who care about every gram" />
+    <meta
+      name="twitter:description"
+      content="Don't scan your food. Describe it. Grain works out calories and macros from real nutrition data."
+    />
+    <meta name="twitter:image" content="https://getgrain.fit/og.png" />
+
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Doto:wght@700..900&family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="sheen" aria-hidden="true"></div>
+
+    <header class="bar wrap">
+      <a class="mark" href="/" aria-label="Grain home">
+        <span class="mark-dot" aria-hidden="true"></span>Grain
+      </a>
+      <a class="btn btn-small" href="https://app.getgrain.fit">Open Grain</a>
+    </header>
+
+    <main>
+      <section class="hero wrap">
+        <div class="hero-copy">
+          <h1>Food tracking for people who give a f*** about every gram.</h1>
+          <p class="lede">
+            A photo can't see the oil in the pan or the chicken under the rice. You can. Type
+            what you ate in plain English, and Grain works out the calories and macros from
+            real nutrition data.
+          </p>
+          <a class="btn" href="https://app.getgrain.fit">Open Grain</a>
+        </div>
+
+        <div class="phone-stage">
+          <div
+            class="phone"
+            role="img"
+            aria-label="Grain demo: typing 200 g chicken breast, 150 g rice and 1 tbsp ghee gives 642 calories and 66 grams of protein."
+          >
+            <div class="screen" aria-hidden="true">
+              <div class="status"><span>9:41</span><span class="status-icons"></span></div>
+
+              <div class="app-label">Today</div>
+              <div class="app-title">Daily log</div>
+
+              <div class="app-card summary">
+                <div class="summary-top">
+                  <div>
+                    <div class="summary-label">Left to eat</div>
+                    <div class="readout" data-left>2,080</div>
+                  </div>
+                  <div class="gauge">
+                    <svg viewBox="0 0 100 100" width="84" height="84">
+                      <circle class="gauge-track" cx="50" cy="50" r="42" />
+                      <circle class="gauge-fill" cx="50" cy="50" r="42" data-gauge />
+                    </svg>
+                    <div class="gauge-text">
+                      <b data-consumed>520</b>
+                      <span>of 2,600</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="chips">
+                  <span class="chip"><i></i><span>P <span data-protein>38</span> / 170g</span></span>
+                  <span class="chip"><span>C <span data-carbs>64</span>g</span></span>
+                  <span class="chip"><span>F <span data-fat>14</span>g</span></span>
+                </div>
+              </div>
+
+              <div class="app-card describe" data-describe>
+                <div class="describe-input">
+                  <span data-typed></span><span class="caret"></span>
+                </div>
+                <div class="describe-foot">
+                  <span class="describe-hint">We match each item, then you log.</span>
+                  <span class="app-btn" data-match>Match</span>
+                </div>
+
+                <div class="rows" data-rows>
+                  <div class="rows-inner">
+                  <div class="row">
+                    <div class="row-main">
+                      <div class="row-name">Chicken breast <em>✓ good match</em></div>
+                      <div class="row-sub">200 g cooked</div>
+                    </div>
+                    <div class="row-kcal">330</div>
+                  </div>
+                  <div class="row">
+                    <div class="row-main">
+                      <div class="row-name">White rice <em>✓ good match</em></div>
+                      <div class="row-sub">150 g cooked</div>
+                    </div>
+                    <div class="row-kcal">195</div>
+                  </div>
+                  <div class="row">
+                    <div class="row-main">
+                      <div class="row-name">Ghee <em>✓ good match</em></div>
+                      <div class="row-sub">1 tbsp (13 g)</div>
+                    </div>
+                    <div class="row-kcal">117</div>
+                  </div>
+                  <div class="row-total">
+                    <span>Total</span><b>642 kcal · 66 g protein</b>
+                  </div>
+                  <span class="app-btn app-btn-wide" data-log>Log 3 items</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="logged" data-logged>
+                <div class="logged-row"><span>Chicken breast</span><b>330</b></div>
+                <div class="logged-row"><span>White rice</span><b>195</b></div>
+                <div class="logged-row"><span>Ghee</span><b>117</b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="why wrap" aria-labelledby="why-title">
+        <h2 id="why-title">Why not scan?</h2>
+        <p class="section-lede">
+          Scanning apps guess from a picture. That's fine for a rough idea, but not when every
+          gram matters.
+        </p>
+        <div class="glass why-panel">
+          <div class="why-item">
+            <h3>It can't see what's hidden</h3>
+            <p>The filling, the layer underneath, whatever is mixed in.</p>
+          </div>
+          <div class="why-item">
+            <h3>It can't see oil or ghee</h3>
+            <p>A tablespoon is around 120 calories, and it looks like nothing at all.</p>
+          </div>
+          <div class="why-item">
+            <h3>It can't weigh anything</h3>
+            <p>100 g of rice and 180 g look the same in a photo.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="does wrap" aria-labelledby="does-title">
+        <div class="glass does-card">
+          <h2 id="does-title">What Grain does</h2>
+          <p class="typed-line">“200 g chicken breast, 150 g rice, 1 tbsp ghee.”</p>
+          <p>
+            You write what you ate. Grain matches each food to measured nutrition data and does
+            the maths. If something's unclear, it tells you instead of guessing.
+          </p>
+        </div>
+      </section>
+
+      <section class="who wrap">
+        <p>Built for lifters, athletes and models. Anyone whose numbers have to be right.</p>
+      </section>
+
+      <section class="end wrap">
+        <div class="glass end-card">
+          <p>Log your next meal the way you'd describe it.</p>
+          <a class="btn" href="https://app.getgrain.fit">Open Grain</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot wrap">
+      <span class="mark mark-quiet"><span class="mark-dot" aria-hidden="true"></span>Grain</span>
+      <span>© 2026 Grain</span>
+    </footer>
+
+    <script src="demo.js" defer></script>
+  </body>
+</html>
