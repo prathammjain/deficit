@@ -1,4 +1,4 @@
-// Deficit — food Edge Function (Supabase / Deno). Indian-table + USDA grounded,
+// Grain — food Edge Function (Supabase / Deno). Indian-table + USDA grounded,
 // AI cross-checked.
 //
 //   { action: 'parse',  text }  -> ParsedMeal

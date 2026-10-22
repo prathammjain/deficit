@@ -1,4 +1,4 @@
-// Deficit service worker — enables "Add to Home Screen" and an offline shell.
+// Grain service worker — enables "Add to Home Screen" and an offline shell.
 //
 // Scope is deliberately narrow: only this origin's own build output is ever
 // cached. The first version of this file intercepted every GET with a

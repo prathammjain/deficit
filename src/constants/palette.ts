@@ -1,5 +1,5 @@
 /**
- * palette.ts — the Deficit design system: "Warm Instrument".
+ * palette.ts — the Grain design system: "Warm Instrument".
  *
  * Direction (see docs/superpowers/specs/2026-07-09-warm-instrument-redesign):
  * a warm bone canvas with near-black warm ink, content on soft outlined

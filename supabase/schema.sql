@@ -1,4 +1,4 @@
--- Deficit — database schema.
+-- Grain — database schema.
 -- Run this once in the Supabase SQL editor (Dashboard → SQL → New query).
 --
 -- One generic key/value table per user. The app already serializes everything
