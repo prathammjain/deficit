@@ -37,8 +37,8 @@ html {
   overflow-x: hidden;
 }
 
-/* Orbs deliberately run off the edges. Clip them at the page edge so they
-   can never widen it into a sideways wobble on phones. */
+/* Floats and tilted panels run off the edges. Clip them at the page edge so
+   they can never widen it into a sideways wobble on phones. */
 main {
   overflow-x: clip;
 }
@@ -51,30 +51,32 @@ body {
   color: var(--ink);
   line-height: 1.55;
   overflow-x: hidden;
-  background-color: var(--pearl);
+  /* Bright white light with only a breath of warmth in it. */
+  background-color: #fff;
   background-image:
     radial-gradient(
-      55% 45% at 85% 8%,
-      rgba(255, 217, 194, 0.85) 0%,
-      rgba(255, 217, 194, 0) 70%
+      55% 45% at 85% 6%,
+      rgba(255, 222, 204, 0.3) 0%,
+      rgba(255, 222, 204, 0) 70%
     ),
-    radial-gradient(45% 40% at 5% 35%, #fff 0%, rgba(255, 255, 255, 0) 70%),
-    linear-gradient(180deg, #fffdf9 0%, var(--pearl) 45%, #f6f0e7 100%);
+    radial-gradient(70% 55% at 20% 30%, #fff 0%, rgba(255, 255, 255, 0) 75%),
+    linear-gradient(180deg, #fff 0%, #fffdfa 55%, #fbf8f3 100%);
   background-attachment: fixed;
 }
 
 /* A slow band of light across the page: the lustre. */
 .sheen {
   position: fixed;
-  inset: -20%;
+  /* Wide enough that its edge never shows as it drifts sideways. */
+  inset: -20% -45%;
   z-index: -1;
   pointer-events: none;
   background: linear-gradient(
     115deg,
-    rgba(255, 255, 255, 0) 38%,
-    rgba(255, 255, 255, 0.5) 48%,
-    rgba(255, 240, 228, 0.3) 52%,
-    rgba(255, 255, 255, 0) 62%
+    rgba(255, 255, 255, 0) 34%,
+    rgba(255, 255, 255, 0.95) 46%,
+    rgba(255, 255, 255, 0.9) 54%,
+    rgba(255, 255, 255, 0) 66%
   );
   animation: sheen 22s ease-in-out infinite alternate;
 }
@@ -833,6 +835,325 @@ h3 {
   .does-card {
     padding: 44px;
   }
+}
+
+/* ---------- Two column sections: copy beside a working card ---------- */
+
+.split {
+  display: grid;
+  gap: 8px;
+  align-items: center;
+  padding-bottom: 88px;
+}
+
+.split .section-lede {
+  margin-bottom: 18px;
+}
+
+@media (min-width: 900px) {
+  .split {
+    grid-template-columns: 1fr 1fr;
+    gap: 64px;
+    padding-bottom: 120px;
+  }
+
+  .split-flip .split-copy {
+    order: 2;
+  }
+}
+
+/* ---------- See where every number comes from ---------- */
+
+.proof-card {
+  padding: 22px;
+  max-width: 480px;
+  width: 100%;
+  font-family: var(--app);
+  justify-self: center;
+}
+
+.m-row,
+.m-total {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.m-row b {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.m-row em {
+  display: block;
+  font-style: normal;
+  font-size: 13.5px;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+
+.m-row strong,
+.m-total strong {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.badge {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge.ok {
+  color: #2f8f5b;
+}
+
+.badge.warn {
+  color: #c77a12;
+}
+
+.m-alts {
+  position: relative;
+  z-index: 1;
+  margin: 10px 0 4px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+}
+
+.m-alts p {
+  margin: 0 4px 8px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.alt {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 14.5px;
+}
+
+.alt em {
+  font-style: normal;
+  color: var(--ink-faint);
+  font-size: 13px;
+}
+
+.alt b {
+  font-weight: 600;
+}
+
+.m-total {
+  border-bottom: 0;
+  padding-bottom: 4px;
+}
+
+.m-total span {
+  color: var(--ink-soft);
+}
+
+/* The swap: the low fat row is picked, then the paneer and total numbers
+   change over to match. Without JS the finished state shows. */
+.swap {
+  display: inline-grid;
+}
+
+.swap > span {
+  grid-area: 1 / 1;
+  text-align: right;
+}
+
+.swap .was {
+  opacity: 0;
+}
+
+.js .proof-card .swap .was {
+  opacity: 1;
+}
+
+.js .proof-card .swap .now {
+  opacity: 0;
+}
+
+.alt-pick {
+  background: rgba(244, 81, 30, 0.1);
+  box-shadow: inset 0 0 0 1.5px rgba(244, 81, 30, 0.5);
+}
+
+.js .proof-card .alt-pick {
+  background: transparent;
+  box-shadow: none;
+}
+
+.proof-card.is-playing .alt-pick {
+  animation: pick 0.5s 0.9s ease forwards;
+}
+
+.proof-card.is-playing .swap .was {
+  animation: fade-out 0.35s 1.5s ease forwards;
+}
+
+.proof-card.is-playing .swap .now {
+  animation: fade-in 0.35s 1.6s ease forwards;
+}
+
+@keyframes pick {
+  from {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px rgba(244, 81, 30, 0);
+  }
+  to {
+    background: rgba(244, 81, 30, 0.1);
+    box-shadow: inset 0 0 0 1.5px rgba(244, 81, 30, 0.5);
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- When you know the numbers, use yours ---------- */
+
+.custom-card {
+  padding: 22px;
+  max-width: 480px;
+  width: 100%;
+  font-family: var(--app);
+  justify-self: center;
+}
+
+.c-field {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 50px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--hairline);
+  font-size: 15.5px;
+  font-weight: 500;
+}
+
+.c-field small {
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+.c-field span:empty + small {
+  margin-left: -6px;
+}
+
+.c-name .caret {
+  align-self: center;
+  opacity: 0;
+}
+
+.custom-card.is-typing .c-name .caret {
+  opacity: 1;
+}
+
+.c-nums {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.c-add {
+  display: grid;
+  place-items: center;
+  padding: 0 22px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+  transition: transform 0.15s ease;
+}
+
+.c-add.is-pressed {
+  transform: scale(0.93);
+}
+
+.c-today {
+  position: relative;
+  z-index: 1;
+  margin-top: 18px;
+}
+
+.c-today p {
+  margin: 0 4px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-faint);
+}
+
+.c-today ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-height: 150px;
+}
+
+.c-today li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 14.5px;
+}
+
+.c-today li:last-child {
+  border-bottom: 0;
+}
+
+.c-today li em {
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: var(--accent);
+  background: rgba(244, 81, 30, 0.1);
+}
+
+.c-today li b {
+  font-weight: 600;
+}
+
+.c-new {
+  animation: fade-in 0.4s ease;
 }
 
 /* ---------- Who it's for ---------- */

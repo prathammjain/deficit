@@ -13,7 +13,7 @@
       name="description"
       content="Type what you ate in plain English. Grain works out the calories and macros from real nutrition data, for lifters and athletes who count every gram."
     />
-    <meta name="theme-color" content="#FCFAF6" />
+    <meta name="theme-color" content="#FFFFFF" />
 
     <meta
       property="og:title"
@@ -501,6 +501,97 @@
         </div>
       </section>
 
+      <section class="split proof wrap" aria-labelledby="proof-title">
+        <div class="split-copy">
+          <h2 id="proof-title">See where every number comes from.</h2>
+          <p class="section-lede">
+            Each food shows what Grain matched it to and how sure it is. If a
+            match looks wrong, tap it and pick the right one. Your total is
+            never a number you have to take on faith.
+          </p>
+        </div>
+        <div class="glass proof-card" data-tile aria-hidden="true">
+          <div class="m-row">
+            <div>
+              <b>Chicken breast</b><span class="badge ok">✓ good match</span>
+              <em>200 g cooked</em>
+            </div>
+            <strong>330</strong>
+          </div>
+          <div class="m-row m-open">
+            <div>
+              <b>Paneer</b><span class="badge warn">check this</span>
+              <em>150 g</em>
+            </div>
+            <strong class="swap"
+              ><span class="was">398</span><span class="now">270</span></strong
+            >
+          </div>
+          <div class="m-alts">
+            <p>Database 398 kcal vs AI estimate ~280 kcal.</p>
+            <div class="alt">
+              <span>Paneer, full fat</span><em>100 g</em><b>265</b>
+            </div>
+            <div class="alt alt-pick">
+              <span>Paneer, low fat</span><em>100 g</em><b>180</b>
+            </div>
+          </div>
+          <div class="m-total">
+            <span>Total</span>
+            <strong class="swap"
+              ><span class="was">728 kcal</span
+              ><span class="now">600 kcal</span></strong
+            >
+          </div>
+        </div>
+      </section>
+
+      <section
+        class="split split-flip custom wrap"
+        aria-labelledby="custom-title"
+      >
+        <div class="split-copy">
+          <h2 id="custom-title">When you know the numbers, use yours.</h2>
+          <p class="section-lede">
+            Some food comes with its numbers: the label on a protein bar, your
+            cafe's menu, a recipe you've worked out once. Add it as it is, in
+            seconds. Grain keeps your numbers exactly as you typed them.
+          </p>
+        </div>
+        <div class="glass custom-card" data-custom aria-hidden="true">
+          <div class="c-field c-name">
+            <span data-c="name">Protein bar, from the label</span
+            ><i class="caret"></i>
+          </div>
+          <div class="c-nums">
+            <div class="c-field">
+              <span data-c="kcal">210</span><small>kcal</small>
+            </div>
+            <div class="c-field">
+              <span data-c="protein">20</span><small>g protein</small>
+            </div>
+            <div class="c-add">Add</div>
+          </div>
+          <div class="c-today">
+            <p>Today</p>
+            <ul data-c="list">
+              <li>
+                <span>Protein bar, from the label</span><em>Custom</em
+                ><b>210</b>
+              </li>
+              <li>
+                <span>Cafe chicken wrap, from the menu</span><em>Custom</em
+                ><b>480</b>
+              </li>
+              <li>
+                <span>Mom's rajma, worked out once</span><em>Custom</em
+                ><b>320</b>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
       <section class="who wrap">
         <p>
           <span class="tone">Built for lifters, athletes and models.</span>
@@ -533,5 +624,6 @@
 
     <script src="demo.js" defer></script>
     <script src="tiles.js" defer></script>
+    <script src="custom.js" defer></script>
   </body>
 </html>
