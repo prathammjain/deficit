@@ -56,7 +56,7 @@ export function SignInScreen() {
   return (
     <Screen contentStyle={st.grow}>
       <View style={st.wrap}>
-        <Text style={st.brand}>DEFICIT</Text>
+        <Text style={st.brand}>GRAIN</Text>
         <Text style={st.tagline}>
           Calorie tracking that does not lie to you.
         </Text>

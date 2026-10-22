@@ -152,7 +152,7 @@ export function OnboardingFlow({
         >
           {step === 'welcome' && (
             <View style={styles.welcomeWrap}>
-              <Text style={styles.welcomeBrand}>DEFICIT</Text>
+              <Text style={styles.welcomeBrand}>GRAIN</Text>
               <Text style={styles.title}>
                 Calorie tracking that does not lie to you
               </Text>
