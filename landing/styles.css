@@ -51,17 +51,9 @@ body {
   color: var(--ink);
   line-height: 1.55;
   overflow-x: hidden;
-  /* Bright white light with only a breath of warmth in it. */
-  background-color: #fff;
-  background-image:
-    radial-gradient(
-      55% 45% at 85% 6%,
-      rgba(255, 222, 204, 0.3) 0%,
-      rgba(255, 222, 204, 0) 70%
-    ),
-    radial-gradient(70% 55% at 20% 30%, #fff 0%, rgba(255, 255, 255, 0) 75%),
-    linear-gradient(180deg, #fff 0%, #fffdfa 55%, #fbf8f3 100%);
-  background-attachment: fixed;
+  /* Pure white. The orange lives only in the .hint glows, never mixed
+     into the page colour. */
+  background: #fff;
 }
 
 /* A slow band of light across the page: the lustre. */
@@ -112,38 +104,88 @@ a {
   color: var(--ink-tone);
 }
 
+/* ---------- Orange glows ---------- */
+
+/* Faint orange light coming in from the side of the window at a few points
+   down the page. Each glow is centred on the window's edge, whatever its
+   width, so only its inner half shows; it fades to nothing inside its own
+   box, and none sits behind a card or the phone. Everywhere else the page
+   is pure white. */
+.hint {
+  --glow-w: clamp(320px, 36vw, 760px);
+  position: absolute;
+  z-index: -1;
+  width: var(--glow-w);
+  pointer-events: none;
+  background: radial-gradient(
+    closest-side,
+    rgba(255, 130, 50, 0.14) 0%,
+    rgba(255, 130, 50, 0.08) 35%,
+    rgba(255, 130, 50, 0.03) 65%,
+    rgba(255, 130, 50, 0) 100%
+  );
+}
+
+.hint-left {
+  left: calc(50% - 50vw - var(--glow-w) / 2);
+}
+
+.hint-right {
+  right: calc(50% - 50vw - var(--glow-w) / 2);
+}
+
+.hint-hero {
+  top: -160px;
+  height: 600px;
+}
+
+/* Beside the "What Grain does" card on wide screens only; on phones the
+   card is full width and there is no open space beside it. */
+.hint-does {
+  display: none;
+  top: 0;
+  height: 100%;
+}
+
+@media (min-width: 900px) {
+  .hint-does {
+    display: block;
+  }
+}
+
+/* Level with the copy, which comes first on phones, so it stays clear of
+   the card below it. */
+.hint-proof,
+.hint-custom {
+  top: 0;
+  height: 300px;
+}
+
+.hint-who {
+  top: -60px;
+  height: 340px;
+}
+
 /* ---------- Glass ---------- */
 
 .glass {
   position: relative;
   z-index: 1;
-  /* The glass carries its own light, so it reads as glass over a plain
-     page: a clear, faintly warm body that lets the page through, a glint in
-     the top corner, and an edge that is bright where light hits it and fades
-     on the far side (drawn by ::after). */
-  background:
-    radial-gradient(
-      90% 70% at 0% 0%,
-      rgba(255, 255, 255, 0.75) 0%,
-      rgba(255, 255, 255, 0) 55%
-    ),
-    radial-gradient(
-      110% 90% at 100% 100%,
-      rgba(255, 190, 150, 0.14) 0%,
-      rgba(255, 190, 150, 0) 60%
-    ),
-    linear-gradient(
-      150deg,
-      rgba(255, 255, 255, 0.42) 0%,
-      rgba(255, 255, 255, 0.16) 100%
-    );
-  -webkit-backdrop-filter: blur(22px) saturate(180%);
-  backdrop-filter: blur(22px) saturate(180%);
+  /* Its own neutral frosted pane, independent of the page: a clear white
+     body that is slightly see through, a bright top edge, a fine outer line
+     and a soft neutral shadow. No orange in the glass. */
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.8) 0%,
+    rgba(248, 249, 251, 0.62) 100%
+  );
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  backdrop-filter: blur(24px) saturate(140%);
   box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.9),
-    inset 0 -10px 24px -18px rgba(255, 255, 255, 0.8),
-    0 1px 2px rgba(80, 45, 20, 0.05),
-    0 22px 50px -28px rgba(80, 45, 20, 0.3);
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 0 0 1px rgba(17, 19, 24, 0.06),
+    0 1px 2px rgba(17, 19, 24, 0.04),
+    0 18px 44px -24px rgba(17, 19, 24, 0.18);
   border-radius: 32px;
 }
 
@@ -159,7 +201,7 @@ a {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* The edge: a 1px ring, bright at the lit corner, fading to almost clear. */
+/* The edge: a 1px white ring, bright at the top corner, fading out. */
 .glass::after {
   content: '';
   position: absolute;
@@ -170,9 +212,8 @@ a {
   background: linear-gradient(
     145deg,
     rgba(255, 255, 255, 1) 0%,
-    rgba(255, 255, 255, 0.35) 40%,
-    rgba(255, 255, 255, 0.15) 65%,
-    rgba(244, 81, 30, 0.18) 100%
+    rgba(255, 255, 255, 0.4) 45%,
+    rgba(255, 255, 255, 0.1) 100%
   );
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
@@ -1263,8 +1304,8 @@ h3 {
   border: 3px solid transparent;
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.06),
-    0 60px 90px -45px rgba(60, 35, 15, 0.55),
-    0 20px 40px -20px rgba(60, 35, 15, 0.35);
+    0 60px 90px -45px rgba(17, 19, 24, 0.45),
+    0 20px 40px -20px rgba(17, 19, 24, 0.28);
   transform: scale(var(--phone-scale));
   transform-origin: top center;
 }
