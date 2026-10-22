@@ -42,6 +42,18 @@ describe('splitSegments', () => {
       'salad',
     ]);
   });
+
+  it('splits sentences on a period', () => {
+    expect(splitSegments('2 roti. 1 katori dal.')).toEqual([
+      '2 roti',
+      '1 katori dal',
+    ]);
+  });
+
+  it('never splits a decimal point', () => {
+    expect(splitSegments('1.5 roti')).toEqual(['1.5 roti']);
+    expect(splitSegments('0.07 paneer raw')).toEqual(['0.07 paneer raw']);
+  });
 });
 
 describe('extractQuantity', () => {
@@ -62,6 +74,30 @@ describe('extractQuantity', () => {
       name: 'rice',
     });
   });
+
+  it('keeps a stated gram amount, joined or separated', () => {
+    expect(extractQuantity('150g chicken')).toEqual({
+      quantity: 1,
+      name: 'chicken',
+      measured: { amount: 150, unit: 'g' },
+    });
+    expect(extractQuantity('200 g paneer')).toEqual({
+      quantity: 1,
+      name: 'paneer',
+      measured: { amount: 200, unit: 'g' },
+    });
+  });
+
+  it('reads kg as grams and keeps ml as ml', () => {
+    expect(extractQuantity('1.5kg rice').measured).toEqual({
+      amount: 1500,
+      unit: 'g',
+    });
+    expect(extractQuantity('250ml milk').measured).toEqual({
+      amount: 250,
+      unit: 'ml',
+    });
+  });
 });
 
 describe('parseMeal', () => {
@@ -73,6 +109,48 @@ describe('parseMeal', () => {
     expect(roti?.quantity).toBe(2);
     // 2×120 + 150 + 200 = 590
     expect(parsed.total.kcal).toBe(590);
+  });
+
+  it('reads a decimal count of a countable serving', async () => {
+    const [roti] = (await provider.parseMeal('1.5 roti')).items;
+    expect(roti.item.id).toBe('roti');
+    expect(roti.quantity).toBe(1.5); // was 5 rotis
+  });
+
+  it('reads a decimal multiple of a per-100g serving', async () => {
+    const [paneer] = (await provider.parseMeal('0.07 paneer raw')).items;
+    expect(paneer.item.id).toBe('paneer-raw');
+    expect(paneer.quantity).toBe(0.07); // 7 g, was 700 g
+  });
+
+  it('maps grams onto a per-100g serving as grams / 100', async () => {
+    const [tikka] = (await provider.parseMeal('150g chicken tikka')).items;
+    expect(tikka.item.serving).toBe('100g');
+    expect(tikka.quantity).toBe(1.5);
+  });
+
+  it('scales grams by the weight a serving declares', async () => {
+    // Roti is "1 piece (40g)": 60 g is 1.5 pieces.
+    const [roti] = (await provider.parseMeal('60 g roti')).items;
+    expect(roti.item.serving).toBe('1 piece (40g)');
+    expect(roti.quantity).toBe(1.5);
+    expect(roti.confidence).toBe('medium'); // no surer than "1.5 roti"
+  });
+
+  it('declines to scale grams against a serving with no weight', async () => {
+    // Chai is "1 cup": no weight to divide by, so no number is invented.
+    const [chai] = (await provider.parseMeal('300g chai')).items;
+    expect(chai.item.serving).toBe('1 cup');
+    expect(chai.quantity).toBe(1);
+    expect(chai.confidence).toBe('low');
+    expect(chai.reason).toContain('300 g');
+  });
+
+  it('declines to scale ml against a serving weighed in grams', async () => {
+    const [paneer] = (await provider.parseMeal('100ml paneer raw')).items;
+    expect(paneer.item.serving).toBe('100g');
+    expect(paneer.quantity).toBe(1);
+    expect(paneer.confidence).toBe('low');
   });
 
   it('reports items it could not match', async () => {

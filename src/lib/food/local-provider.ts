@@ -11,6 +11,7 @@
  * recipes) and returns itemized macros. The UI never changes.
  */
 
+import { isWeighed } from '../quantity';
 import { INDIAN_FOODS, type IndianFood } from './indian-foods';
 import {
   totalMacros,
@@ -96,10 +97,15 @@ const UNIT_WORDS = new Set([
   'full',
 ]);
 
-/** Split a meal description into individual food segments. */
+/** A weight or volume: "150g", "1.5kg" (as 1500 g), "250ml". */
+type Measure = { amount: number; unit: 'g' | 'ml' };
+
+/** Split a meal description into individual food segments. A period ends a
+ *  sentence ("2 roti. 1 katori dal") unless it sits between two digits, where
+ *  it is a decimal point: "1.5 roti" is one segment, not "1" and "5 roti". */
 export function splitSegments(text: string): string[] {
   return text
-    .split(/,|\band\b|\+|\n|;|&|\./i)
+    .split(/,|\band\b|\+|\n|;|&|(?<!\d)\.|\.(?!\d)/i)
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 }
@@ -108,10 +114,17 @@ export function splitSegments(text: string): string[] {
 export function extractQuantity(segment: string): {
   quantity: number;
   name: string;
+  measured?: Measure;
 } {
-  const tokens = segment.toLowerCase().trim().split(/\s+/);
+  // Join "200 g" into "200g" so both forms read as one amount token.
+  const tokens = segment
+    .toLowerCase()
+    .trim()
+    .replace(/(\d)\s+(g|gm|gms|grams?|kg|ml)\b/g, '$1$2')
+    .split(/\s+/);
   let quantity = 1;
   let started = false;
+  let measured: Measure | undefined;
 
   const kept: string[] = [];
   for (const tok of tokens) {
@@ -128,12 +141,38 @@ export function extractQuantity(segment: string): {
     }
     started = true;
     if (UNIT_WORDS.has(tok)) continue;
-    // strip a numeric+unit blob like "150g"
-    if (/^\d+(?:g|gm|ml|kg)$/.test(tok)) continue;
+    // a stated amount like "150g": keep it out of the name, but keep it
+    const m = /^(\d+(?:\.\d+)?)(g|gm|gms|grams?|kg|ml)$/.exec(tok);
+    if (m) {
+      measured ??=
+        m[2] === 'ml'
+          ? { amount: Number(m[1]), unit: 'ml' }
+          : { amount: Number(m[1]) * (m[2] === 'kg' ? 1000 : 1), unit: 'g' };
+      continue;
+    }
     kept.push(tok);
   }
 
-  return { quantity: quantity > 0 ? quantity : 1, name: kept.join(' ').trim() };
+  const name = kept.join(' ').trim();
+  if (measured) return { quantity: 1, name, measured };
+  return { quantity: quantity > 0 ? quantity : 1, name };
+}
+
+/**
+ * The amount one serving weighs, when the serving says: "100g" (a weighed
+ * serving, see quantity.ts) or the "(150g)" in "1 katori (150g)". A bare
+ * "1 katori" or "1 cup" says nothing, and gets nothing.
+ */
+function servingMeasure(serving: string): Measure | undefined {
+  if (isWeighed(serving))
+    return { amount: 100, unit: /^100\s*ml/i.test(serving) ? 'ml' : 'g' };
+  const m = /\((\d+(?:\.\d+)?)\s*(g|ml)\)/i.exec(serving);
+  if (m)
+    return {
+      amount: Number(m[1]),
+      unit: m[2].toLowerCase() as Measure['unit'],
+    };
+  return undefined;
 }
 
 /**
@@ -171,7 +210,7 @@ export class LocalFoodProvider implements FoodProvider {
     const unmatched: string[] = [];
 
     for (const seg of segments) {
-      const { quantity, name } = extractQuantity(seg);
+      const { quantity, name, measured } = extractQuantity(seg);
       if (!name) continue;
       const ranked = this.rank(name);
       if (ranked.length === 0) {
@@ -179,10 +218,18 @@ export class LocalFoodProvider implements FoodProvider {
         continue;
       }
       const [best, ...rest] = ranked;
+      // A stated amount is scaled only against a serving that declares one in
+      // the same unit. Otherwise it stays 1 serving, flagged, never converted.
+      const per = measured && servingMeasure(best.item.serving);
+      const scaled = measured && per && per.unit === measured.unit;
       items.push({
         item: best.item,
-        quantity,
-        confidence: localConfidence(best.score),
+        quantity: scaled ? measured.amount / per.amount : quantity,
+        confidence: measured && !scaled ? 'low' : localConfidence(best.score),
+        ...(measured &&
+          !scaled && {
+            reason: `${measured.amount} ${measured.unit} not converted to ${best.item.serving} — check the portion`,
+          }),
         // Up to 4 other guesses so a wrong match is a one-tap fix.
         alternates: rest.slice(0, 4).map((r) => r.item),
       });
