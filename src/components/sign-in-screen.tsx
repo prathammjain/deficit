@@ -1,44 +1,20 @@
 /**
- * sign-in-screen.tsx — the magic-link sign-in (white paper §13).
- * Premium, minimal: one field, one button, a calm confirmation state.
+ * sign-in-screen.tsx — sign in with Google (white paper §13).
+ * Premium, minimal: one button.
  */
 
 import { useState } from 'react';
-import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { PrimaryButton, Screen } from '@/components/ui/primitives';
+import { Screen } from '@/components/ui/primitives';
 import { palette, radius, space, type as typo } from '@/constants/palette';
 import { useAuth } from '@/lib/supabase/auth';
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 export function SignInScreen() {
-  const { signIn, signInWithGoogle } = useAuth();
-  const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const { signInWithGoogle } = useAuth();
   const [googleBusy, setGoogleBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const valid = EMAIL_RE.test(email.trim());
-
-  const submit = async () => {
-    if (!valid || busy) return;
-    setBusy(true);
-    setError(null);
-    const { error } = await signIn(email);
-    setBusy(false);
-    if (error) setError(error);
-    else setSent(true);
-  };
 
   // On success the browser navigates away to Google, so the busy state only
   // ever clears on an immediate failure.
@@ -65,79 +41,18 @@ export function SignInScreen() {
           one you can trust, not one it made up.
         </Text>
 
-        {sent ? (
-          <>
-            <Text style={st.title}>Check your inbox</Text>
-            <Text style={st.body}>
-              We sent a sign-in link to{'\n'}
-              <Text style={st.email}>{email.trim()}</Text>. Open it on this
-              device to continue.
-            </Text>
-            <Text style={st.sentHint}>
-              Didn’t get it? Check your spam folder.
-            </Text>
-            <Text
-              style={st.resend}
-              onPress={() => {
-                setSent(false);
-                setEmail('');
-              }}
-            >
-              Use a different email
-            </Text>
-          </>
-        ) : (
-          <>
-            <Text style={st.title}>Sign in</Text>
-            {Platform.OS === 'web' ? (
-              <>
-                <Pressable
-                  onPress={google}
-                  disabled={googleBusy}
-                  style={({ pressed }) => [
-                    st.googleBtn,
-                    pressed && st.googlePressed,
-                  ]}
-                >
-                  <GoogleLogo />
-                  <Text style={st.googleText}>
-                    {googleBusy ? 'Opening Google…' : 'Continue with Google'}
-                  </Text>
-                </Pressable>
-                <View style={st.dividerRow}>
-                  <View style={st.dividerLine} />
-                  <Text style={st.dividerText}>or</Text>
-                  <View style={st.dividerLine} />
-                </View>
-              </>
-            ) : null}
-            <Text style={st.body}>
-              Enter your email and we’ll send a magic link. No password needed.
-            </Text>
-            <TextInput
-              style={st.input}
-              placeholder="you@email.com"
-              placeholderTextColor={palette.textDim}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="email-address"
-              inputMode="email"
-              value={email}
-              onChangeText={(t) => {
-                setEmail(t);
-                setError(null);
-              }}
-              onSubmitEditing={submit}
-            />
-            {error ? <Text style={st.error}>{error}</Text> : null}
-            <PrimaryButton
-              label={busy ? 'Sending…' : 'Send magic link'}
-              disabled={!valid || busy}
-              onPress={submit}
-              style={st.btn}
-            />
-          </>
-        )}
+        <Text style={st.title}>Sign in</Text>
+        <Pressable
+          onPress={google}
+          disabled={googleBusy}
+          style={({ pressed }) => [st.googleBtn, pressed && st.googlePressed]}
+        >
+          <GoogleLogo />
+          <Text style={st.googleText}>
+            {googleBusy ? 'Opening Google…' : 'Continue with Google'}
+          </Text>
+        </Pressable>
+        {error ? <Text style={st.error}>{error}</Text> : null}
       </View>
       <Text style={st.footer}>
         Grain provides estimates, not medical advice.
@@ -190,11 +105,6 @@ const st = StyleSheet.create({
     marginTop: space.sm,
     marginBottom: space.xxl,
   },
-  sentHint: {
-    color: palette.textFaint,
-    fontSize: 13,
-    marginTop: space.lg,
-  },
   footer: {
     color: palette.textDim,
     fontSize: 12,
@@ -202,24 +112,6 @@ const st = StyleSheet.create({
     paddingBottom: space.lg,
   },
   title: { ...typo.title, color: palette.text },
-  body: {
-    color: palette.textMuted,
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: space.md,
-  },
-  email: { color: palette.text, fontWeight: '600' },
-  input: {
-    marginTop: space.xxl,
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.hairline,
-    borderRadius: radius.md,
-    paddingHorizontal: space.lg,
-    paddingVertical: space.lg,
-    color: palette.text,
-    fontSize: 16,
-  },
   googleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -234,20 +126,5 @@ const st = StyleSheet.create({
   },
   googlePressed: { opacity: 0.85 },
   googleText: { color: '#1F1F1F', fontSize: 15, fontWeight: '600' },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    marginTop: space.xl,
-  },
-  dividerLine: { flex: 1, height: 1, backgroundColor: palette.hairline },
-  dividerText: { color: palette.textFaint, fontSize: 13 },
   error: { color: palette.danger, fontSize: 13, marginTop: space.md },
-  btn: { marginTop: space.lg },
-  resend: {
-    color: palette.accent,
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: space.xxl,
-  },
 });

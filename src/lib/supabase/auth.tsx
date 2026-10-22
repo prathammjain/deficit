@@ -29,8 +29,6 @@ interface AuthContextValue {
   session: Session | null;
   /** Whether cloud accounts are switched on at all. */
   enabled: boolean;
-  /** Send a magic link to the given email. */
-  signIn: (email: string) => Promise<{ error: string | null }>;
   /** Redirect to Google OAuth (web). Resolves only on immediate failure. */
   signInWithGoogle: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -77,23 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [applySession]);
 
-  const signIn = useCallback(async (email: string) => {
-    if (!supabase) return { error: 'Cloud accounts are not configured.' };
-    const emailRedirectTo =
-      Platform.OS === 'web' && typeof window !== 'undefined'
-        ? window.location.origin
-        : undefined;
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { emailRedirectTo },
-    });
-    return { error: error?.message ?? null };
-  }, []);
-
   const signInWithGoogle = useCallback(async () => {
     if (!supabase) return { error: 'Cloud accounts are not configured.' };
-    // Same implicit flow as magic links: Google redirects back to the app URL
-    // with the session in the hash, which detectSessionInUrl picks up.
+    // Implicit flow: Google redirects back to the app URL with the session in
+    // the hash, which detectSessionInUrl picks up.
     const redirectTo =
       Platform.OS === 'web' && typeof window !== 'undefined'
         ? window.location.origin
@@ -115,11 +100,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       session,
       enabled: isSupabaseConfigured,
-      signIn,
       signInWithGoogle,
       signOut,
     }),
-    [loading, session, signIn, signInWithGoogle, signOut],
+    [loading, session, signInWithGoogle, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
