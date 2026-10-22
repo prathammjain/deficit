@@ -110,17 +110,19 @@ a {
 .orb {
   position: absolute;
   z-index: 0;
-  border-radius: 50%;
   pointer-events: none;
+  /* Not a shape: a faint, shapeless haze of warm light, blurred until no
+     edge survives, so the page reads as shiny white with colour drifting
+     through it. */
+  border-radius: 46% 54% 60% 40% / 52% 44% 56% 48%;
   background: radial-gradient(
-    circle at 34% 30%,
-    #ffd2b0 0%,
-    #ff9a62 26%,
-    #f86a2c 52%,
-    #ef4e14 74%,
-    #d93f0c 100%
+    closest-side,
+    rgba(255, 166, 112, 0.55) 0%,
+    rgba(255, 196, 150, 0.35) 45%,
+    rgba(255, 226, 200, 0) 100%
   );
-  box-shadow: 0 40px 120px -20px rgba(244, 81, 30, 0.45);
+  filter: blur(70px);
+  opacity: 0.55;
 }
 
 /* ---------- Glass ---------- */
@@ -908,8 +910,7 @@ h3 {
   aspect-ratio: 1;
   right: -90px;
   bottom: -150px;
-  opacity: 0.95;
-  box-shadow: 0 0 120px 10px rgba(244, 81, 30, 0.35);
+  opacity: 0.5;
 }
 
 @media (min-width: 760px) {
