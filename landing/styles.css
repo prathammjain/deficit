@@ -115,30 +115,33 @@ a {
 .glass {
   position: relative;
   z-index: 1;
-  /* The glass carries its own light: a diagonal sheen and a faint warm
-     tint inside the panel, a bright top edge, a soft drop shadow. It reads
-     as glass over plain white, without borrowing colour from behind. */
+  /* The glass carries its own light, so it reads as glass over a plain
+     page: a clear, faintly warm body that lets the page through, a glint in
+     the top corner, and an edge that is bright where light hits it and fades
+     on the far side (drawn by ::after). */
   background:
-    linear-gradient(
-      140deg,
-      rgba(255, 255, 255, 0.92) 0%,
-      rgba(255, 255, 255, 0.55) 42%,
-      rgba(255, 246, 238, 0.5) 100%
+    radial-gradient(
+      90% 70% at 0% 0%,
+      rgba(255, 255, 255, 0.75) 0%,
+      rgba(255, 255, 255, 0) 55%
     ),
     radial-gradient(
-      120% 90% at 100% 100%,
-      rgba(255, 196, 160, 0.16) 0%,
-      rgba(255, 196, 160, 0) 60%
+      110% 90% at 100% 100%,
+      rgba(255, 190, 150, 0.14) 0%,
+      rgba(255, 190, 150, 0) 60%
+    ),
+    linear-gradient(
+      150deg,
+      rgba(255, 255, 255, 0.42) 0%,
+      rgba(255, 255, 255, 0.16) 100%
     );
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  backdrop-filter: blur(24px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.9);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
   box-shadow:
-    inset 0 1px 0 #fff,
-    inset 1px 0 0 rgba(255, 255, 255, 0.6),
-    inset 0 -1px 0 rgba(25, 23, 21, 0.04),
-    0 1px 2px rgba(80, 45, 20, 0.06),
-    0 24px 60px -30px rgba(80, 45, 20, 0.28);
+    inset 0 1px 1px rgba(255, 255, 255, 0.9),
+    inset 0 -10px 24px -18px rgba(255, 255, 255, 0.8),
+    0 1px 2px rgba(80, 45, 20, 0.05),
+    0 22px 50px -28px rgba(80, 45, 20, 0.3);
   border-radius: 32px;
 }
 
@@ -152,6 +155,28 @@ a {
   opacity: 0.12;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* The edge: a 1px ring, bright at the lit corner, fading to almost clear. */
+.glass::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 255, 255, 0.35) 40%,
+    rgba(255, 255, 255, 0.15) 65%,
+    rgba(244, 81, 30, 0.18) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
 }
 
 @supports not (

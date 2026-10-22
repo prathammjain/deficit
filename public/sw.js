@@ -12,13 +12,14 @@
 // Note the Cache API is not the HTTP cache: it ignores Cache-Control
 // entirely, so a `no-store` response still replays from it once stored.
 
-const CACHE_NAME = 'deficit-v2';
+const CACHE_NAME = 'grain-v3';
 
-/** Content-hashed build output — immutable, so cache-first is safe. */
+/** Content-hashed build output — immutable, so cache-first is safe. /icons/
+ *  is not: its file names never change, so caching it here kept the old logo
+ *  on installed phones after the icons were replaced. */
 const isImmutableAsset = (url) =>
   url.pathname.startsWith('/_expo/static/') ||
-  url.pathname.startsWith('/assets/') ||
-  url.pathname.startsWith('/icons/');
+  url.pathname.startsWith('/assets/');
 
 /** Store a copy without blocking the response. */
 function cachePut(request, response) {

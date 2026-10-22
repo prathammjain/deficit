@@ -43,7 +43,7 @@ export default function Root({ children }: PropsWithChildren) {
         {/* PWA: installable, named, iconed */}
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#EDEAE4" />
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=2" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Grain" />
