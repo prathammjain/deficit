@@ -45,7 +45,11 @@
 // @ts-nocheck
 import { INDIAN_FOODS } from './_indian-foods.ts';
 import { ifctSearch } from './ifct.ts';
-import { servingMultiplier } from './portion.ts';
+import {
+  estimateMultiplier,
+  portionCertainty as statedCertainty,
+  servingMultiplier,
+} from './portion.ts';
 
 // ---- CORS -------------------------------------------------------------------
 
@@ -475,7 +479,7 @@ async function signedInUserId(req: Request): Promise<string | null> {
 // Keyed on ENGINE_VERSION + model + normalised text so switching providers or
 // models automatically uses a separate cache namespace.
 
-const ENGINE_VERSION = 'v4';
+const ENGINE_VERSION = 'v5';
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const cacheKey = (cfg: LLMConfig, text: string) =>
@@ -841,8 +845,10 @@ async function parseUncached(
     const quantity = decision?.quantity || d.quantity || 1;
     const chosen = decision?.chosen ?? (candidates.length ? 0 : -1);
     const aiKcal = num(decision?.aiEstimateKcal);
-    const portionCertainty =
-      decision?.portionCertainty === 'clear' ? 'clear' : 'unsure';
+    const portionCertainty = statedCertainty(
+      d.grams,
+      decision?.portionCertainty,
+    );
 
     if (chosen >= 0 && candidates[chosen]) {
       const picked = candidates[chosen];
@@ -874,20 +880,31 @@ async function parseUncached(
       });
     } else if (decision?.estimate) {
       const e = decision.estimate;
+      const estServing = e.serving || '1 serving';
+      const estQuantity = estimateMultiplier(
+        estServing,
+        d.grams,
+        d.quantity || 1,
+      );
+      const scaled = estQuantity !== (d.quantity || 1);
       items.push({
         item: {
           id: `ai-${i}`,
           name: e.name || d.name,
-          serving: e.serving || '1 serving',
+          serving: estServing,
           kcal: num(e.kcal),
           proteinG: num(e.proteinG),
           carbsG: num(e.carbsG),
           fatG: num(e.fatG),
           source: 'ai',
         },
-        quantity: d.quantity || 1,
+        quantity: estQuantity,
         confidence: 'low',
-        reason: decision.reason || 'No database match — AI estimate.',
+        // The model's own reason names its serving ("1 tsp"), which no longer
+        // describes the amount once it is scaled to the user's weight.
+        reason: scaled
+          ? `No database match. AI estimate per ${estServing}, scaled to the ${d.grams} g you gave.`
+          : decision.reason || 'No database match — AI estimate.',
         alternates: candidates,
       });
     } else {

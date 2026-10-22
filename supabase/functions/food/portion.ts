@@ -45,3 +45,42 @@ export function servingMultiplier(
   // Floor at 0.01 so a tiny garnish still logs something rather than zero.
   return Math.max(0.01, Math.round(grams) / 100);
 }
+
+/** Grams (or ml) in one serving, when the label names them: "100g" -> 100,
+ *  "1 tsp (5g)" -> 5, "1 katori (150g)" -> 150. Null for "1 glass". */
+export function servingGrams(serving: string): number | null {
+  const m = /(\d+(?:\.\d+)?)\s*(g|ml)\b/i.exec(String(serving ?? ''));
+  const grams = m ? Number(m[1]) : NaN;
+  return grams > 0 ? grams : null;
+}
+
+/**
+ * The multiplier for the AI's own estimate, used when no candidate matched.
+ * Its serving is whatever the model wrote, often a home measure with its
+ * weight in brackets. When the user stated an amount it is honoured against
+ * that weight. Live case: "quarter tablespoon of ghee" was split as 3.5 g,
+ * the model estimated "1 tsp (5g)" at 45 kcal, and quantity 1 logged the
+ * whole teaspoon; 3.5 / 5 = 0.7 gives the ~31 kcal actually eaten.
+ */
+export function estimateMultiplier(
+  serving: string,
+  statedGrams: unknown,
+  fallbackQuantity: number,
+): number {
+  const fallback = fallbackQuantity > 0 ? fallbackQuantity : 1;
+  const grams = Number(statedGrams);
+  const per = servingGrams(serving);
+  if (!per || !Number.isFinite(grams) || grams <= 0) return fallback;
+  return Math.max(0.01, Math.round((grams / per) * 100) / 100);
+}
+
+/** A portion the user stated is known, whatever the model thought: "100 gm
+ *  paneer" came back 'unsure' and was labelled "portion uncertain". */
+export function portionCertainty(
+  statedGrams: unknown,
+  judged: unknown,
+): 'clear' | 'unsure' {
+  const grams = Number(statedGrams);
+  if (Number.isFinite(grams) && grams > 0) return 'clear';
+  return judged === 'clear' ? 'clear' : 'unsure';
+}

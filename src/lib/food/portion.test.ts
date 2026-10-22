@@ -3,7 +3,10 @@
  * failing cases below are real entries pulled from the live food_cache.
  */
 import {
+  estimateMultiplier,
   isPer100,
+  portionCertainty,
+  servingGrams,
   servingMultiplier,
 } from '../../../supabase/functions/food/portion';
 
@@ -61,5 +64,52 @@ describe('servingMultiplier', () => {
 
   it('never rounds a small amount away to zero', () => {
     expect(servingMultiplier('100g', 1, 1)).toBe(0.01);
+  });
+});
+
+describe('servingGrams', () => {
+  it('reads the weight a serving names', () => {
+    expect(servingGrams('100g')).toBe(100);
+    expect(servingGrams('1 tsp (5g)')).toBe(5);
+    expect(servingGrams('1 katori (150g)')).toBe(150);
+    expect(servingGrams('1 glass (250 ml)')).toBe(250);
+    expect(servingGrams('100g raw (uncooked weight)')).toBe(100);
+  });
+
+  it('returns null when no weight is named', () => {
+    expect(servingGrams('1 glass')).toBeNull();
+    expect(servingGrams('1 serving')).toBeNull();
+    expect(servingGrams('')).toBeNull();
+  });
+});
+
+describe('estimateMultiplier', () => {
+  it('scales the AI estimate to the stated weight (live: quarter tbsp ghee)', () => {
+    // Split as 3.5 g; the model estimated "1 tsp (5g)" at 45 kcal and the
+    // engine logged the whole teaspoon. 0.7 tsp is the ~31 kcal eaten.
+    expect(estimateMultiplier('1 tsp (5g)', 3.5, 1)).toBe(0.7);
+    expect(Math.round(45 * estimateMultiplier('1 tsp (5g)', 3.5, 1))).toBe(31);
+  });
+
+  it('keeps the counted quantity when nothing was weighed', () => {
+    expect(estimateMultiplier('1 tsp (5g)', null, 2)).toBe(2);
+    expect(estimateMultiplier('1 tsp (5g)', undefined, 0)).toBe(1);
+  });
+
+  it('keeps the counted quantity when the serving names no weight', () => {
+    expect(estimateMultiplier('1 serving', 120, 1)).toBe(1);
+  });
+});
+
+describe('portionCertainty', () => {
+  it('treats a stated amount as clear (live: "100 gm paneer" came back unsure)', () => {
+    expect(portionCertainty(100, 'unsure')).toBe('clear');
+    expect(portionCertainty(3.5, undefined)).toBe('clear');
+  });
+
+  it("follows the model's call when no amount was stated", () => {
+    expect(portionCertainty(null, 'clear')).toBe('clear');
+    expect(portionCertainty(null, 'unsure')).toBe('unsure');
+    expect(portionCertainty(0, 'garbage')).toBe('unsure');
   });
 });
