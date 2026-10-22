@@ -63,7 +63,7 @@
     return new Promise((resolve) => {
       const start = performance.now();
       const step = (now) => {
-        const t = Math.min(1, (now - start) / ms);
+        const t = Math.min(1, Math.max(0, (now - start) / ms));
         const e = 1 - Math.pow(1 - t, 3);
         const v = {};
         for (const k in from) v[k] = from[k] + (to[k] - from[k]) * e;
