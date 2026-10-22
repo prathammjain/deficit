@@ -6,7 +6,9 @@
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
-    <title>Grain: food tracking for people who care about every gram</title>
+    <title>
+      Grain: food tracking for people who give a f*** about every gram
+    </title>
     <meta
       name="description"
       content="Type what you ate in plain English. Grain works out the calories and macros from real nutrition data, for lifters and athletes who count every gram."
@@ -15,30 +17,31 @@
 
     <meta
       property="og:title"
-      content="Grain: food tracking for people who care about every gram"
+      content="Food tracking for people who give a f*** about every gram."
     />
     <meta
       property="og:description"
-      content="Don't scan your food. Describe it. Grain works out calories and macros from real nutrition data."
+      content="Type what you ate in plain English. Grain works out the calories and macros from real nutrition data."
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://getgrain.fit" />
-    <meta property="og:image" content="https://getgrain.fit/og.png" />
+    <meta property="og:image" content="https://getgrain.fit/og.png?v=2" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta
       name="twitter:title"
-      content="Grain: food tracking for people who care about every gram"
+      content="Food tracking for people who give a f*** about every gram."
     />
     <meta
       name="twitter:description"
-      content="Don't scan your food. Describe it. Grain works out calories and macros from real nutrition data."
+      content="Type what you ate in plain English. Grain works out the calories and macros from real nutrition data."
     />
-    <meta name="twitter:image" content="https://getgrain.fit/og.png" />
+    <meta name="twitter:image" content="https://getgrain.fit/og.png?v=2" />
 
     <script>
       document.documentElement.classList.add('js');
     </script>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -57,7 +60,7 @@
 
     <header class="bar wrap">
       <a class="mark" href="/" aria-label="Grain home">
-        <span class="mark-dot" aria-hidden="true"></span>Grain
+        <img class="mark-logo" src="logo.svg" alt="" />Grain
       </a>
       <a class="cta cta-small" href="https://app.getgrain.fit">
         <span class="cta-label">Open Grain</span>
@@ -88,17 +91,50 @@
         </div>
 
         <div class="phone-stage">
-          <div class="orb orb-hero" aria-hidden="true"></div>
-          <div class="orb orb-hero-small" aria-hidden="true"></div>
-
           <div
             class="phone"
             role="img"
             aria-label="Grain demo: typing 200 g chicken breast, 150 g rice and 1 tbsp ghee gives 642 calories and 66 grams of protein."
           >
             <div class="screen" aria-hidden="true">
+              <span class="glare"></span>
               <div class="status">
-                <span>9:41</span><span class="status-icons"></span>
+                <span>9:41</span><span class="island" aria-hidden="true"></span
+                ><span class="status-icons"
+                  ><svg viewBox="0 0 18 12" width="17" height="11">
+                    <rect x="0" y="8" width="3" height="4" rx="1" />
+                    <rect x="5" y="5.5" width="3" height="6.5" rx="1" />
+                    <rect x="10" y="3" width="3" height="9" rx="1" />
+                    <rect x="15" y="0" width="3" height="12" rx="1" /></svg
+                  ><svg viewBox="0 0 16 12" width="15" height="11">
+                    <path d="M8 11.5l2.4-2.8a3.4 3.4 0 0 0-4.8 0z" />
+                    <path
+                      d="M3.9 6.9a5.9 5.9 0 0 1 8.2 0l1.4-1.6a8 8 0 0 0-11 0z"
+                    />
+                    <path
+                      d="M1.2 3.8a9.8 9.8 0 0 1 13.6 0L16 2.4a11.8 11.8 0 0 0-16 0z"
+                    /></svg
+                  ><svg viewBox="0 0 27 12" width="25" height="11">
+                    <rect
+                      x="0.5"
+                      y="0.5"
+                      width="22"
+                      height="11"
+                      rx="3.2"
+                      fill="none"
+                      stroke="currentColor"
+                      opacity=".4"
+                    />
+                    <rect x="2" y="2" width="16" height="8" rx="2" />
+                    <rect
+                      x="24"
+                      y="4"
+                      width="2"
+                      height="4"
+                      rx="1"
+                      opacity=".45"
+                    /></svg
+                ></span>
               </div>
 
               <div class="app-label">Today</div>
@@ -211,9 +247,6 @@
       </section>
 
       <section class="why wrap" aria-labelledby="why-title">
-        <div class="orb orb-why" aria-hidden="true"></div>
-        <div class="orb orb-why-small" aria-hidden="true"></div>
-
         <h2 id="why-title">Why not scan?</h2>
         <p class="section-lede">
           Scanning apps guess from a picture. That's fine for a rough idea, but
@@ -444,7 +477,6 @@
       </section>
 
       <section class="does wrap" aria-labelledby="does-title">
-        <div class="orb orb-does" aria-hidden="true"></div>
         <div class="glass does-card" data-tile>
           <h2 id="does-title">What Grain does</h2>
           <p class="typed-line">
@@ -478,7 +510,6 @@
 
       <section class="end wrap">
         <div class="end-card">
-          <div class="orb orb-end" aria-hidden="true"></div>
           <p>
             Log your next meal
             <span class="tone-light">the way you'd describe it.</span>
@@ -495,7 +526,7 @@
 
     <footer class="foot wrap">
       <span class="mark mark-quiet"
-        ><span class="mark-dot" aria-hidden="true"></span>Grain</span
+        ><img class="mark-logo" src="logo.svg" alt="" />Grain</span
       >
       <span>© 2026 Grain</span>
     </footer>

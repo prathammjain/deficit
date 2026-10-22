@@ -1,11 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Doto:wght@500..900&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Doto:wght@500..900&display=swap');
 
 /* App-wide UI font (web PWA). The RN styles set no fontFamily, so this single
    rule restyles every text/input/button; per-glyph fallback covers any icon
-   or emoji glyphs Inter doesn't include. */
+   or emoji glyphs Satoshi doesn't include. Same face as getgrain.fit. */
 * {
   font-family:
-    'Inter',
+    'Satoshi',
     ui-sans-serif,
     system-ui,
     -apple-system,
@@ -18,12 +19,13 @@
    passes dataSet={{ font: 'doto' }}; attribute specificity beats the * rule. */
 [data-font='doto'],
 [data-font='doto'] * {
-  font-family: 'Doto', 'Inter', ui-sans-serif, system-ui, sans-serif !important;
+  font-family:
+    'Doto', 'Satoshi', ui-sans-serif, system-ui, sans-serif !important;
 }
 
 :root {
   --font-display:
-    'Inter', ui-sans-serif, system-ui, sans-serif, Apple Color Emoji,
+    'Satoshi', ui-sans-serif, system-ui, sans-serif, Apple Color Emoji,
     Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
   --font-mono:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono,

@@ -82,7 +82,7 @@ export function SectionLabel({
 
 /**
  * Hero numeral in the dot-matrix display face (Doto, loaded in global.css).
- * Use for the few signature numbers only — everything else stays Inter.
+ * Use for the few signature numbers only — everything else stays Satoshi.
  */
 export function DotMatrix({
   children,

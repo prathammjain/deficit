@@ -8,13 +8,13 @@
     "scheme": "deficit",
     "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.prathammjain.deficit"
     },
     "android": {
       "package": "com.prathammjain.deficit",
       "adaptiveIcon": {
-        "backgroundColor": "#EDEAE4",
+        "backgroundColor": "#191715",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
