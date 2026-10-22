@@ -158,6 +158,10 @@ function DescribeMeal({
 }) {
   const [text, setText] = useState('');
   const [items, setItems] = useState<ParsedItem[]>([]);
+  // Which engine item each row came from, kept in step with `items` so the
+  // correction sent on Log can say what was removed.
+  const [origins, setOrigins] = useState<number[]>([]);
+  const [runId, setRunId] = useState<string | undefined>();
   const [note, setNote] = useState<string | undefined>();
   const [calculated, setCalculated] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -168,6 +172,8 @@ function DescribeMeal({
     setBusy(true);
     const parsed = await foodProvider.parseMeal(text);
     setItems(parsed.items);
+    setOrigins(parsed.items.map((_, i) => i));
+    setRunId(parsed.runId);
     setNote(parsed.note);
     setCalculated(true);
     setExpanded(null);
@@ -182,8 +188,10 @@ function DescribeMeal({
           : it,
       ),
     );
-  const removeItem = (idx: number) =>
+  const removeItem = (idx: number) => {
     setItems((arr) => arr.filter((_, i) => i !== idx));
+    setOrigins((arr) => arr.filter((_, i) => i !== idx));
+  };
   // Swap a wrong match for one of its alternates. The rules live in
   // swapParsedItem so they can be tested — getting them wrong logs a
   // fabricated number under a confident badge.
@@ -306,13 +314,28 @@ function DescribeMeal({
               </View>
               <PrimaryButton
                 label={`Log ${items.length} item${items.length > 1 ? 's' : ''}`}
-                onPress={() =>
+                onPress={() => {
+                  if (runId) {
+                    foodProvider.reportLogged?.(
+                      runId,
+                      items.map(({ item, quantity }, i) => ({
+                        from: origins[i],
+                        id: item.id,
+                        name: item.name,
+                        serving: item.serving,
+                        source: item.source,
+                        quantity,
+                        kcal: Math.round(item.kcal * quantity),
+                        proteinG: Math.round(item.proteinG * quantity),
+                      })),
+                    );
+                  }
                   onLog(
                     items.map(({ item, quantity, confidence }) =>
                       portionedEntry(item, quantity, confidence),
                     ),
-                  )
-                }
+                  );
+                }}
               />
             </>
           ) : null}

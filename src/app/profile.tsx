@@ -188,6 +188,10 @@ export default function ProfileScreen() {
       <AddToHomeScreenButton />
 
       <Text style={s.version}>Grain v{version}</Text>
+      <Text style={s.privacy}>
+        Meals you describe are saved without your name, to make Grain’s
+        estimates better.
+      </Text>
     </Screen>
   );
 }
@@ -278,5 +282,12 @@ const s = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginTop: space.xxl,
+  },
+  privacy: {
+    color: palette.textDim,
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: 'center',
+    marginTop: space.sm,
   },
 });

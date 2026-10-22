@@ -9,7 +9,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { setProviderStatus } from './provider-status';
-import type { FoodItem, FoodProvider, ParsedMeal } from './types';
+import type { FoodItem, FoodProvider, LoggedItem, ParsedMeal } from './types';
 
 export class RemoteFoodProvider implements FoodProvider {
   readonly name = 'remote';
@@ -56,5 +56,13 @@ export class RemoteFoodProvider implements FoodProvider {
         ? this.fallback.parseMeal(text)
         : { items: [], total: { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 } };
     }
+  }
+
+  /** Every edit before logging is the engine being corrected: the run log
+   *  keeps it next to the engine's own answer. */
+  reportLogged(runId: string, logged: LoggedItem[]): void {
+    this.client.functions
+      .invoke('food', { body: { action: 'correction', runId, logged } })
+      .catch(() => {});
   }
 }

@@ -55,7 +55,9 @@ export function SignInScreen() {
         {error ? <Text style={st.error}>{error}</Text> : null}
       </View>
       <Text style={st.footer}>
-        Grain provides estimates, not medical advice.
+        Grain provides estimates, not medical advice.{'\n'}
+        Meals you describe are saved without your name, to make Grain’s
+        estimates better.
       </Text>
     </Screen>
   );
@@ -108,6 +110,7 @@ const st = StyleSheet.create({
   footer: {
     color: palette.textDim,
     fontSize: 12,
+    lineHeight: 17,
     textAlign: 'center',
     paddingBottom: space.lg,
   },

@@ -1,8 +1,9 @@
 // Grain — food Edge Function (Supabase / Deno). Indian-table + USDA grounded,
 // AI cross-checked.
 //
-//   { action: 'parse',  text }  -> ParsedMeal
-//   { action: 'health' }        -> { ok, provider, model, usda }
+//   { action: 'parse',  text }               -> ParsedMeal (with runId)
+//   { action: 'health' }                     -> { ok, provider, model, usda }
+//   { action: 'correction', runId, logged }  -> { ok }  what the user logged
 //
 // The engine grounds each food on real candidates from TWO sources — the app's
 // curated Indian home-cooking table (home portions, ghee/butter included) and
@@ -24,6 +25,15 @@
 // Switch providers without touching code:
 //   supabase secrets set LLM_PROVIDER=openai
 //   supabase functions deploy food --no-verify-jwt
+//
+// ---- Engine switch and run log ----------------------------------------------
+// The env above configures the LIVE engine, which everyone gets. The
+// `engine_settings` row can turn on a BETA engine (another provider/model) for
+// the users in `engine_testers` plus `rollout_percent` of everyone else, capped
+// per user per day. Every parse is saved to `engine_runs` with its stage
+// outputs; `engine_corrections` holds what the user logged from it. Users are
+// recorded as a salted hash:
+//   ENGINE_LOG_SALT  any long random string; changing it unlinks old runs
 //
 // ---- Deploy -----------------------------------------------------------------
 //   node scripts/sync-indian-foods.mjs   # refresh ./_indian-foods.ts
@@ -77,10 +87,15 @@ interface LLMConfig {
   model: string;
 }
 
-function getLLMConfig(): LLMConfig | null {
-  const provider = (Deno.env.get('LLM_PROVIDER') ?? 'groq') as
-    | 'groq'
-    | 'openai';
+/** The live engine's model comes from the env; the beta engine passes its own
+ *  provider and model from `engine_settings`. Keys always come from the env. */
+function getLLMConfig(
+  providerOverride?: string | null,
+  modelOverride?: string | null,
+): LLMConfig | null {
+  const provider = (providerOverride ??
+    Deno.env.get('LLM_PROVIDER') ??
+    'groq') as 'groq' | 'openai';
 
   if (provider === 'openai') {
     const key = Deno.env.get('OPENAI_API_KEY')?.trim();
@@ -89,7 +104,8 @@ function getLLMConfig(): LLMConfig | null {
       provider,
       url: 'https://api.openai.com/v1/chat/completions',
       key,
-      model: Deno.env.get('OPENAI_MODEL')?.trim() ?? 'gpt-4o-mini',
+      model:
+        modelOverride ?? Deno.env.get('OPENAI_MODEL')?.trim() ?? 'gpt-4o-mini',
     };
   }
 
@@ -97,16 +113,29 @@ function getLLMConfig(): LLMConfig | null {
   const key = Deno.env.get('GROQ_API_KEY')?.trim();
   if (!key) return null;
   return {
-    provider,
+    provider: 'groq',
     url: 'https://api.groq.com/openai/v1/chat/completions',
     key,
-    model: Deno.env.get('GROQ_MODEL')?.trim() ?? 'openai/gpt-oss-120b',
+    model:
+      modelOverride ??
+      Deno.env.get('GROQ_MODEL')?.trim() ??
+      'openai/gpt-oss-120b',
   };
 }
 
-async function callLLM(prompt: string): Promise<any> {
-  const cfg = getLLMConfig();
-  if (!cfg) throw new Error('No LLM API key configured');
+/** One LLM call as the run log records it. */
+interface StageTrace {
+  ms: number;
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
+  output?: unknown;
+}
+
+async function callLLM(
+  cfg: LLMConfig,
+  prompt: string,
+  stage?: StageTrace,
+): Promise<any> {
+  const started = Date.now();
   const res = await fetch(cfg.url, {
     method: 'POST',
     headers: {
@@ -124,6 +153,13 @@ async function callLLM(prompt: string): Promise<any> {
   });
   if (!res.ok) throw new Error(`llm ${res.status}`);
   const data = await res.json();
+  if (stage) {
+    stage.ms = Date.now() - started;
+    stage.usage = {
+      prompt_tokens: data?.usage?.prompt_tokens,
+      completion_tokens: data?.usage?.completion_tokens,
+    };
+  }
   const raw = data?.choices?.[0]?.message?.content ?? '{}';
   try {
     return JSON.parse(raw);
@@ -294,15 +330,19 @@ async function usdaSearch(query: string, max = 5) {
 
 /** Stage 1 — split free text into items with a normalised portion + db query. */
 async function structureMeal(
+  cfg: LLMConfig,
   text: string,
+  stage: StageTrace,
 ): Promise<
   { name: string; quantity: number; query: string; grams?: number | null }[]
 > {
   const parsed = await callLLM(
+    cfg,
     `You are a nutrition assistant for Indian food. Break this meal into individual food items. For each item return its display name, the quantity (number of servings as a decimal), a concise English search query suitable for a food database (generic ingredient terms, e.g. "cooked lentils dal", "wheat flatbread roti", "cooked white rice"), and "grams". Normalise Indian portions (katori, roti, bowl, plate).
 "grams" is the edible weight of the WHOLE eaten amount in grams, and ONLY when the text states a measurable amount — a weight, a volume, or a standard kitchen measure. "150 ml milk" => 150. "100 gram paneer" => 100. "1 tablespoon ghee" => 14. "2 teaspoons sugar" => 8. "1 glass lassi" => 250. If the text gives no such amount — "dal", "2 roti", "a bowl of rice" — return null, do NOT guess a typical portion. Return ONLY JSON of the form {"items":[{"name":"","quantity":1,"query":"","grams":null}]}.
 
 Meal: ${text}`,
+    stage,
   );
   return Array.isArray(parsed.items) ? parsed.items : [];
 }
@@ -327,8 +367,10 @@ interface JudgeDecision {
 /** Stage 2 — judge each item against real candidates + make an independent
  *  estimate for cross-checking. */
 async function judgeCandidates(
+  cfg: LLMConfig,
   described: { name: string; quantity: number }[],
   candidatesPerItem: any[][],
+  stage: StageTrace,
 ): Promise<JudgeDecision[]> {
   const payload = described.map((d, i) => ({
     index: i,
@@ -347,6 +389,7 @@ async function judgeCandidates(
   }));
 
   const parsed = await callLLM(
+    cfg,
     `You are grounding a food log so its numbers can be trusted. For each EATEN item you get real CANDIDATE foods from three sources: a curated Indian home-cooking table ("local" — macros per the stated home serving, recipe fats included), IFCT 2017 ("ifct" — Indian lab-measured macros per 100g of a single raw ingredient), and USDA ("usda" — macros per 100g). For each item return a decision:
 - "chosen": index i of the candidate that best matches the eaten dish. PREFER a specific Indian-table ("local") match over a generic USDA one when both reasonably fit (e.g. real "Dal Tadka" over plain "cooked lentils"). If NONE is a reasonable match, use -1 and provide your own "estimate" (per-serving macros for a typical Indian home portion, with a "serving" label like "1 katori (150g)").
 - RAW vs AS-EATEN. Every candidate's "serving" says which it is. An "ifct" candidate labelled "100g raw (uncooked weight)" is the dry/uncooked ingredient, NOT the cooked food on the plate: 100g of cooked rice is roughly 33g raw. Never treat a raw candidate's 100g as 100g eaten. For a cooked dish prefer a "local" candidate, or an "ifct" one already labelled "100g cooked"; pick a raw "ifct" candidate only when the food really is eaten raw or uncooked (fruit, salad, nuts, curd, a measured weight of dry grain). A candidate labelled "100g cooked" is ALREADY converted — do not adjust it again. A staple may appear TWICE, once as "100g cooked" and once as "100g raw (uncooked weight)": these are the same food, not two foods, so choose the reading that matches how the portion was described.
@@ -358,6 +401,7 @@ Portion reference (use unless grams are given): 1 roti/chapati≈40g, 1 paratha�
 Return ONLY JSON: {"decisions":[{"index":0,"chosen":0,"quantity":1.5,"aiEstimateKcal":220,"portionCertainty":"clear","reason":"","estimate":null}]}.
 
 Items: ${JSON.stringify(payload)}`,
+    stage,
   );
   return Array.isArray(parsed.decisions) ? parsed.decisions : [];
 }
@@ -404,23 +448,26 @@ function buildReason(
 
 // ---- Auth gate --------------------------------------------------------------
 
-async function isSignedInUser(req: Request): Promise<boolean> {
+/** The signed-in user's id, or null when the request isn't signed in. */
+async function signedInUserId(req: Request): Promise<string | null> {
   const token = (req.headers.get('Authorization') ?? '')
     .replace(/^Bearer\s+/i, '')
     .trim();
-  if (!token) return false;
+  if (!token) return null;
   const url = Deno.env.get('SUPABASE_URL');
   const apikey =
     Deno.env.get('SUPABASE_ANON_KEY') ??
     Deno.env.get('SUPABASE_PUBLISHABLE_KEY');
-  if (!url || !apikey) return false;
+  if (!url || !apikey) return null;
   try {
     const res = await fetch(`${url}/auth/v1/user`, {
       headers: { Authorization: `Bearer ${token}`, apikey },
     });
-    return res.ok;
+    if (!res.ok) return null;
+    const user = await res.json();
+    return typeof user?.id === 'string' ? user.id : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -431,11 +478,8 @@ async function isSignedInUser(req: Request): Promise<boolean> {
 const ENGINE_VERSION = 'v4';
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-const cacheKey = (text: string) => {
-  const cfg = getLLMConfig();
-  const model = cfg?.model ?? 'unknown';
-  return `${ENGINE_VERSION}|${model}|${text.toLowerCase().replace(/\s+/g, ' ').trim()}`;
-};
+const cacheKey = (cfg: LLMConfig, text: string) =>
+  `${ENGINE_VERSION}|${cfg.model}|${text.toLowerCase().replace(/\s+/g, ' ').trim()}`;
 
 function cacheEnv() {
   const url = Deno.env.get('SUPABASE_URL');
@@ -484,6 +528,120 @@ async function cacheSet(key: string, value: unknown): Promise<void> {
   }
 }
 
+// ---- Engine switch -----------------------------------------------------------
+// All of this reads through the service role and fails towards the live
+// engine: a missing table, a slow query or a bad setting must never stop a
+// user from logging.
+
+const rest = (path: string, init: RequestInit = {}) => {
+  const env = cacheEnv();
+  if (!env) return Promise.reject(new Error('no service role'));
+  return fetch(`${env.url}/rest/v1/${path}`, {
+    ...init,
+    headers: {
+      apikey: env.key,
+      Authorization: `Bearer ${env.key}`,
+      'Content-Type': 'application/json',
+      ...(init.headers ?? {}),
+    },
+  });
+};
+
+interface EngineSettings {
+  beta_enabled: boolean;
+  beta_provider: string | null;
+  beta_model: string | null;
+  rollout_percent: number;
+  beta_daily_cap: number;
+}
+
+// Settings change rarely; re-read them at most once a minute per instance.
+let settingsCache: { at: number; value: EngineSettings | null } | null = null;
+
+async function engineSettings(): Promise<EngineSettings | null> {
+  if (settingsCache && Date.now() - settingsCache.at < 60_000)
+    return settingsCache.value;
+  let value: EngineSettings | null = null;
+  try {
+    const res = await rest('engine_settings?id=eq.1&select=*');
+    if (res.ok) value = (await res.json())[0] ?? null;
+  } catch {
+    // live engine
+  }
+  settingsCache = { at: Date.now(), value };
+  return value;
+}
+
+async function isTester(userId: string): Promise<boolean> {
+  try {
+    const res = await rest(
+      `engine_testers?user_id=eq.${encodeURIComponent(userId)}&select=user_id`,
+    );
+    return res.ok && (await res.json()).length > 0;
+  } catch {
+    return false;
+  }
+}
+
+async function sha256(text: string): Promise<string> {
+  const bytes = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(text),
+  );
+  return [...new Uint8Array(bytes)]
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/** How a user appears in the run log: a salted hash, never the id itself. */
+const userRef = (userId: string) =>
+  sha256(`${Deno.env.get('ENGINE_LOG_SALT') ?? ''}:${userId}`);
+
+/** Uncached beta runs this user has had since midnight UTC. */
+async function betaRunsToday(ref: string): Promise<number> {
+  const since = new Date();
+  since.setUTCHours(0, 0, 0, 0);
+  try {
+    const res = await rest(
+      `engine_runs?user_ref=eq.${ref}&arm=eq.beta&cached=eq.false&created_at=gte.${since.toISOString()}&select=id`,
+      { method: 'HEAD', headers: { Prefer: 'count=exact' } },
+    );
+    const range = res.headers.get('content-range') ?? '';
+    return Number(range.split('/')[1]) || 0;
+  } catch {
+    // Can't count, so can't promise the cap holds: treat as spent.
+    return Infinity;
+  }
+}
+
+/** Which engine answers this user: the beta one when it's switched on, the
+ *  user is a tester or inside the rollout, and they're under today's cap. */
+async function pickEngine(
+  userId: string,
+  ref: string,
+): Promise<{ arm: 'live' | 'beta'; cfg: LLMConfig | null }> {
+  const live = { arm: 'live' as const, cfg: getLLMConfig() };
+  const s = await engineSettings();
+  if (!s?.beta_enabled || !s.beta_model) return live;
+  // The user's place in the rollout is fixed by their hash, so raising the
+  // percentage only ever adds people.
+  const inRollout = parseInt(ref.slice(0, 8), 16) % 100 < s.rollout_percent;
+  if (!inRollout && !(await isTester(userId))) return live;
+  if ((await betaRunsToday(ref)) >= s.beta_daily_cap) return live;
+  const cfg = getLLMConfig(s.beta_provider, s.beta_model);
+  return cfg ? { arm: 'beta', cfg } : live;
+}
+
+/** Saves a run without holding up the response. */
+function saveRun(row: Record<string, unknown>): void {
+  const write = rest('engine_runs', {
+    method: 'POST',
+    body: JSON.stringify(row),
+  }).catch(() => {});
+  // deno-lint-ignore no-explicit-any
+  (globalThis as any).EdgeRuntime?.waitUntil?.(write);
+}
+
 // ---- Handler ----------------------------------------------------------------
 
 Deno.serve(async (req: Request) => {
@@ -491,11 +649,12 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS')
     return new Response('ok', { headers: corsHeaders(origin) });
   try {
-    if (!(await isSignedInUser(req))) {
+    const userId = await signedInUserId(req);
+    if (!userId) {
       return json({ error: 'sign in required' }, 401, origin);
     }
 
-    const { action, text } = await req.json();
+    const { action, text, runId, logged } = await req.json();
 
     if (action === 'health') {
       const cfg = getLLMConfig();
@@ -518,168 +677,73 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (action === 'parse') {
-      const key = cacheKey(String(text ?? ''));
-      const hit = await cacheGet(key);
-      if (hit) return json({ ...hit, cached: true }, 200, origin);
+    if (action === 'correction') {
+      // What the user logged from a run, after their edits. Shape-checked
+      // only; the playground does the comparing.
+      const valid =
+        typeof runId === 'string' &&
+        /^[0-9a-f-]{36}$/i.test(runId) &&
+        Array.isArray(logged) &&
+        logged.length <= 30;
+      if (!valid) return json({ error: 'bad correction' }, 400, origin);
+      await rest('engine_corrections', {
+        method: 'POST',
+        body: JSON.stringify({
+          run_id: runId,
+          user_ref: await userRef(userId),
+          logged,
+        }),
+      }).catch(() => {});
+      return json({ ok: true }, 200, origin);
+    }
 
-      const described = await structureMeal(String(text ?? ''));
-      if (described.length === 0) {
+    if (action === 'parse') {
+      const mealText = String(text ?? '');
+      const started = Date.now();
+      const ref = await userRef(userId);
+      const { arm, cfg } = await pickEngine(userId, ref);
+      if (!cfg) throw new Error('No LLM API key configured');
+      const id = crypto.randomUUID();
+      const run = {
+        id,
+        user_ref: ref,
+        arm,
+        engine: `${ENGINE_VERSION}/${cfg.provider}/${cfg.model}`,
+        text: mealText,
+      };
+
+      const key = cacheKey(cfg, mealText);
+      const hit = await cacheGet(key);
+      if (hit) {
+        saveRun({
+          ...run,
+          result: hit,
+          cached: true,
+          latency_ms: Date.now() - started,
+        });
+        return json({ ...hit, cached: true, runId: id }, 200, origin);
+      }
+
+      const trace = {
+        structure: { ms: 0 } as StageTrace,
+        lookup: { ms: 0 } as StageTrace,
+        judge: { ms: 0 } as StageTrace,
+      };
+      try {
         return json(
-          { items: [], total: { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 } },
+          await parseUncached(cfg, mealText, key, run, trace, started),
           200,
           origin,
         );
+      } catch (e) {
+        saveRun({
+          ...run,
+          trace,
+          error: String((e as Error)?.message ?? e),
+          latency_ms: Date.now() - started,
+        });
+        throw e;
       }
-
-      // `degraded` means this parse hit an infrastructure or judge FAILURE —
-      // USDA unavailable, or the model returned no usable decision for an
-      // item. Such a run still answers (logging must never hard-fail) but it
-      // is flagged to the user and never cached, because a retry once USDA is
-      // back can do genuinely better.
-      //
-      // It deliberately does NOT cover an honest low-confidence call (the
-      // database and the AI really disagree, or the dish is in neither table).
-      // Those are correct, reproducible results that the UI already flags, so
-      // caching them is right.
-      let degraded = false;
-
-      const candidatesPerItem = await Promise.all(
-        described.map(async (d) => {
-          const usdaQuery = d.query || d.name;
-          // The curated Indian table is keyed on real dish names ("Paneer
-          // Paratha"), so match it on the display name — the generic USDA
-          // query ("wheat flatbread") would miss those entries. Fall back to
-          // the query only when the name finds nothing.
-          const byName = indianSearch(d.name, 3);
-          const indian = byName.length ? byName : indianSearch(usdaQuery, 3);
-          // IFCT is keyed on generic ingredient English ("Red gram, dal"),
-          // which is how structureMeal writes `query` — the mirror image of
-          // the curated dish table, keyed on dish names and matched on `name`.
-          const byQuery = ifctSearch(usdaQuery, 3);
-          const ifct = byQuery.length ? byQuery : ifctSearch(d.name, 3);
-          const usda = await usdaSearch(usdaQuery, 5);
-          if (usda === null) degraded = true;
-          // local first, so the curated table keeps the low indices the
-          // "PREFER local" rule relies on; IFCT ahead of USDA so the Indian
-          // ingredient is seen before the generic one. IFCT is compiled in
-          // with no network and no key, so it can never be unavailable and
-          // must never set `degraded`.
-          return [...indian, ...ifct, ...(usda ?? [])];
-        }),
-      );
-
-      const decisions = await judgeCandidates(described, candidatesPerItem);
-
-      const items: any[] = [];
-      const unmatched: string[] = [];
-      described.forEach((d, i) => {
-        const candidates = candidatesPerItem[i] ?? [];
-        const decision = decisions.find((x) => x.index === i) ?? decisions[i];
-        // The model can return fewer decisions than items, or omit/misnumber
-        // the index. Falling back to the first candidate then presented an
-        // unjudged guess — often a generic USDA 100g row — as a normal match.
-        // It still gets shown (dropping the food would be worse), but only as
-        // an explicitly unverified 'low', and it degrades the run.
-        const judged = !!decision;
-        if (!judged) degraded = true;
-        const quantity = decision?.quantity || d.quantity || 1;
-        const chosen = decision?.chosen ?? (candidates.length ? 0 : -1);
-        const aiKcal = num(decision?.aiEstimateKcal);
-        const portionCertainty =
-          decision?.portionCertainty === 'clear' ? 'clear' : 'unsure';
-
-        if (chosen >= 0 && candidates[chosen]) {
-          const picked = candidates[chosen];
-          // For a per-100g candidate the multiplier is just grams / 100, and
-          // this is where the engine was losing worst: "150 ml milk" came back
-          // as quantity 6 (414 kcal for ~100 kcal of milk) and "1 tablespoon
-          // ghee" as a full 100g — 876 kcal, reported 'high' because the AI
-          // cross-check repeated the same portion mistake. When stage 1 found
-          // an explicit amount, do the arithmetic instead of asking for it.
-          const scaled = servingMultiplier(picked.serving, d.grams, quantity);
-          const dbKcalTotal = picked.kcal * scaled;
-          const confidence = judged
-            ? calcConfidence(
-                dbKcalTotal,
-                aiKcal,
-                portionCertainty,
-                picked.source,
-              )
-            : 'low';
-          items.push({
-            item: { ...picked, name: d.name || picked.name },
-            quantity: scaled,
-            confidence,
-            reason: judged
-              ? buildReason(
-                  confidence,
-                  dbKcalTotal,
-                  aiKcal,
-                  portionCertainty,
-                  decision?.reason,
-                )
-              : 'Not cross-checked — verify this portion.',
-            alternates: candidates.filter((_, ci) => ci !== chosen),
-          });
-        } else if (decision?.estimate) {
-          const e = decision.estimate;
-          items.push({
-            item: {
-              id: `ai-${i}`,
-              name: e.name || d.name,
-              serving: e.serving || '1 serving',
-              kcal: num(e.kcal),
-              proteinG: num(e.proteinG),
-              carbsG: num(e.carbsG),
-              fatG: num(e.fatG),
-              source: 'ai',
-            },
-            quantity: d.quantity || 1,
-            confidence: 'low',
-            reason: decision.reason || 'No database match — AI estimate.',
-            alternates: candidates,
-          });
-        } else {
-          unmatched.push(d.name);
-          // The total is missing a food the user said they ate.
-          degraded = true;
-        }
-      });
-
-      const total = items.reduce(
-        (a, { item, quantity }) => ({
-          kcal: a.kcal + Math.round(item.kcal * quantity),
-          proteinG: a.proteinG + Math.round(item.proteinG * quantity),
-          carbsG: a.carbsG + Math.round(item.carbsG * quantity),
-          fatG: a.fatG + Math.round(item.fatG * quantity),
-        }),
-        { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 },
-      );
-
-      const notes: string[] = [];
-      if (unmatched.length)
-        notes.push(`Couldn't match: ${unmatched.join(', ')}.`);
-      if (degraded) {
-        notes.push(
-          'Grounding was incomplete for this meal — the numbers are less reliable than usual. Re-run it in a minute for a better match.',
-        );
-      }
-
-      const result = {
-        items,
-        total,
-        note: notes.length ? notes.join(' ') : undefined,
-      };
-
-      // Cache only fully grounded results. The cache lives for 7 days and is
-      // shared across users, so caching a degraded parse froze a bad number
-      // for that phrase for a week: the same meal typed again returned the
-      // same wrong calories, while a phrase first parsed while USDA was
-      // healthy stayed accurate. That is what made the engine look like it
-      // was "sometimes right, sometimes wildly off".
-      if (items.length > 0 && !degraded) await cacheSet(key, result);
-      return json(result, 200, origin);
     }
 
     return json({ error: 'unknown action' }, 400, origin);
@@ -687,3 +751,189 @@ Deno.serve(async (req: Request) => {
     return json({ error: String((e as Error)?.message ?? e) }, 500, origin);
   }
 });
+
+/** A full engine run: split, look up, judge, then the arithmetic. */
+async function parseUncached(
+  cfg: LLMConfig,
+  text: string,
+  key: string,
+  run: Record<string, unknown> & { id: string },
+  trace: Record<'structure' | 'lookup' | 'judge', StageTrace>,
+  started: number,
+) {
+  const described = await structureMeal(cfg, text, trace.structure);
+  trace.structure.output = described;
+  if (described.length === 0) {
+    const empty = {
+      items: [],
+      total: { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 },
+    };
+    saveRun({
+      ...run,
+      result: empty,
+      trace,
+      latency_ms: Date.now() - started,
+    });
+    return { ...empty, runId: run.id };
+  }
+
+  // `degraded` means this parse hit an infrastructure or judge FAILURE —
+  // USDA unavailable, or the model returned no usable decision for an
+  // item. Such a run still answers (logging must never hard-fail) but it
+  // is flagged to the user and never cached, because a retry once USDA is
+  // back can do genuinely better.
+  //
+  // It deliberately does NOT cover an honest low-confidence call (the
+  // database and the AI really disagree, or the dish is in neither table).
+  // Those are correct, reproducible results that the UI already flags, so
+  // caching them is right.
+  let degraded = false;
+
+  const lookupStarted = Date.now();
+  const candidatesPerItem = await Promise.all(
+    described.map(async (d) => {
+      const usdaQuery = d.query || d.name;
+      // The curated Indian table is keyed on real dish names ("Paneer
+      // Paratha"), so match it on the display name — the generic USDA
+      // query ("wheat flatbread") would miss those entries. Fall back to
+      // the query only when the name finds nothing.
+      const byName = indianSearch(d.name, 3);
+      const indian = byName.length ? byName : indianSearch(usdaQuery, 3);
+      // IFCT is keyed on generic ingredient English ("Red gram, dal"),
+      // which is how structureMeal writes `query` — the mirror image of
+      // the curated dish table, keyed on dish names and matched on `name`.
+      const byQuery = ifctSearch(usdaQuery, 3);
+      const ifct = byQuery.length ? byQuery : ifctSearch(d.name, 3);
+      const usda = await usdaSearch(usdaQuery, 5);
+      if (usda === null) degraded = true;
+      // local first, so the curated table keeps the low indices the
+      // "PREFER local" rule relies on; IFCT ahead of USDA so the Indian
+      // ingredient is seen before the generic one. IFCT is compiled in
+      // with no network and no key, so it can never be unavailable and
+      // must never set `degraded`.
+      return [...indian, ...ifct, ...(usda ?? [])];
+    }),
+  );
+
+  trace.lookup.ms = Date.now() - lookupStarted;
+  trace.lookup.output = candidatesPerItem;
+
+  const decisions = await judgeCandidates(
+    cfg,
+    described,
+    candidatesPerItem,
+    trace.judge,
+  );
+  trace.judge.output = decisions;
+
+  const items: any[] = [];
+  const unmatched: string[] = [];
+  described.forEach((d, i) => {
+    const candidates = candidatesPerItem[i] ?? [];
+    const decision = decisions.find((x) => x.index === i) ?? decisions[i];
+    // The model can return fewer decisions than items, or omit/misnumber
+    // the index. Falling back to the first candidate then presented an
+    // unjudged guess — often a generic USDA 100g row — as a normal match.
+    // It still gets shown (dropping the food would be worse), but only as
+    // an explicitly unverified 'low', and it degrades the run.
+    const judged = !!decision;
+    if (!judged) degraded = true;
+    const quantity = decision?.quantity || d.quantity || 1;
+    const chosen = decision?.chosen ?? (candidates.length ? 0 : -1);
+    const aiKcal = num(decision?.aiEstimateKcal);
+    const portionCertainty =
+      decision?.portionCertainty === 'clear' ? 'clear' : 'unsure';
+
+    if (chosen >= 0 && candidates[chosen]) {
+      const picked = candidates[chosen];
+      // For a per-100g candidate the multiplier is just grams / 100, and
+      // this is where the engine was losing worst: "150 ml milk" came back
+      // as quantity 6 (414 kcal for ~100 kcal of milk) and "1 tablespoon
+      // ghee" as a full 100g — 876 kcal, reported 'high' because the AI
+      // cross-check repeated the same portion mistake. When stage 1 found
+      // an explicit amount, do the arithmetic instead of asking for it.
+      const scaled = servingMultiplier(picked.serving, d.grams, quantity);
+      const dbKcalTotal = picked.kcal * scaled;
+      const confidence = judged
+        ? calcConfidence(dbKcalTotal, aiKcal, portionCertainty, picked.source)
+        : 'low';
+      items.push({
+        item: { ...picked, name: d.name || picked.name },
+        quantity: scaled,
+        confidence,
+        reason: judged
+          ? buildReason(
+              confidence,
+              dbKcalTotal,
+              aiKcal,
+              portionCertainty,
+              decision?.reason,
+            )
+          : 'Not cross-checked — verify this portion.',
+        alternates: candidates.filter((_, ci) => ci !== chosen),
+      });
+    } else if (decision?.estimate) {
+      const e = decision.estimate;
+      items.push({
+        item: {
+          id: `ai-${i}`,
+          name: e.name || d.name,
+          serving: e.serving || '1 serving',
+          kcal: num(e.kcal),
+          proteinG: num(e.proteinG),
+          carbsG: num(e.carbsG),
+          fatG: num(e.fatG),
+          source: 'ai',
+        },
+        quantity: d.quantity || 1,
+        confidence: 'low',
+        reason: decision.reason || 'No database match — AI estimate.',
+        alternates: candidates,
+      });
+    } else {
+      unmatched.push(d.name);
+      // The total is missing a food the user said they ate.
+      degraded = true;
+    }
+  });
+
+  const total = items.reduce(
+    (a, { item, quantity }) => ({
+      kcal: a.kcal + Math.round(item.kcal * quantity),
+      proteinG: a.proteinG + Math.round(item.proteinG * quantity),
+      carbsG: a.carbsG + Math.round(item.carbsG * quantity),
+      fatG: a.fatG + Math.round(item.fatG * quantity),
+    }),
+    { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 },
+  );
+
+  const notes: string[] = [];
+  if (unmatched.length) notes.push(`Couldn't match: ${unmatched.join(', ')}.`);
+  if (degraded) {
+    notes.push(
+      'Grounding was incomplete for this meal — the numbers are less reliable than usual. Re-run it in a minute for a better match.',
+    );
+  }
+
+  const result = {
+    items,
+    total,
+    note: notes.length ? notes.join(' ') : undefined,
+  };
+
+  // Cache only fully grounded results. The cache lives for 7 days and is
+  // shared across users, so caching a degraded parse froze a bad number
+  // for that phrase for a week: the same meal typed again returned the
+  // same wrong calories, while a phrase first parsed while USDA was
+  // healthy stayed accurate. That is what made the engine look like it
+  // was "sometimes right, sometimes wildly off".
+  if (items.length > 0 && !degraded) await cacheSet(key, result);
+  saveRun({
+    ...run,
+    result,
+    trace,
+    degraded,
+    latency_ms: Date.now() - started,
+  });
+  return { ...result, runId: run.id };
+}

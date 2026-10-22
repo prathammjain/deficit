@@ -47,6 +47,22 @@ export interface ParsedMeal {
   total: { kcal: number; proteinG: number; carbsG: number; fatG: number };
   /** Any AI caveat, e.g. "estimated portion for dal". */
   note?: string;
+  /** The engine's id for this run, so what the user logs can be sent back
+   *  as a correction. Absent for the offline parser. */
+  runId?: string;
+}
+
+/** One item as the user finally logged it from a parsed meal. */
+export interface LoggedItem {
+  /** Index of the engine item this came from. */
+  from: number;
+  id: string;
+  name: string;
+  serving: string;
+  source?: FoodItem['source'];
+  quantity: number;
+  kcal: number;
+  proteinG: number;
 }
 
 export interface FoodProvider {
@@ -59,6 +75,9 @@ export interface FoodProvider {
    * provider; the local provider may omit it.
    */
   parseMeal?(text: string): Promise<ParsedMeal>;
+  /** Optional: tell the engine what the user logged from run `runId`, after
+   *  their edits. Fire and forget; never blocks logging. */
+  reportLogged?(runId: string, logged: LoggedItem[]): void;
 }
 
 /**

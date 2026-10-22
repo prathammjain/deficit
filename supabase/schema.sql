@@ -44,3 +44,61 @@ create table if not exists public.food_cache (
 );
 
 alter table public.food_cache enable row level security;
+
+-- ---- Engine platform: run log, corrections, engine switch -----------------
+-- Written and read only by the food Edge Function and the playground, through
+-- the service role. RLS is on with NO policies, so client keys get nothing.
+-- Rows carry `user_ref`, a salted hash of the user id, never a name or email.
+
+-- One row per Match: the meal text, every stage's output and the answer.
+create table if not exists public.engine_runs (
+  id         uuid        primary key,
+  created_at timestamptz not null default now(),
+  user_ref   text,
+  arm        text        not null,          -- 'live' | 'beta'
+  engine     text        not null,          -- e.g. 'v4/groq/openai/gpt-oss-120b'
+  text       text        not null,
+  result     jsonb,
+  trace      jsonb,
+  latency_ms integer,
+  cached     boolean     not null default false,
+  degraded   boolean     not null default false,
+  error      text
+);
+create index if not exists engine_runs_created on public.engine_runs (created_at desc);
+create index if not exists engine_runs_user_day on public.engine_runs (user_ref, arm, created_at);
+alter table public.engine_runs enable row level security;
+
+-- What the user actually logged from a run, after their edits.
+create table if not exists public.engine_corrections (
+  id         uuid        primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  run_id     uuid        not null references public.engine_runs (id) on delete cascade,
+  user_ref   text,
+  logged     jsonb       not null
+);
+create index if not exists engine_corrections_run on public.engine_corrections (run_id);
+alter table public.engine_corrections enable row level security;
+
+-- The engine switch: a single row. Beta stays off until a model is set and
+-- beta_enabled is true; then testers, plus rollout_percent of everyone else,
+-- get it, up to beta_daily_cap uncached runs per user per day.
+create table if not exists public.engine_settings (
+  id              integer     primary key default 1 check (id = 1),
+  beta_enabled    boolean     not null default false,
+  beta_provider   text,                    -- 'groq' | 'openai'
+  beta_model      text,
+  rollout_percent integer     not null default 0 check (rollout_percent between 0 and 100),
+  beta_daily_cap  integer     not null default 30,
+  updated_at      timestamptz not null default now()
+);
+insert into public.engine_settings (id) values (1) on conflict do nothing;
+alter table public.engine_settings enable row level security;
+
+-- Testers who get the beta engine regardless of rollout_percent.
+create table if not exists public.engine_testers (
+  user_id  uuid        primary key references auth.users (id) on delete cascade,
+  note     text,
+  added_at timestamptz not null default now()
+);
+alter table public.engine_testers enable row level security;
