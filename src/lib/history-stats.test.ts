@@ -12,7 +12,11 @@ const T: HistoryTargets = {
   proteinG: 150,
 };
 
-function day(date: string, kcal: number | null, weightKg: number | null = null): DayRecord {
+function day(
+  date: string,
+  kcal: number | null,
+  weightKg: number | null = null,
+): DayRecord {
   const logged = kcal != null;
   return {
     date,
@@ -33,7 +37,11 @@ describe('dayDeficit', () => {
 
 describe('cumulativeDeficit', () => {
   it('runs a sum and skips unlogged days', () => {
-    const days = [day('2026-06-01', 2000), day('2026-06-02', null), day('2026-06-03', 2300)];
+    const days = [
+      day('2026-06-01', 2000),
+      day('2026-06-02', null),
+      day('2026-06-03', 2300),
+    ];
     expect(cumulativeDeficit(days, T)).toEqual([500, 500, 700]);
   });
 });

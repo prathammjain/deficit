@@ -80,5 +80,7 @@ export function stepperLabel(
   quantity: number,
 ): string {
   const m = PER_100.exec(serving ?? '');
-  return m ? `${Math.round(quantity * 100)} ${m[1].toLowerCase()}` : plain(quantity);
+  return m
+    ? `${Math.round(quantity * 100)} ${m[1].toLowerCase()}`
+    : plain(quantity);
 }

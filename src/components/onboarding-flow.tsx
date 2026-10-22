@@ -52,7 +52,11 @@ const ACTIVITY_OPTIONS: {
   { value: 'sedentary', title: 'Sedentary', hint: 'Desk job, little exercise' },
   { value: 'light', title: 'Light', hint: 'Light exercise 1 to 3 days a week' },
   { value: 'moderate', title: 'Moderate', hint: 'Exercise 3 to 5 days a week' },
-  { value: 'active', title: 'Active', hint: 'Hard exercise 6 to 7 days a week' },
+  {
+    value: 'active',
+    title: 'Active',
+    hint: 'Hard exercise 6 to 7 days a week',
+  },
   {
     value: 'very_active',
     title: 'Very active',
@@ -153,9 +157,9 @@ export function OnboardingFlow({
                 Calorie tracking that does not lie to you
               </Text>
               <Text style={styles.hint}>
-                Log meals in plain language. A hybrid engine checks AI
-                against real food data, so every number is one you can
-                trust, not one it made up.
+                Log meals in plain language. A hybrid engine checks AI against
+                real food data, so every number is one you can trust, not one it
+                made up.
               </Text>
               <View style={styles.proofRow}>
                 <ProofLine text="No signup. Nothing leaves your device." />

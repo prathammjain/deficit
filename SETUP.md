@@ -82,11 +82,11 @@ on the app project.
 
 The food tables are generated; don't edit them by hand.
 
-| Table                         | Source               | Regenerate                                                                 |
-| ----------------------------- | -------------------- | -------------------------------------------------------------------------- |
-| `src/lib/food/indian-foods.ts`| curated, part INDB   | `python3 scripts/import-indb.py INDB.xlsx` (then paste)                    |
-| engine copy of the above      | the curated table    | `node scripts/sync-indian-foods.mjs`                                       |
-| `supabase/functions/food/_ifct.ts` | IFCT 2017 PDF    | `npm run ifct -- path/to/food_table_IFCT2017.pdf > supabase/functions/food/_ifct.ts` |
+| Table                              | Source             | Regenerate                                                                           |
+| ---------------------------------- | ------------------ | ------------------------------------------------------------------------------------ |
+| `src/lib/food/indian-foods.ts`     | curated, part INDB | `python3 scripts/import-indb.py INDB.xlsx` (then paste)                              |
+| engine copy of the above           | the curated table  | `node scripts/sync-indian-foods.mjs`                                                 |
+| `supabase/functions/food/_ifct.ts` | IFCT 2017 PDF      | `npm run ifct -- path/to/food_table_IFCT2017.pdf > supabase/functions/food/_ifct.ts` |
 
 IFCT 2017's publisher requires written permission to reproduce its data in a
 product. That permission is an open item to settle before wider launch.

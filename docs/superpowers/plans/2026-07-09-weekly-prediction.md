@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Window = the 7 calendar days ending **yesterday** (today excluded).
-- A day is *logged* iff `typeof intakeKcal === 'number' && intakeKcal > 0` (same predicate as `estimateAdaptiveTdee`).
+- A day is _logged_ iff `typeof intakeKcal === 'number' && intakeKcal > 0` (same predicate as `estimateAdaptiveTdee`).
 - States: `loggedDays ≥ 5` → `ready`; `1–4` → `building`; `0` → `fresh`.
 - `predictedKgPerWeek = round2((avgDeficit × 7) / KCAL_PER_KG_FAT)`; `KCAL_PER_KG_FAT` is `7700`, imported from `./targets` — never hard-code it.
 - Sign convention: positive = loss. Display: loss renders `−0.48 kg` in ink, gain renders `+0.21 kg` in `palette.accent`. Use the true minus sign `−` (U+2212), as elsewhere in the app.
@@ -26,10 +26,12 @@
 ### Task 1: `predictWeeklyLoss` pure library (TDD)
 
 **Files:**
+
 - Create: `src/lib/weekly-prediction.ts`
 - Test: `src/lib/weekly-prediction.test.ts`
 
 **Interfaces:**
+
 - Consumes: `DailyDatum` from `src/lib/adaptive-tdee.ts` (`{ date: string; intakeKcal?: number | null; weightKg?: number | null }`), `KCAL_PER_KG_FAT` from `src/lib/targets.ts`, `todayKey(d?: Date): string` from `src/lib/log-store.ts`.
 - Produces: `predictWeeklyLoss(data: DailyDatum[], maintenanceKcal: number, today?: string): WeeklyPrediction` and the `WeeklyPrediction` interface — Task 2 imports both from `@/lib/weekly-prediction`.
 
@@ -269,11 +271,13 @@ git commit -m "feat: weekly weight-loss prediction math (rolling 7-day window)"
 ### Task 2: WeekCard on Home
 
 **Files:**
+
 - Create: `src/components/dashboard/week-card.tsx`
-- Modify: `src/components/dashboard/styles.ts` (append week* styles before the closing `});`)
+- Modify: `src/components/dashboard/styles.ts` (append week\* styles before the closing `});`)
 - Modify: `src/app/index.tsx` (retain history in state; render the card below the hero)
 
 **Interfaces:**
+
 - Consumes: `predictWeeklyLoss` + `WeeklyPrediction` from `@/lib/weekly-prediction` (Task 1); `DailyDatum` from `@/lib/adaptive-tdee`; existing Home values `adaptive.estimatedTdeeKcal`, `t.maintenanceKcal`, `t.appliedRateKgWeek`.
 - Produces: `WeekCard({ prediction, goalRateKgWeek }: { prediction: WeeklyPrediction; goalRateKgWeek: number })`.
 
@@ -339,8 +343,8 @@ export function WeekCard({
         </>
       ) : state === 'building' ? (
         <Text style={st.weekBody}>
-          {loggedDays} of 7 days logged — log {5 - loggedDays} more to see
-          your weekly prediction.
+          {loggedDays} of 7 days logged — log {5 - loggedDays} more to see your
+          weekly prediction.
         </Text>
       ) : (
         <Text style={st.weekBody}>
@@ -394,7 +398,11 @@ In `src/app/index.tsx`, four edits:
 3a. Extend the adaptive-tdee import and add the new imports (the WeekCard import goes with the other `@/components/dashboard/*` imports, alphabetically after `weigh-in-card`; predictWeeklyLoss goes with the `@/lib/*` imports):
 
 ```ts
-import { estimateAdaptiveTdee, type AdaptiveTdee, type DailyDatum } from '@/lib/adaptive-tdee';
+import {
+  estimateAdaptiveTdee,
+  type AdaptiveTdee,
+  type DailyDatum,
+} from '@/lib/adaptive-tdee';
 ```
 
 ```ts
@@ -414,10 +422,7 @@ const [history, setHistory] = useState<DailyDatum[]>([]);
 3c. Retain the gathered history. In `refresh`, replace:
 
 ```ts
-const [history, lw] = await Promise.all([
-  gatherHistory(21),
-  latestWeight(),
-]);
+const [history, lw] = await Promise.all([gatherHistory(21), latestWeight()]);
 setAdaptive(estimateAdaptiveTdee(history));
 setLastWeight(lw?.kg ?? null);
 ```

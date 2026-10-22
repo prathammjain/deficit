@@ -8,7 +8,9 @@
 
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const fmt = (el, n) =>
-    (el.dataset.prefix || '') + Math.round(n).toLocaleString('en-US') + (el.dataset.suffix || '');
+    (el.dataset.prefix || '') +
+    Math.round(n).toLocaleString('en-US') +
+    (el.dataset.suffix || '');
 
   function count(el, delay) {
     const to = Number(el.dataset.countTo);

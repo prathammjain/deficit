@@ -11,7 +11,7 @@ data, so its numbers come from measured sources rather than guesses.
 In practice it now does worse than ChatGPT on everyday meals. On the same input
 — "50g soya chunks blended with 1 potato and 1 tablespoon besan" — ChatGPT said
 319 kcal / 31 g protein (about right). Deficit said 733 kcal / 41 g, matching
-"soya chunk *curry*" under a "✓ good match" badge and reading "1 tablespoon" of
+"soya chunk _curry_" under a "✓ good match" badge and reading "1 tablespoon" of
 besan as "1 cup". The grounding idea is sound; the execution is incomplete. When
 the right food is missing from our data, or the engine looks up the wrong one,
 grounding pushes it towards an answer it wouldn't otherwise have given.
@@ -45,22 +45,23 @@ pay for the difference.
 
 Scored on the practice set (below):
 
-| Meal kind | Calories | Protein |
-|---|---|---|
-| Weighed ingredients ("200g chicken breast, 150g cooked rice") | within ±5% | within ±5% |
-| Home-cooked or composite dishes ("2 roti, dal tadka") | within ±15% | within ±15% |
-| Any meal | never off by 2× or more | never off by 2× or more |
+| Meal kind                                                     | Calories                | Protein                 |
+| ------------------------------------------------------------- | ----------------------- | ----------------------- |
+| Weighed ingredients ("200g chicken breast, 150g cooked rice") | within ±5%              | within ±5%              |
+| Home-cooked or composite dishes ("2 roti, dal tadka")         | within ±15%             | within ±15%             |
+| Any meal                                                      | never off by 2× or more | never off by 2× or more |
 
 And overall: beats ChatGPT's recorded answers on the same set.
 
 How it is counted (my call):
+
 - **Per meal, on the meal's total.** Where a meal mixes kinds (weighed chicken
   plus 2 roti), each item is held to its own band and the meal passes only if
   every item does.
 - **Weighed meals:** at least 90% land within ±5%. **Dishes:** at least 90% land
   inside their reference range. **The 2× rule has no exceptions.**
 - **"Beats ChatGPT"** means a lower median error than ChatGPT's recorded answers
-  on calories *and* on protein, each measured separately.
+  on calories _and_ on protein, each measured separately.
 
 These targets are my proposal from our conversation; adjust them if they feel
 wrong.
@@ -74,7 +75,7 @@ wrong.
 - **Photo scanning.** A photo can't see food beneath other food, can't see oil
   or ghee, can't judge depth or weight, and can't tell low-fat paneer from
   regular. Deficit calculates from what you ate rather than guessing from a
-  picture, and that is a selling point. Photos might later *identify* foods and
+  picture, and that is a selling point. Photos might later _identify_ foods and
   then ask for weights, but never supply the numbers. Out of scope here.
 - Designing for casual users at the athlete's expense.
 - Changes to the rest of the app (dashboard, weigh-ins, TDEE) beyond what the
@@ -115,7 +116,7 @@ correct answer and ChatGPT's recorded answer.
   the ones that went wrong.
 - **Weighed meals** get an exact answer: published per-100g values (USDA, IFCT,
   product labels) × the stated weights.
-- **Dishes** get an answer *range* built from professional recipes, because
+- **Dishes** get an answer _range_ built from professional recipes, because
   home cooking varies.
 - Answers are checked the way the owner already checks: against published
   nutrition data and professional recipes.
@@ -154,7 +155,7 @@ One database of our own in Supabase, replacing live calls to USDA on every meal.
   525 rows, `scripts/import-ifct.py`), the curated Indian dish table
   (`src/lib/food/indian-foods.ts`), and INDB recipes.
 - Every row records where it came from, so it can be audited and corrected.
-- **Staples come first and must be right:** chicken breast and thigh (raw *and*
+- **Staples come first and must be right:** chicken breast and thigh (raw _and_
   cooked), eggs and egg whites, paneer (regular and low-fat), whey, Greek
   yogurt, milks (toned, double-toned, full-cream, cow, buffalo), rice raw and
   cooked, boiled potato, sweet potato, oats, common fruits, oil, ghee, butter,

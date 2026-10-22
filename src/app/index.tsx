@@ -49,10 +49,7 @@ export default function HomeScreen() {
     const p = await loadProfile();
     setProfile(p);
     if (p) {
-      const [hist, lw] = await Promise.all([
-        gatherHistory(21),
-        latestWeight(),
-      ]);
+      const [hist, lw] = await Promise.all([gatherHistory(21), latestWeight()]);
       setAdaptive(estimateAdaptiveTdee(hist));
       setHistory(hist);
       setLastWeight(lw?.kg ?? null);

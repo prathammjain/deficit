@@ -134,7 +134,9 @@ export function LineChart({
       cur = [];
       return;
     }
-    cur.push(`${cur.length ? 'L' : 'M'}${px(i).toFixed(1)} ${py(v).toFixed(1)}`);
+    cur.push(
+      `${cur.length ? 'L' : 'M'}${px(i).toFixed(1)} ${py(v).toFixed(1)}`,
+    );
   });
   if (cur.length) segments.push(cur.join(' '));
 
@@ -150,7 +152,9 @@ export function LineChart({
               : '',
           )
           .filter(Boolean)
-          .join(' ')} L${px(lastIdx).toFixed(1)} ${height} L${px(firstIdx).toFixed(1)} ${height} Z`
+          .join(
+            ' ',
+          )} L${px(lastIdx).toFixed(1)} ${height} L${px(firstIdx).toFixed(1)} ${height} Z`
       : '';
 
   return (

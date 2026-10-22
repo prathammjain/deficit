@@ -29,7 +29,7 @@ exported but never called. Home's "Edit" link opens the questionnaire.
   `size` prop (small for headers, large for the profile hero).
 - Home header: the "Edit" text link becomes a small Monogram button that
   navigates to `/profile`. First-run onboarding on Home is unchanged;
-  profile *editing* moves to the profile screen.
+  profile _editing_ moves to the profile screen.
 - New route `src/app/profile.tsx`:
   - Back control returning to Home.
   - Hero: large Monogram + account email, or "Local device" when there

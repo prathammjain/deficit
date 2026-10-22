@@ -34,6 +34,7 @@ disagreement, guessed foods, or shaky portions.
 ## Design — 3 moves (all in `supabase/functions/food/index.ts`)
 
 ### Move 1 — Indian table as a candidate source
+
 - Bundle the curated Indian foods into the function as
   `supabase/functions/food/indian-foods.json`, generated from the canonical
   `src/lib/food/indian-foods.ts` by a small sync script
@@ -47,6 +48,7 @@ disagreement, guessed foods, or shaky portions.
 - The judge sees the merged, source-tagged list and picks the best across both.
 
 ### Move 2 — Cross-check → honest, server-computed confidence
+
 - The judge step (one Gemini call, no extra latency) returns, per item:
   `chosen` (candidate index or -1), `quantity`, an **independent
   `aiEstimateKcal`** (the model's own estimate for the eaten portion), and
@@ -60,10 +62,11 @@ disagreement, guessed foods, or shaky portions.
     estimate agrees (≤20%) and portion 'clear' is always **high** — curated
     home foods are trusted.
 - When flagged, `reason` names the disagreement, e.g.
-  *"table says 180 kcal, my estimate ~260 — recipe/portion varies"*, so the
-  user sees *why*. UI already renders reason + alternates + badge.
+  _"table says 180 kcal, my estimate ~260 — recipe/portion varies"_, so the
+  user sees _why_. UI already renders reason + alternates + badge.
 
 ### Move 3 — Portion grounding
+
 - Add an Indian portion→grams reference to the structuring prompt: roti/chapati
   ≈ 45g, phulka ≈ 35g, paratha ≈ 80g, naan ≈ 90g, katori (dal/curry/rice) ≈
   150g, bowl ≈ 200g, glass ≈ 250ml. Use these unless the user gives grams.

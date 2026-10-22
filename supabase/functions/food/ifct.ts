@@ -61,13 +61,21 @@ const IFCT_ALIASES: Record<string, string[]> = {
  * from guesswork.
  */
 const COOKED_YIELD: Record<string, number> = {
-  A013: 3.0, A014: 3.0, A015: 3.0, // rice: brown, parboiled, milled
-  A023: 2.2, A024: 2.2, // wheat vermicelli
-  B001: 2.5, B002: 2.5, // bengal gram
-  B003: 2.5, B004: 2.5, // black gram
-  B010: 2.5, B011: 2.5, // green gram
+  A013: 3.0,
+  A014: 3.0,
+  A015: 3.0, // rice: brown, parboiled, milled
+  A023: 2.2,
+  A024: 2.2, // wheat vermicelli
+  B001: 2.5,
+  B002: 2.5, // bengal gram
+  B003: 2.5,
+  B004: 2.5, // black gram
+  B010: 2.5,
+  B011: 2.5, // green gram
   B013: 2.5, // lentil dal
-  B018: 2.5, B019: 2.5, B020: 2.5, // rajmah
+  B018: 2.5,
+  B019: 2.5,
+  B020: 2.5, // rajmah
   B021: 2.5, // red gram
 };
 
@@ -124,16 +132,18 @@ export function ifctSearch(query: string, max = 3) {
 
       if (!y) {
         const cooked = isCooked(f.name);
-        return [{
-          ...base,
-          id: `ifct-${f.code}`,
-          // The serving text is what the judge reads, and what the user sees
-          // if they open the alternates list — so it must say which weight
-          // this is.
-          serving: cooked ? '100g' : '100g raw (uncooked weight)',
-          state: cooked ? ('as-eaten' as const) : ('raw' as const),
-          ...scale(1),
-        }];
+        return [
+          {
+            ...base,
+            id: `ifct-${f.code}`,
+            // The serving text is what the judge reads, and what the user sees
+            // if they open the alternates list — so it must say which weight
+            // this is.
+            serving: cooked ? '100g' : '100g raw (uncooked weight)',
+            state: cooked ? ('as-eaten' as const) : ('raw' as const),
+            ...scale(1),
+          },
+        ];
       }
 
       // A staple that absorbs water is genuinely two readings of one food, and

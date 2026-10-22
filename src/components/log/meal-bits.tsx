@@ -26,11 +26,7 @@ export function Stepper({
         <Text style={st.stepText}>−</Text>
       </Pressable>
       <Text style={st.stepQty}>{label}</Text>
-      <Pressable
-        onPress={() => onStep(1)}
-        hitSlop={8}
-        style={st.stepBtn}
-      >
+      <Pressable onPress={() => onStep(1)} hitSlop={8} style={st.stepBtn}>
         <Text style={st.stepText}>+</Text>
       </Pressable>
     </View>

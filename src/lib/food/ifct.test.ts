@@ -7,7 +7,10 @@
  * factor or a typo'd food code would ship ~3x calories for rice and dal with
  * nothing else to catch it.
  */
-import { COOKED_YIELD, ifctSearch } from '../../../supabase/functions/food/ifct';
+import {
+  COOKED_YIELD,
+  ifctSearch,
+} from '../../../supabase/functions/food/ifct';
 import { IFCT_FOODS } from '../../../supabase/functions/food/_ifct';
 
 describe('IFCT table integrity', () => {

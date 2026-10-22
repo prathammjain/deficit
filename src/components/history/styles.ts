@@ -65,7 +65,11 @@ export const st = StyleSheet.create({
     letterSpacing: -0.3,
     fontVariant: ['tabular-nums'],
   },
-  heroStatLabel: { color: palette.textFaint, fontSize: 11, marginTop: space.xxs },
+  heroStatLabel: {
+    color: palette.textFaint,
+    fontSize: 11,
+    marginTop: space.xxs,
+  },
   heroStatDivider: {
     width: 1,
     height: 32,

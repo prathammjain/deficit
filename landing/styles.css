@@ -20,7 +20,9 @@
 
   --gutter: 16px;
   --max: 1140px;
-  --sans: 'Satoshi', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --sans:
+    'Satoshi', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
+    sans-serif;
   --app: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --readout: 'Doto', 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
@@ -52,7 +54,11 @@ body {
   overflow-x: hidden;
   background-color: var(--pearl);
   background-image:
-    radial-gradient(55% 45% at 85% 8%, rgba(255, 217, 194, 0.85) 0%, rgba(255, 217, 194, 0) 70%),
+    radial-gradient(
+      55% 45% at 85% 8%,
+      rgba(255, 217, 194, 0.85) 0%,
+      rgba(255, 217, 194, 0) 70%
+    ),
     radial-gradient(45% 40% at 5% 35%, #fff 0%, rgba(255, 255, 255, 0) 70%),
     linear-gradient(180deg, #fffdf9 0%, var(--pearl) 45%, #f6f0e7 100%);
   background-attachment: fixed;
@@ -153,7 +159,9 @@ a {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
   .glass {
     background: rgba(255, 255, 255, 0.85);
   }
@@ -989,8 +997,10 @@ h3 {
   height: 11px;
   border-radius: 3px;
   background:
-    linear-gradient(90deg, var(--ink) 0 62%, transparent 62%) right / 22px 11px no-repeat,
-    radial-gradient(circle, var(--ink) 55%, transparent 58%) left / 11px 11px no-repeat;
+    linear-gradient(90deg, var(--ink) 0 62%, transparent 62%) right / 22px 11px
+      no-repeat,
+    radial-gradient(circle, var(--ink) 55%, transparent 58%) left / 11px 11px
+      no-repeat;
   opacity: 0.85;
 }
 
@@ -1183,7 +1193,12 @@ h3 {
 
 .app-btn.is-busy {
   color: transparent;
-  background-image: linear-gradient(90deg, var(--accent) 0%, #ff8a5e 50%, var(--accent) 100%);
+  background-image: linear-gradient(
+    90deg,
+    var(--accent) 0%,
+    #ff8a5e 50%,
+    var(--accent) 100%
+  );
   background-size: 200% 100%;
   animation: busy 0.8s linear infinite;
 }

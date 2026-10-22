@@ -4,7 +4,13 @@
  * as the Profile hero. Falls back to "G" (Grain) in local, no-account mode.
  */
 
-import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 import { palette, shadow } from '@/constants/palette';
 

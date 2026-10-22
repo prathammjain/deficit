@@ -203,7 +203,9 @@ describe('portioned entries', () => {
     expect(e.source).toBe('usda');
     expect(e.confidence).toBe('low');
     // A direct pick (no confidence arg) leaves it unflagged.
-    expect(portionedEntry({ ...dal, source: 'local' }, 1).confidence).toBeUndefined();
+    expect(
+      portionedEntry({ ...dal, source: 'local' }, 1).confidence,
+    ).toBeUndefined();
   });
 
   it('re-scales a logged entry when the quantity changes', async () => {

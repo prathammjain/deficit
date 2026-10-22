@@ -12,7 +12,8 @@ function isIOS(): boolean {
   if (!isWeb()) return false;
   const ua = navigator.userAgent;
   return (
-    /iPad|iPhone|iPod/.test(ua) || (ua.includes('Mac') && 'ontouchend' in window)
+    /iPad|iPhone|iPod/.test(ua) ||
+    (ua.includes('Mac') && 'ontouchend' in window)
   );
 }
 

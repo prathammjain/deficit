@@ -57,8 +57,7 @@ export function MonthCalendar({ targets }: { targets: HistoryTargets }) {
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
   const today = todayKey();
 
-  const shift = (delta: number) =>
-    setAnchor(new Date(year, month + delta, 1));
+  const shift = (delta: number) => setAnchor(new Date(year, month + delta, 1));
 
   const selectedRec = records.find((r) => r.date === selected) ?? null;
 
@@ -123,12 +122,7 @@ export function MonthCalendar({ targets }: { targets: HistoryTargets }) {
                   {dayNum}
                 </Text>
               </View>
-              <View
-                style={[
-                  st.calDot,
-                  rec.logged && !isSel && st.calDotOn,
-                ]}
-              />
+              <View style={[st.calDot, rec.logged && !isSel && st.calDotOn]} />
             </Pressable>
           );
         })}
@@ -198,10 +192,7 @@ function DaySummary({
           <Text style={st.calSumWeight}>{rec.weightKg} kg</Text>
         ) : null}
       </View>
-      <ProgressBar
-        fraction={rec.kcal / targets.targetKcal}
-        over={over}
-      />
+      <ProgressBar fraction={rec.kcal / targets.targetKcal} over={over} />
 
       <View style={st.calMacros}>
         <Macro label="Protein" value={rec.proteinG} color={palette.protein} />

@@ -36,7 +36,7 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <Head>
-      <title>Grain: food tracking for people who care about every gram</title>
+        <title>Grain: food tracking for people who care about every gram</title>
       </Head>
       <ThemeProvider value={NavTheme}>
         <StatusBar style="dark" />

@@ -24,7 +24,13 @@
   const TARGET = 2600;
   const CIRC = 263.9; // 2 * pi * r, r = 42
   const BEFORE = { left: 2080, consumed: 520, protein: 38, carbs: 64, fat: 14 };
-  const AFTER = { left: 1438, consumed: 1162, protein: 104, carbs: 106, fat: 34 };
+  const AFTER = {
+    left: 1438,
+    consumed: 1162,
+    protein: 104,
+    carbs: 106,
+    fat: 34,
+  };
   const fields = {
     left: $('[data-left]'),
     consumed: $('[data-consumed]'),
@@ -49,7 +55,8 @@
 
   const wait = (ms) =>
     new Promise((resolve) => {
-      const tick = () => (visible ? setTimeout(resolve, ms) : setTimeout(tick, 200));
+      const tick = () =>
+        visible ? setTimeout(resolve, ms) : setTimeout(tick, 200);
       tick();
     });
 

@@ -28,6 +28,7 @@ Use the owner's Gmail as the SMTP sender. Free (~500/day), no domain needed,
 reliable delivery.
 
 **1a. Create a Gmail App Password**
+
 1. https://myaccount.google.com → **Security**.
 2. Turn on **2-Step Verification** (required for app passwords).
 3. Go to https://myaccount.google.com/apppasswords → create one named
@@ -36,6 +37,7 @@ reliable delivery.
 **1b. Point Supabase at Gmail**
 Supabase dashboard → **Authentication → Emails → SMTP Settings** → enable
 **Custom SMTP**:
+
 - Sender email: `your-gmail@gmail.com`
 - Sender name: `Deficit`
 - Host: `smtp.gmail.com`
@@ -48,7 +50,7 @@ Supabase dashboard → **Authentication → Emails → SMTP Settings** → enabl
 Supabase → **Authentication → Rate Limits → "Rate limit for sending emails"** →
 set to **30 per hour** (plenty for 20 users) → **Save.**
 
-**Verify:** from the live site, request a magic link to an email *other* than the
+**Verify:** from the live site, request a magic link to an email _other_ than the
 owner's. It should arrive within a minute, from "Deficit".
 
 ---
@@ -84,6 +86,7 @@ non-OK HTTP response. The error then propagates → the handler returns 500 →
 user always gets a best-effort breakdown, never a blank.
 
 **Redeploy after the edit:**
+
 ```bash
 supabase functions deploy food --no-verify-jwt
 ```

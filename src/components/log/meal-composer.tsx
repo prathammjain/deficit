@@ -248,8 +248,7 @@ function DescribeMeal({
                       {isWeighed(it.item.serving)
                         ? quantityLabel(it.item.serving, it.quantity)
                         : it.item.serving}{' '}
-                      ·{' '}
-                      {Math.round(it.item.kcal * it.quantity)} kcal
+                      · {Math.round(it.item.kcal * it.quantity)} kcal
                       {canSwap ? (
                         <Text style={st.changeHint}>
                           {open ? '  · close' : '  · change'}

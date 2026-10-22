@@ -89,8 +89,7 @@ function getLLMConfig(): LLMConfig | null {
       provider,
       url: 'https://api.openai.com/v1/chat/completions',
       key,
-      model:
-        Deno.env.get('OPENAI_MODEL')?.trim() ?? 'gpt-4o-mini',
+      model: Deno.env.get('OPENAI_MODEL')?.trim() ?? 'gpt-4o-mini',
     };
   }
 
@@ -101,8 +100,7 @@ function getLLMConfig(): LLMConfig | null {
     provider,
     url: 'https://api.groq.com/openai/v1/chat/completions',
     key,
-    model:
-      Deno.env.get('GROQ_MODEL')?.trim() ?? 'openai/gpt-oss-120b',
+    model: Deno.env.get('GROQ_MODEL')?.trim() ?? 'openai/gpt-oss-120b',
   };
 }
 
@@ -202,7 +200,9 @@ async function checkLLMLive(): Promise<{ ok: boolean; detail: string }> {
 
 /** Curated Indian home-cooking table — ranked by name/alias match. */
 function indianSearch(query: string, max = 3) {
-  const q = String(query ?? '').trim().toLowerCase();
+  const q = String(query ?? '')
+    .trim()
+    .toLowerCase();
   if (!q) return [];
   const toks = q.split(/\s+/).filter(Boolean);
   return INDIAN_FOODS.map((f: any) => {
@@ -658,7 +658,8 @@ Deno.serve(async (req: Request) => {
       );
 
       const notes: string[] = [];
-      if (unmatched.length) notes.push(`Couldn't match: ${unmatched.join(', ')}.`);
+      if (unmatched.length)
+        notes.push(`Couldn't match: ${unmatched.join(', ')}.`);
       if (degraded) {
         notes.push(
           'Grounding was incomplete for this meal — the numbers are less reliable than usual. Re-run it in a minute for a better match.',

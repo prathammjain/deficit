@@ -5,3 +5,10 @@ package-lock.json
 supabase/.temp
 ios
 android
+
+# Generated food tables: rebuilt by scripts/, never hand-formatted
+supabase/functions/food/_ifct.ts
+supabase/functions/food/_indian-foods.ts
+
+# Claude Code session worktrees
+.claude/worktrees

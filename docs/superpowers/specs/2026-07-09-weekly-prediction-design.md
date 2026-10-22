@@ -14,7 +14,7 @@ while all log history stays intact.
 
 1. **Rolling window, not calendar weeks.** The prediction always reads
    the trailing 7 days. Seven consecutive unlogged days leave the window
-   empty, which *is* the reset — no stored anchor, no reset state to
+   empty, which _is_ the reset — no stored anchor, no reset state to
    manage, and log history is untouched by construction.
 2. **Missed days count as your average, up to 2.** With ≥5 logged days
    the prediction is `avgDailyDeficit × 7` (the ×7 implicitly fills
@@ -22,7 +22,7 @@ while all log history stays intact.
    number — the card asks the user to log more days. With 0, it starts
    fresh.
 3. **Lives on Home**, directly below the daily-target hero card.
-4. **Today is excluded.** The window is the 7 days ending *yesterday*.
+4. **Today is excluded.** The window is the 7 days ending _yesterday_.
    A half-eaten day looks like a huge deficit and would swing the
    prediction all morning; completed days are stable.
 5. **Maintenance = best available estimate.** Use the adaptive TDEE
@@ -43,18 +43,18 @@ New pure module + one card component. Zero new IO — Home already loads
 ```ts
 export interface WeeklyPrediction {
   state: 'ready' | 'building' | 'fresh';
-  loggedDays: number;                 // 0..7
-  missedDays: number;                 // 7 − loggedDays
+  loggedDays: number; // 0..7
+  missedDays: number; // 7 − loggedDays
   avgDailyDeficitKcal: number | null; // ready only
-  weeklyDeficitKcal: number | null;   // avg × 7, ready only
-  predictedKgPerWeek: number | null;  // weekly / 7700; positive = loss
+  weeklyDeficitKcal: number | null; // avg × 7, ready only
+  predictedKgPerWeek: number | null; // weekly / 7700; positive = loss
   days: { date: string; logged: boolean }[]; // 7 entries, oldest → newest
 }
 
 export function predictWeeklyLoss(
-  data: DailyDatum[],      // any series that includes the window
+  data: DailyDatum[], // any series that includes the window
   maintenanceKcal: number, // adaptive ?? formula, chosen by caller
-  today?: string,          // YYYY-MM-DD, injectable for tests
+  today?: string, // YYYY-MM-DD, injectable for tests
 ): WeeklyPrediction;
 ```
 
@@ -62,7 +62,7 @@ Rules:
 
 - Window: the 7 calendar dates ending the day before `today`
   (default: today's local date via the existing `todayKey()` logic).
-- A day is *logged* when its `intakeKcal` is a number > 0 (same
+- A day is _logged_ when its `intakeKcal` is a number > 0 (same
   predicate `estimateAdaptiveTdee` uses).
 - Per logged day: `deficit = maintenanceKcal − intakeKcal`.
 - `loggedDays ≥ 5` → `state: 'ready'`;

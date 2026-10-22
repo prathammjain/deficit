@@ -226,7 +226,12 @@ describe('swapParsedItem', () => {
     fatG: 2,
     source: 'ifct' as const,
   };
-  const sameServing = { ...katori, id: 'dal-makhani', name: 'Dal Makhani', kcal: 280 };
+  const sameServing = {
+    ...katori,
+    id: 'dal-makhani',
+    name: 'Dal Makhani',
+    kcal: 280,
+  };
 
   const parsed = {
     item: katori,

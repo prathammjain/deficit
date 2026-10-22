@@ -35,16 +35,16 @@ code from the old glass skin, a personal note in a public repo, and stale docs.
 
 ## 3. Dead-weight removal (each verified unused)
 
-| Item | Action |
-| --- | --- |
-| `scripts/reset-project.js` + npm script | delete (create-expo-app remnant) |
-| `GhostButton` in primitives | delete (0 uses) |
-| `GlassBackdrop` (renders `null`) | delete + remove its 2 import/render sites |
-| `webBlur()` (inert on opaque surfaces) | delete + remove 3 spread sites |
+| Item                                                                                                                                                                  | Action                                                                                                                               |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `scripts/reset-project.js` + npm script                                                                                                                               | delete (create-expo-app remnant)                                                                                                     |
+| `GhostButton` in primitives                                                                                                                                           | delete (0 uses)                                                                                                                      |
+| `GlassBackdrop` (renders `null`)                                                                                                                                      | delete + remove its 2 import/render sites                                                                                            |
+| `webBlur()` (inert on opaque surfaces)                                                                                                                                | delete + remove 3 spread sites                                                                                                       |
 | Legacy palette keys: `bgElevated`, `surfaceSolid`, `surface2Solid`, `surfaceBorder`, `glass`, `glassBorder`, `glassHighlight`, `glassDark`, `blobA/B/C`, `accentGlow` | migrate 3 stragglers (`glassBorder`→`hairline` ×2, `surface2Solid`→`surface2` ×1), then delete all keys + the "legacy" comment block |
-| `GlassSurface`'s legacy `dark` prop | remove prop + its one use |
-| `constants/theme.ts` | delete; `app-tabs.tsx` (its only consumer) reads palette directly |
-| Remaining `as any` casts (2 after webBlur removal) | keep, each annotated with a one-line platform reason |
+| `GlassSurface`'s legacy `dark` prop                                                                                                                                   | remove prop + its one use                                                                                                            |
+| `constants/theme.ts`                                                                                                                                                  | delete; `app-tabs.tsx` (its only consumer) reads palette directly                                                                    |
+| Remaining `as any` casts (2 after webBlur removal)                                                                                                                    | keep, each annotated with a one-line platform reason                                                                                 |
 
 ## 4. Out of scope
 
