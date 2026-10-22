@@ -65,7 +65,7 @@ export default function HistoryScreen() {
 
   return (
     <Screen>
-      <Eyebrow>Deficit</Eyebrow>
+      <Eyebrow>Grain</Eyebrow>
       <Title>Your journey</Title>
 
       <RangePills value={rangeDays} onChange={setRangeDays} />

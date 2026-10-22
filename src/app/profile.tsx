@@ -187,7 +187,7 @@ export default function ProfileScreen() {
       <SectionLabel>Quick access</SectionLabel>
       <AddToHomeScreenButton />
 
-      <Text style={s.version}>Deficit v{version}</Text>
+      <Text style={s.version}>Grain v{version}</Text>
     </Screen>
   );
 }

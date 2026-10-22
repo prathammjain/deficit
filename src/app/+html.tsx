@@ -1,12 +1,12 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
 import type { PropsWithChildren } from 'react';
 
-const TITLE = 'Deficit: calorie tracking that doesn’t make up numbers';
+const TITLE = 'Grain: food tracking for people who care about every gram';
 const DESCRIPTION =
   'Log meals in plain language, like “2 roti, mom’s dal, 1 katori rice”, and ' +
   'get calories and macros you can trust. AI grounded on real food data, ' +
   'built for Indian food.';
-const URL = 'https://deficit-cyan.vercel.app';
+const URL = 'https://app.getgrain.fit';
 
 /**
  * +html.tsx — the static HTML shell for web export. This is the only place the
@@ -46,7 +46,7 @@ export default function Root({ children }: PropsWithChildren) {
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Deficit" />
+        <meta name="apple-mobile-web-app-title" content="Grain" />
 
         <ScrollViewStyleReset />
 

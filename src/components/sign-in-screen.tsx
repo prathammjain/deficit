@@ -140,7 +140,7 @@ export function SignInScreen() {
         )}
       </View>
       <Text style={st.footer}>
-        Deficit provides estimates, not medical advice.
+        Grain provides estimates, not medical advice.
       </Text>
     </Screen>
   );

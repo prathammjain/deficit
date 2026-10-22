@@ -115,7 +115,7 @@ export default function HomeScreen() {
   return (
     <Screen>
       <View style={st.headerRow}>
-        <Eyebrow>Deficit</Eyebrow>
+        <Eyebrow>Grain</Eyebrow>
         <Pressable
           onPress={() => router.push('/profile')}
           hitSlop={8}

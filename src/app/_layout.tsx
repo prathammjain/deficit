@@ -36,7 +36,7 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <Head>
-      <title>Deficit: calorie tracking that doesn&apos;t make up numbers</title>
+      <title>Grain: food tracking for people who care about every gram</title>
       </Head>
       <ThemeProvider value={NavTheme}>
         <StatusBar style="dark" />

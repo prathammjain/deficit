@@ -1,7 +1,7 @@
 /**
  * monogram.tsx — the circular account mark: the first letter of the user's
  * email on a warm-white card circle. Small in headers (opens Profile), large
- * as the Profile hero. Falls back to "D" (Deficit) in local, no-account mode.
+ * as the Profile hero. Falls back to "G" (Grain) in local, no-account mode.
  */
 
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
@@ -17,7 +17,7 @@ export function Monogram({
   size?: number;
   style?: StyleProp<ViewStyle>;
 }) {
-  const mark = (letter ?? 'D').trim().charAt(0).toUpperCase() || 'D';
+  const mark = (letter ?? 'G').trim().charAt(0).toUpperCase() || 'G';
   return (
     <View
       style={[
