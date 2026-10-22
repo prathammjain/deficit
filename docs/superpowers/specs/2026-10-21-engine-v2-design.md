@@ -1,6 +1,7 @@
 # Engine v2 — accurate macro tracking for athletes
 
-Date: 2026-10-21 · Status: awaiting approval (owner's answers folded in 2026-10-22)
+Date: 2026-10-21 · Status: approved 2026-10-22, with "Running beside the live
+app" and the playground scope added the same day
 
 ## Intent and why
 
@@ -92,13 +93,19 @@ wrong.
 
 ## Constraints
 
-- Solo developer. **AI budget: at most $10–20 a month.** A paid model is
-  acceptable within that **if** it clearly improves the score.
+- Solo developer. **AI budget:** the owner will buy credits for a frontier
+  model, but only after the bake-off (step 5) shows it clearly improves the
+  score. Spend is held down by the cache and a per-user daily cap (below).
+- **Learning is a goal in its own right.** The owner is building this to learn
+  real AI engineering, so the playground favours tools that make each step of
+  the engine visible over shortcuts that hide them.
 - **Speed: "Match" must return within 8–9 seconds.** Today it takes about
   10–15 s, so this is a real target, not slack — it constrains the model choice
   and how many AI calls a meal may make.
 - The live app (Expo PWA on Vercel, Supabase backend, `food` edge function on
-  Deno) must keep working throughout. Users see no change until step 6.
+  Deno) must keep working throughout. **It is public:** people are signing in
+  from posts on X, and open access stays. Users see no change until step 6,
+  except testers the owner moves onto the new engine.
 - Groq's free tier caps requests per day; any model choice must hold up at
   athlete-app volumes.
 - IFCT 2017 data is used now, by the owner's decision. Its publisher requires
@@ -132,6 +139,32 @@ Known cases that must be in it: the soya-chunk meal above; "120 ml milk with
 half a tablespoon of sugar and coffee"; "1 tablespoon ghee"; "50g soya chunks"
 alone.
 
+### 0. Running beside the live app
+
+Everyone keeps using today's engine while the new one is built. The rule that
+makes this safe: **the app talks to one engine API that never changes**, so
+which engine answers is a server setting, never an app release.
+
+- **Engine switch.** The function picks an engine per user: the live engine
+  for everyone, the beta engine for testers on an allowlist, and later a
+  rollout percentage. One setting turns the beta engine off for everyone.
+- **Run log.** Every Match is saved: the meal text, each stage's output
+  (split, candidates, decisions), the answer, tokens, time and cost. Runs are
+  tagged with an anonymous user reference, never a name or email.
+- **User corrections.** When someone logs a matched meal, what they actually
+  logged (after changing portions, swapping or removing items) is saved next to
+  the engine's answer. Every edit is a labelled example of the engine being
+  wrong.
+- **Shadow mode** (before any wider rollout). For real meals, the candidate
+  engine also runs in the background; both answers are saved and compared. No
+  user sees it.
+- **Rollout:** shadow → testers → 10% → everyone, each step only when the
+  practice set says the new engine is better.
+- **Cost guard.** The beta engine is capped per user per day; past the cap a
+  user quietly gets the live engine. The cache serves repeats for free.
+- **Privacy note** in the app: meals are stored without names to improve
+  estimates.
+
 ### 2. The lab
 
 A small separate project — a workshop — where the engine is run against the
@@ -146,6 +179,28 @@ bitten by two food tables that nothing kept in sync. "Shipping to the app" means
 updating the version the app uses, never copying files across.
 
 My call: the lab is its own repository, so it can be experimented in freely.
+
+**The playground** is the lab's web front end, and the one internal tool for
+the engine: a control room plus a workshop.
+
+- **Controls:** who gets which engine (tester allowlist, rollout percentage),
+  the off switch, the daily cap, shadow-mode comparisons.
+- **Workshop:** the practice set and its scorecard (typical calorie error,
+  share within ±5%, protein error, time typical and worst case, cost per
+  meal); a trace viewer showing every stage of a run; side-by-side runs of two
+  setups (model × prompt × lookup) over one meal or the whole set; a lookup
+  lab measuring how often the right food is in the top 5 candidates; checks of
+  tool calling against the fixed pipeline, of model routing (cheap model for
+  weighed staples, frontier for dishes), and of whether "high confidence" is
+  right more often; later, training a small model on frontier answers and user
+  corrections.
+- **Feedback inbox:** user corrections and "this looks off" flags, each one
+  turnable into a practice-set meal.
+
+What it may touch: engine runs, corrections, engine settings and the practice
+set. **What it may not:** user accounts, people's full meal logs, or anything a
+user logged. Access is the owner's account only, checked by the server on
+every request through an admin role; a hidden URL is not access control.
 
 ### 3. Our own food database
 
@@ -215,6 +270,18 @@ move onto the new database, retiring `src/lib/food/indian-foods.ts` as a
 separate source. Otherwise the app would show different numbers from the
 engine — the drift this project has already suffered.
 
+## Order of work
+
+| When     | Work                                                                                   |
+| -------- | -------------------------------------------------------------------------------------- |
+| Week 1   | Run log, user corrections, engine switch and privacy note, in the live function        |
+| Week 2   | Practice set and scorer; today's engine scored as the baseline                         |
+| Week 3–4 | Playground (trace viewer, side by side) and a small credit test of two frontier models |
+| Week 5+  | Own food database and lookup lab, then shadow, testers and rollout                     |
+
+Week 1 changes nothing users see, and starts collecting real meals and
+corrections at once.
+
 ## Left to the builder
 
 - Database schema and how the sources are merged and de-duplicated.
@@ -232,8 +299,8 @@ engine — the drift this project has already suffered.
   stated grams), engine cache version `v4`.
 - Logging now saves engine quantities exactly and shows weighed items in grams
   (`src/lib/quantity.ts`, commit `06a446a`).
-- A fix for the offline fallback parser (decimals and grams) sits on branch
-  `claude/loving-dirac-e3d833`, not yet merged.
+- The offline fallback parser reads decimals and stated grams (merged in
+  `06d3862`).
 - The engine's answers are cached in the `food_cache` table, which only stores
   runs that didn't degrade — so it shows the engine's better answers, not its
   worst.
