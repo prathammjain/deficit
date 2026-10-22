@@ -39,7 +39,12 @@ import { servingMultiplier } from './portion.ts';
 
 // ---- CORS -------------------------------------------------------------------
 
-const ALLOWED_ORIGINS = ['https://deficit-cyan.vercel.app'];
+// The app's own address, plus the old Vercel one, which keeps working for
+// anyone still on it.
+const ALLOWED_ORIGINS = [
+  'https://app.getgrain.fit',
+  'https://deficit-cyan.vercel.app',
+];
 const isAllowedOrigin = (origin: string | null) =>
   !!origin &&
   (ALLOWED_ORIGINS.includes(origin) ||
