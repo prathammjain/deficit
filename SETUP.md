@@ -1,105 +1,92 @@
-# Deficit — Backend setup (Supabase + FatSecret + Gemini)
+# Setup
 
-The app runs fully **local, no account** until you add the values below. Adding
-them switches on magic-link accounts, cloud sync, and AI meal parsing. Nothing
-in the app code needs to change — it's all gated on these keys.
+Grain runs fully on-device with no account until you add the keys below.
+Each step switches on more: Supabase adds sign-in and sync, the engine keys add
+grounded meal parsing. Nothing in the app code changes; everything is gated on
+configuration.
 
-Estimated time: ~15 minutes.
+## 1. Supabase: accounts and sync
 
----
-
-## 1. Supabase (auth + sync) — required
-
-1. Create a free project at https://supabase.com → **New project**. Pick a
-   region close to your testers. Save the database password somewhere.
-2. **Run the schema.** Dashboard → **SQL Editor** → New query → paste the
-   contents of [`supabase/schema.sql`](supabase/schema.sql) → **Run**.
-3. **Enable email auth.** Dashboard → **Authentication → Providers → Email**:
-   make sure Email is enabled. (Magic links work out of the box on the built-in
-   email sender for low volume; for nicer delivery add an SMTP provider later.)
-4. **Allow the redirect URL.** Authentication → **URL Configuration** → add your
-   app URL to _Redirect URLs_ (for local dev: `http://localhost:8081`; for the
-   deployed PWA: its real URL).
-5. **Grab the keys.** Project Settings → **API**. Copy the **Project URL** and
-   the **anon public** key.
-6. In the project root, copy `.env.example` to `.env` and fill in:
+1. Create a project at [supabase.com](https://supabase.com).
+2. **Schema.** SQL Editor → paste [`supabase/schema.sql`](supabase/schema.sql)
+   → Run. It creates the per-user storage table and the shared engine cache,
+   both with row-level security.
+3. **Email sign-in.** Authentication → Providers → Email: enabled. Magic links
+   work on the built-in sender at low volume; add SMTP for real traffic.
+4. **Allowed addresses.** Authentication → URL Configuration:
+   - Site URL: `https://app.getgrain.fit`
+   - Redirect URLs: `https://app.getgrain.fit` and `http://localhost:8081`
+5. **Keys.** Project Settings → API. Copy `.env.example` to `.env` and fill in:
 
    ```
    EXPO_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
-   EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+   EXPO_PUBLIC_SUPABASE_ANON_KEY=...
    ```
 
-7. Restart the dev server (`npm run web`). You should now see the sign-in
-   screen. Enter your email, click the link, and you're in — your data now
-   syncs to Supabase.
+   The anon key is meant to be public; row-level security keeps each user's
+   data private.
 
-> The anon key is **meant** to be public; row-level security (from the schema)
-> is what keeps each user's data private.
+6. Restart `npm run web`. The sign-in screen appears.
 
-### Google sign-in (optional, web)
+### Google sign-in (optional)
 
-The sign-in screen shows a **Continue with Google** button on web. To make it
-work:
+1. Google Cloud Console → Credentials → OAuth client ID (Web application).
+   Authorized redirect URI: `https://YOUR-PROJECT.supabase.co/auth/v1/callback`.
+2. Supabase → Authentication → Providers → Google: paste the client ID and
+   secret.
 
-1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
-   create an **OAuth client ID** (type: *Web application*):
-   - First configure the **OAuth consent screen** (External, app name
-     “Deficit”, your support email). No scopes beyond the defaults are needed.
-   - **Authorized redirect URI:**
-     `https://YOUR-PROJECT.supabase.co/auth/v1/callback`
-2. Supabase Dashboard → **Authentication → Providers → Google**: enable, paste
-   the **Client ID** and **Client secret**, save.
-3. That's it — no code or env changes. Users who previously signed in by magic
-   link keep their data: Supabase links providers with the same verified email
-   to one account.
+## 2. The engine: grounded meal parsing
 
----
+Without this, "Describe a meal" uses the offline parser over the built-in
+table. With it, descriptions go through the `food` Edge Function.
 
-## 2. AI meal parsing (Gemini + USDA) — optional, enables describe-to-log accuracy
+Keys, all free:
 
-Without these, "Describe" mode uses the built-in Indian food table. With them,
-the engine grounds AI and a real food database in each other: Gemini structures
-your wording, **USDA FoodData Central** supplies measured macros for candidate
-foods, and Gemini then judges which candidate fits and how sure it is — so a
-guess is always flagged, never hidden.
+- **Groq** (the default LLM): [console.groq.com](https://console.groq.com)
+- **USDA FoodData Central**: [fdc.nal.usda.gov/api-key-signup](https://fdc.nal.usda.gov/api-key-signup)
 
-> We use USDA (not FatSecret) because Supabase Edge Functions have a rotating
-> egress IP, and FatSecret's free tier IP-allowlists every request. USDA's key
-> has no IP lock.
-
-### Get the keys
-
-- **Gemini:** https://aistudio.google.com → **Get API key** (free tier).
-- **USDA:** https://fdc.nal.usda.gov/api-key-signup — instant free key from
-  api.data.gov. No IP allow-listing.
-
-### Deploy the Edge Function
-
-Install the Supabase CLI (https://supabase.com/docs/guides/cli), then from the
-project root:
+Deploy with the [Supabase CLI](https://supabase.com/docs/guides/cli):
 
 ```bash
 supabase login
 supabase link --project-ref YOUR-PROJECT-REF
-supabase secrets set \
-  GEMINI_API_KEY=... \
-  USDA_API_KEY=...
+supabase secrets set GROQ_API_KEY=... USDA_API_KEY=...
 supabase functions deploy food --no-verify-jwt
 ```
 
-Check it's live: the app's log screen shows **"AI-grounded · USDA"** when the
-function is reachable and both keys are set; otherwise it quietly falls back to
-the local table (logging never hard-fails).
+To use OpenAI instead: `supabase secrets set LLM_PROVIDER=openai
+OPENAI_API_KEY=...` and redeploy.
 
----
+The Log screen shows **AI-grounded · USDA** when the engine is reachable and
+its keys work. The health check makes a real call to the LLM, so an expired key
+shows as offline rather than as healthy.
 
-## What's where
+If you add the engine's address to a new domain, also add that domain to
+`ALLOWED_ORIGINS` in `supabase/functions/food/index.ts` and redeploy.
 
-| Piece                    | File                               |
-| ------------------------ | ---------------------------------- |
-| DB schema + RLS          | `supabase/schema.sql`              |
-| Gemini + USDA engine     | `supabase/functions/food/index.ts` |
-| Supabase client (gated)  | `src/lib/supabase/client.ts`       |
-| Auth (magic link)        | `src/lib/supabase/auth.tsx`        |
-| Cloud-backed storage     | `src/lib/supabase/supabase-kv.ts`  |
-| Remote food provider     | `src/lib/food/remote-provider.ts`  |
+## 3. Hosting: Vercel
+
+Two Vercel projects deploy from this repository on every push to `main`:
+
+| Project   | Root directory | Domain                             |
+| --------- | -------------- | ---------------------------------- |
+| `deficit` | `/`            | `app.getgrain.fit`                 |
+| `grain`   | `landing`      | `getgrain.fit`, `www.getgrain.fit` |
+
+The app's build is set in [`vercel.json`](vercel.json); the landing page has
+its own [`landing/vercel.json`](landing/vercel.json) that serves its files as
+they are. Add the two `EXPO_PUBLIC_SUPABASE_*` values as environment variables
+on the app project.
+
+## 4. Food data (maintainers)
+
+The food tables are generated; don't edit them by hand.
+
+| Table                         | Source               | Regenerate                                                                 |
+| ----------------------------- | -------------------- | -------------------------------------------------------------------------- |
+| `src/lib/food/indian-foods.ts`| curated, part INDB   | `python3 scripts/import-indb.py INDB.xlsx` (then paste)                    |
+| engine copy of the above      | the curated table    | `node scripts/sync-indian-foods.mjs`                                       |
+| `supabase/functions/food/_ifct.ts` | IFCT 2017 PDF    | `npm run ifct -- path/to/food_table_IFCT2017.pdf > supabase/functions/food/_ifct.ts` |
+
+IFCT 2017's publisher requires written permission to reproduce its data in a
+product. That permission is an open item to settle before wider launch.

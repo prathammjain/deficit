@@ -1,84 +1,88 @@
-# Deficit
+# Grain
 
-Hallucination-resistant meal logging for fat loss. Log what you ate in plain
-language ("2 roti, mom's dal, 1 katori rice") and get calories, macros, and
-your deficit, with every number you can trust.
+Food tracking for people who care about every gram.
 
-## Why Deficit exists
+Describe what you ate in plain English, "200 g chicken breast, 150 g rice,
+1 tbsp ghee", and Grain works out the calories and macros from measured
+nutrition data. Built for lifters, athletes and anyone whose numbers have to
+be right.
 
-I've been lifting for the better part of a year. Building muscle turned out to
-be the easy half; losing fat while living in an Indian household, where the
-food is gloriously carb-rich, is the hard one. So I tried the obvious hack: a
-dedicated ChatGPT project where, every night before bed, I logged everything I
-ate and got back calories, macros, and whether I hit my deficit.
+**Live:** [getgrain.fit](https://getgrain.fit) (landing) ·
+[app.getgrain.fit](https://app.getgrain.fit) (app)
 
-It worked, until I noticed it sometimes just makes numbers up.
+## Why describe instead of scan
 
-That is the whole reason this app exists: meal logging in natural language,
-but with a **hybrid engine where AI and real food databases ground each
-other**, so neither gets to invent a number alone. Log a meal the moment you
-eat it, and the daily dashboard updates with numbers you can actually trust.
+A photo can't see the oil in the pan, the chicken under the rice, or the
+difference between 100 g and 180 g. Chatbots can read a description, but they
+invent numbers and never show their work. Grain grounds an AI on real food data
+so that every number comes from a measured source, and anything it isn't sure
+about is flagged rather than hidden.
 
 ## How the engine works
 
-1. An **LLM structures** your text into food items with normalised Indian
-   portions (katori, roti, bowl). The provider is pluggable: Groq's
-   `gpt-oss-120b` by default, OpenAI via one env switch.
-2. Real candidates are fetched from two grounded sources: a **curated Indian
-   home-cooking table** (derived from INDB, grounded in IFCT 2017) and **USDA
-   FoodData Central** (measured macros per 100g).
-3. The **LLM judges** which candidate matches, scales the portion, and makes
-   its own independent calorie estimate. The two are cross-checked: agreement
-   earns high confidence; divergence or a guessed portion gets flagged
-   (`✓ good match`, `≈ likely`, `check this`).
+The engine is the `food` Supabase Edge Function (`supabase/functions/food`).
 
-A guess is always visible and one tap from correction. The trust signal
-follows every entry into the log and history.
+1. **Structure.** An LLM splits the description into foods, servings and any
+   stated amount ("150 ml", "1 tbsp").
+2. **Ground.** Each food is matched against three sources: a curated table of
+   Indian home dishes (home portions, recipe fats included), IFCT 2017 (Indian
+   lab-measured ingredients) and USDA FoodData Central.
+3. **Judge.** The LLM picks the best match and makes an independent estimate as
+   a cross-check.
+4. **Calculate.** Portion arithmetic is done in code, not by the model: stated
+   weights become exact multipliers, and raw-to-cooked conversion for rice and
+   dals uses documented yield factors.
+5. **Flag.** Each item carries a source and a confidence (`✓ good match`,
+   `≈ likely`, `check this`), and follows the entry into the log.
 
-## Architecture map
+The LLM is pluggable (Groq `openai/gpt-oss-120b` by default, OpenAI by env
+switch). If the engine is unreachable, the app falls back to an offline parser
+over the built-in Indian table, so logging never hard-fails.
+
+The next version of the engine is designed in
+[`docs/superpowers/specs/2026-10-21-engine-v2-design.md`](docs/superpowers/specs/2026-10-21-engine-v2-design.md).
+
+## Repository
 
 ```
-src/app/          screens (expo-router): home, log, history, profile
-src/components/   UI by feature: dashboard/, log/, history/, ui/ primitives
-src/lib/          pure logic + IO: food engine client, targets, adaptive TDEE,
-                  weekly prediction, KV storage (local or Supabase)
-supabase/         schema.sql (RLS) + functions/food (the hybrid engine, Deno)
-docs/             design specs and implementation plans
+src/app/           screens (expo-router): home, log, history, profile
+src/components/    UI by feature: dashboard/, log/, history/, ui/
+src/lib/           logic and storage: food engine client, targets, adaptive
+                   TDEE, history, quantity rules, local or Supabase storage
+supabase/          schema.sql (row-level security) and functions/food (engine)
+landing/           the getgrain.fit landing page (static HTML, CSS, JS)
+scripts/           data importers: IFCT 2017, INDB, table sync
+public/            PWA manifest, icons, service worker
+docs/              design specs and implementation plans
 ```
 
 ## Stack
 
-- **Expo / React Native** (iOS, Android, web) with `expo-router`
-- **Supabase** — magic-link + Google auth, row-level-secured cloud sync, and
-  the `food` Edge Function (Deno) that runs the hybrid engine
-- Runs **fully local with no account** until you add Supabase keys
+- **Expo / React Native** with `expo-router`, shipped as a web PWA
+- **Supabase**: email and Google sign-in, row-level-secured sync, and the
+  Deno Edge Function that runs the engine
+- **Vercel**: two projects from this repo, the app and `landing/`, both
+  deploying on every push to `main`
 
-## Run it locally
+## Run locally
 
 ```bash
 npm install
-npm run web        # or: npm run ios / npm run android
+npm run web
 ```
 
-That's enough to use the app against the built-in Indian food table. To turn on
-accounts, cloud sync, and the AI-grounded engine, see **[SETUP.md](SETUP.md)**.
+With no keys, the app runs fully on-device against the built-in food table.
+To switch on accounts, sync and the grounded engine, see [SETUP.md](SETUP.md).
 
 ## Develop
 
 ```bash
-npm test           # jest unit tests (pure logic: TDEE, budget, log, history)
-npm run typecheck  # tsc --noEmit
-npm run lint
+npm test            # jest: engine rules, storage, targets, TDEE, history
+npm run typecheck   # tsc --noEmit
+npm run lint        # eslint
+npm run format      # prettier
 ```
 
-## Deploy the web app
+## License
 
-The app exports to a static PWA:
-
-```bash
-npx expo export --platform web      # outputs ./dist
-```
-
-Host `./dist` anywhere static (EAS Hosting, Vercel, Netlify). After deploying,
-add the deployed URL to Supabase → Authentication → **URL Configuration →
-Redirect URLs** so magic links land back in the app.
+MIT, see [LICENSE](LICENSE).
