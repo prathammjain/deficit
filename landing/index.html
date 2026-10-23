@@ -246,19 +246,19 @@
       </section>
 
       <section class="why wrap" aria-labelledby="why-title">
-        <div class="section-head">
+        <div class="section-head" data-reveal>
           <div
             class="hint hint-mid hint-amber hint-why"
             aria-hidden="true"
           ></div>
           <h2 id="why-title">Why not scan?</h2>
           <p class="section-lede">
-            Scanning apps guess from a picture. That's fine for a rough idea,
-            but not when every gram matters.
+            A photo can miss what's hidden, what was added, and how much is
+            actually on your plate.
           </p>
         </div>
 
-        <div class="tiles">
+        <div class="tiles" data-reveal>
           <article class="tile glass tile-hidden" data-tile>
             <div class="art" aria-hidden="true">
               <svg viewBox="0 0 260 150">
@@ -475,52 +475,94 @@
                 </div>
               </div>
             </div>
-            <h3>It can't weigh anything</h3>
+            <h3>It can't measure portions</h3>
             <p>100 g of rice and 180 g look the same in a photo.</p>
           </article>
         </div>
       </section>
 
       <section class="does wrap" aria-labelledby="does-title">
-        <div class="hint hint-right hint-does" aria-hidden="true"></div>
-        <div class="glass does-card" data-tile>
+        <div class="section-head" data-reveal>
           <h2 id="does-title">What Grain does</h2>
-          <p class="typed-line">
-            “200 g chicken breast, 150 g rice, 1 tbsp ghee.”
-          </p>
-          <div class="pills" aria-hidden="true">
-            <span class="pill"
-              ><b>Chicken breast</b><span>200 g</span><i>330 kcal</i></span
-            >
-            <span class="pill"
-              ><b>White rice</b><span>150 g</span><i>195 kcal</i></span
-            >
-            <span class="pill"
-              ><b>Ghee</b><span>13 g</span><i>117 kcal</i></span
-            >
-          </div>
-          <p class="does-text">
+          <p class="section-lede">
             You write what you ate. Grain matches each food to measured
             nutrition data and does the maths. If something's unclear, it tells
             you instead of guessing.
           </p>
         </div>
+        <div class="glass does-card" data-flow data-reveal aria-hidden="true">
+          <div class="flow">
+            <div class="step" data-step="1">
+              <p class="step-label"><b>1</b>Describe</p>
+              <div class="ui ui-describe">
+                <p class="ui-input">
+                  <span data-flow-text
+                    >200 g chicken breast, 150 g rice, 1 tbsp ghee</span
+                  ><i class="caret"></i>
+                </p>
+                <span class="ui-match">Match</span>
+              </div>
+            </div>
+            <div class="step" data-step="2">
+              <p class="step-label"><b>2</b>Match</p>
+              <div class="ui ui-rows">
+                <div class="ui-row">
+                  <div>
+                    <b>Chicken breast</b
+                    ><span class="badge ok">✓ good match</span>
+                    <em>200 g cooked</em>
+                  </div>
+                  <strong>330</strong>
+                </div>
+                <div class="ui-row">
+                  <div>
+                    <b>White rice</b><span class="badge ok">✓ good match</span>
+                    <em>150 g cooked</em>
+                  </div>
+                  <strong>195</strong>
+                </div>
+                <div class="ui-row">
+                  <div>
+                    <b>Ghee</b><span class="badge ok">✓ good match</span>
+                    <em>13 g</em>
+                  </div>
+                  <strong>117</strong>
+                </div>
+                <div class="ui-total">
+                  <span>Total</span><strong>642 kcal, 66 g protein</strong>
+                </div>
+              </div>
+            </div>
+            <div class="step" data-step="3">
+              <p class="step-label"><b>3</b>Logged</p>
+              <div class="ui ui-day">
+                <p class="ui-caption">Left to eat</p>
+                <p class="ui-big" data-flow-left>1,958</p>
+                <div class="ui-bar"><i></i></div>
+                <p class="ui-of">642 of 2,600 kcal eaten</p>
+                <div class="ui-chips">
+                  <span>P 66 g</span><span>C 43 g</span><span>F 21 g</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section class="split proof wrap" aria-labelledby="proof-title">
-        <div class="split-copy">
+        <div class="split-copy" data-reveal>
           <div
             class="hint hint-mid hint-amber hint-proof"
             aria-hidden="true"
           ></div>
           <h2 id="proof-title">See where every number comes from.</h2>
           <p class="section-lede">
-            Each food shows what Grain matched it to and how sure it is. If a
-            match looks wrong, tap it and pick the right one. Your total is
-            never a number you have to take on faith.
+            Every matched food has a reason behind its numbers. Review the food,
+            see why Grain chose it, and correct a match when it doesn't look
+            right.
           </p>
         </div>
-        <div class="glass proof-card" data-tile aria-hidden="true">
+        <div class="glass proof-card" data-tile data-reveal aria-hidden="true">
           <div class="m-row">
             <div>
               <b>Chicken breast</b><span class="badge ok">✓ good match</span>
@@ -531,7 +573,7 @@
           <div class="m-row m-open">
             <div>
               <b>Paneer</b><span class="badge warn">check this</span>
-              <em>150 g</em>
+              <em>150 g <span class="change">change</span></em>
             </div>
             <strong class="swap"
               ><span class="was">398</span><span class="now">270</span></strong
@@ -560,16 +602,21 @@
         class="split split-flip custom wrap"
         aria-labelledby="custom-title"
       >
-        <div class="split-copy">
+        <div class="split-copy" data-reveal>
           <div class="hint hint-mid hint-custom" aria-hidden="true"></div>
           <h2 id="custom-title">When you know the numbers, use yours.</h2>
           <p class="section-lede">
             Some food comes with its numbers: the label on a protein bar, your
-            cafe's menu, a recipe you've worked out once. Add it as it is, in
-            seconds. Grain keeps your numbers exactly as you typed them.
+            cafe's menu, a recipe you've worked out once. Add it as entered, and
+            Grain keeps your numbers intact.
           </p>
         </div>
-        <div class="glass custom-card" data-custom aria-hidden="true">
+        <div
+          class="glass custom-card"
+          data-custom
+          data-reveal
+          aria-hidden="true"
+        >
           <div class="c-field c-name">
             <span data-c="name">Protein bar, from the label</span
             ><i class="caret"></i>
@@ -603,20 +650,185 @@
         </div>
       </section>
 
-      <section class="who wrap">
-        <div class="hint hint-mid hint-amber hint-who" aria-hidden="true"></div>
-        <p>
-          <span class="tone">Built for lifters, athletes and models.</span>
-          Anyone whose numbers have to be right.
-        </p>
+      <section class="week wrap" aria-labelledby="week-title">
+        <div class="section-head" data-reveal>
+          <div class="hint hint-mid hint-week" aria-hidden="true"></div>
+          <h2 id="week-title">Every day adds up.</h2>
+          <p class="section-lede">
+            One meal is a number. Grain keeps the running picture: your total
+            deficit, every day you logged, and what your body really burns.
+          </p>
+        </div>
+
+        <div class="bento">
+          <article class="glass feat feat-deficit" data-feat data-reveal>
+            <div class="ui" aria-hidden="true">
+              <p class="ui-caption">Total deficit maintained</p>
+              <p class="ui-big ui-good">
+                <span data-count-to="5910">5,910</span><small>kcal</small>
+              </p>
+              <p class="ui-sub">≈ 0.8 kg of fat, if it all held</p>
+              <div class="bars">
+                <i style="--i: 0; --h: 0.84"></i>
+                <i style="--i: 1; --h: 0.68"></i>
+                <i class="off" style="--i: 2"></i>
+                <i style="--i: 3; --h: 0.93"></i>
+                <i style="--i: 4; --h: 0.78"></i>
+                <i style="--i: 5; --h: 0.63"></i>
+                <i class="over" style="--i: 6; --h: 0.24"></i>
+                <i style="--i: 7; --h: 0.91"></i>
+                <i style="--i: 8; --h: 0.8"></i>
+                <i class="off" style="--i: 9"></i>
+                <i style="--i: 10; --h: 1"></i>
+                <i style="--i: 11; --h: 0.74"></i>
+                <i class="over" style="--i: 12; --h: 0.16"></i>
+                <i style="--i: 13; --h: 0.86"></i>
+              </div>
+              <div class="ui-stats">
+                <span><b>12</b> of 14 days logged</span>
+                <span><b>4</b> day streak</span>
+              </div>
+            </div>
+            <h3>Your deficit, added up</h3>
+            <p>
+              Every day's gap between what you ate and what you burned, kept as
+              a running total, with the fat it comes to.
+            </p>
+          </article>
+
+          <article
+            class="glass feat feat-calendar"
+            data-feat
+            data-reveal
+            style="--d: 90"
+          >
+            <div class="ui" aria-hidden="true">
+              <div class="cal-head"><b>October</b><span>‹ ›</span></div>
+              <div class="cal-grid cal-week">
+                <i>M</i><i>T</i><i>W</i><i>T</i><i>F</i><i>S</i><i>S</i>
+              </div>
+              <div class="cal-grid cal-days">
+                <i></i>
+                <i></i>
+                <i></i>
+                <span class="has-log" data-day="1">1</span>
+                <span class="has-log" data-day="2">2</span>
+                <span class="has-log" data-day="3">3</span>
+                <span class="has-log" data-day="4">4</span>
+                <span data-day="5">5</span>
+                <span class="has-log" data-day="6">6</span>
+                <span class="has-log" data-day="7">7</span>
+                <span class="has-log" data-day="8">8</span>
+                <span class="has-log" data-day="9">9</span>
+                <span class="has-log" data-day="10">10</span>
+                <span class="has-log" data-day="11">11</span>
+                <span data-day="12">12</span>
+                <span class="has-log" data-day="13">13</span>
+                <span class="has-log" data-day="14">14</span>
+                <span class="has-log" data-day="15">15</span>
+                <span class="has-log" data-day="16">16</span>
+                <span class="has-log" data-day="17">17</span>
+                <span class="has-log" data-day="18">18</span>
+                <span class="has-log" data-day="19">19</span>
+                <span class="has-log" data-day="20">20</span>
+                <span class="has-log sel" data-day="21">21</span>
+                <span class="has-log" data-day="22">22</span>
+                <span class="has-log today" data-day="23">23</span>
+                <span data-day="24">24</span>
+                <span data-day="25">25</span>
+                <span data-day="26">26</span>
+                <span data-day="27">27</span>
+                <span data-day="28">28</span>
+                <span data-day="29">29</span>
+                <span data-day="30">30</span>
+                <span data-day="31">31</span>
+              </div>
+              <div class="cal-day">
+                <p data-cal-date>Wednesday, 21 October</p>
+                <div class="ui-stats">
+                  <span><b data-cal-kcal>2,180</b> kcal</span>
+                  <span><b data-cal-protein>162 g</b> protein</span>
+                  <span
+                    ><b data-cal-deficit>420</b>
+                    <i data-cal-word>deficit</i></span
+                  >
+                </div>
+              </div>
+            </div>
+            <h3>Every past day, a tap away</h3>
+            <p>
+              Pick any date to see what you ate, your macros and that day's
+              deficit.
+            </p>
+          </article>
+
+          <article
+            class="glass feat feat-target"
+            data-feat
+            data-reveal
+            style="--d: 180"
+          >
+            <div class="ui target-ui" aria-hidden="true">
+              <div class="target-learning">
+                <p class="ui-caption">Learning your real maintenance</p>
+                <div class="ticks">
+                  <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                  <span>7 of 7 days logged</span>
+                </div>
+                <div class="ticks ticks-weigh">
+                  <i></i><i></i><i></i><span>3 of 3 weigh-ins</span>
+                </div>
+              </div>
+              <div class="target-learned">
+                <p class="ui-caption">Your real maintenance</p>
+                <p class="ui-big">2,740<small>kcal</small></p>
+                <div class="ui-stats">
+                  <span><b>↓ 0.4 kg</b> a week</span>
+                  <span><b>+140</b> vs formula</span>
+                </div>
+                <p class="target-pill">Suggested target <b>2,190 kcal</b></p>
+              </div>
+            </div>
+            <h3>A target that learns</h3>
+            <p>
+              After a week of logs and three weigh-ins, Grain works out what you
+              really burn and suggests a new target.
+            </p>
+          </article>
+
+          <article
+            class="glass feat feat-home"
+            data-feat
+            data-reveal
+            style="--d: 270"
+          >
+            <div class="ui home-ui" aria-hidden="true">
+              <div class="home-grid">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                <span class="home-app"
+                  ><img src="logo.svg" alt="" /><em>Grain</em></span
+                >
+              </div>
+              <span class="home-add">Add to Home Screen</span>
+            </div>
+            <h3>On your home screen</h3>
+            <p>
+              Add Grain to your home screen and it opens like any other app,
+              full screen, one tap from your next meal.
+            </p>
+          </article>
+        </div>
       </section>
 
       <section class="end wrap">
-        <div class="glass end-card">
-          <p>
-            Log your next meal
-            <span class="tone">the way you'd describe it.</span>
-          </p>
+        <div class="glass end-card" data-reveal>
+          <div class="end-copy">
+            <p class="end-who">Built for lifters, athletes and models.</p>
+            <p class="end-line">
+              Log your next meal
+              <span class="tone">the way you'd describe it.</span>
+            </p>
+          </div>
           <a class="cta" href="https://app.getgrain.fit">
             <span class="cta-label">Open Grain</span>
             <span class="cta-arrow" aria-hidden="true">
@@ -637,5 +849,6 @@
     <script src="demo.js" defer></script>
     <script src="tiles.js" defer></script>
     <script src="custom.js" defer></script>
+    <script src="motion.js" defer></script>
   </body>
 </html>
