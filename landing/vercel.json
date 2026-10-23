@@ -8,7 +8,7 @@
   "rewrites": [
     {
       "source": "/go",
-      "destination": "/index.html"
+      "destination": "/"
     }
   ]
 }
