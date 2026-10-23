@@ -6,12 +6,12 @@
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
-    <title>
-      Grain: food tracking for people who give a f*** about every gram
-    </title>
+    <!-- Search: what people type to find a tracker. The headline leads shared
+         links through og:title below. -->
+    <title>Grain: calorie and macro tracker. Describe what you ate.</title>
     <meta
       name="description"
-      content="Type what you ate in plain English. Grain works out the calories and macros from real nutrition data, for lifters and athletes who count every gram."
+      content="Track calories and macros by typing what you ate. Grain matches each food to measured nutrition data. Built for lifters and athletes, Indian food included."
     />
     <meta name="theme-color" content="#FFFFFF" />
 
@@ -35,6 +35,40 @@
     />
     <meta name="twitter:image" content="https://getgrain.fit/og-card.png" />
 
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://getgrain.fit/#org",
+            "name": "Grain",
+            "url": "https://getgrain.fit/",
+            "logo": "https://getgrain.fit/apple-touch-icon.png"
+          },
+          {
+            "@type": "WebSite",
+            "url": "https://getgrain.fit/",
+            "name": "Grain",
+            "publisher": { "@id": "https://getgrain.fit/#org" }
+          },
+          {
+            "@type": "WebApplication",
+            "name": "Grain",
+            "url": "https://app.getgrain.fit/",
+            "applicationCategory": "HealthApplication",
+            "operatingSystem": "Web",
+            "description": "Track calories and macros by typing what you ate. Grain matches each food to measured nutrition data.",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            },
+            "publisher": { "@id": "https://getgrain.fit/#org" }
+          }
+        ]
+      }
+    </script>
     <script>
       document.documentElement.classList.add('js');
     </script>

@@ -39,8 +39,9 @@ The LLM is pluggable (Groq `openai/gpt-oss-120b` by default, OpenAI by env
 switch). If the engine is unreachable, the app falls back to an offline parser
 over the built-in Indian table, so logging never hard-fails.
 
-The next version of the engine is designed in
-[`docs/superpowers/specs/2026-10-21-engine-v2-design.md`](docs/superpowers/specs/2026-10-21-engine-v2-design.md).
+The engine's design, practice set and playground live in the separate,
+private `grain_engine` repository. The build log for the app is
+[`x.md`](x.md).
 
 ## Repository
 

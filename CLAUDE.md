@@ -68,3 +68,12 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+
+---
+
+## This repository
+
+- **Keep x.md current.** After every technical or business decision, cost
+  trade-off, or notable piece of work, add a dated entry to x.md in plain,
+  specific words, then commit and push it. Engine work goes in the
+  grain_engine repository's x.md instead.
