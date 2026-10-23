@@ -4,5 +4,11 @@
   "buildCommand": "",
   "installCommand": "",
   "outputDirectory": ".",
-  "cleanUrls": true
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/go",
+      "destination": "/index.html"
+    }
+  ]
 }
