@@ -40,26 +40,23 @@ configuration.
 Without this, "Describe a meal" uses the offline parser over the built-in
 table. With it, descriptions go through the `food` Edge Function.
 
-Keys:
+Keys, all free:
 
-- **Gemini** (the default LLM, and voice to text): [aistudio.google.com](https://aistudio.google.com/apikey)
-- **USDA FoodData Central** (free): [fdc.nal.usda.gov/api-key-signup](https://fdc.nal.usda.gov/api-key-signup)
-- **Groq** (optional, free): [console.groq.com](https://console.groq.com). Used
-  when no Gemini key is set, for both the LLM and voice (Whisper).
+- **Groq** (the LLM, and Whisper for voice notes): [console.groq.com](https://console.groq.com)
+- **USDA FoodData Central**: [fdc.nal.usda.gov/api-key-signup](https://fdc.nal.usda.gov/api-key-signup)
 
 Deploy with the [Supabase CLI](https://supabase.com/docs/guides/cli):
 
 ```bash
 supabase login
 supabase link --project-ref YOUR-PROJECT-REF
-supabase secrets set GEMINI_API_KEY=... USDA_API_KEY=...
+supabase secrets set GROQ_API_KEY=... USDA_API_KEY=...
 supabase functions deploy food --no-verify-jwt
 ```
 
-Models default to `gemini-3.8-flash` for meals and `gemini-3.5-flash-lite` for
-voice; override with `GEMINI_MODEL` and `STT_MODEL`. To use another provider:
-`supabase secrets set LLM_PROVIDER=groq` (or `openai` with `OPENAI_API_KEY`)
-and redeploy.
+Meals use `openai/gpt-oss-120b` and voice notes use `whisper-large-v3`, both
+on Groq. To use OpenAI for meals instead: `supabase secrets set
+LLM_PROVIDER=openai OPENAI_API_KEY=...` and redeploy.
 
 The Log screen says nothing while the engine works, and shows a line when it is
 offline. The health check makes a real call to the LLM, so an expired key shows

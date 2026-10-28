@@ -15,12 +15,8 @@
 //
 // ---- LLM provider config (set via `supabase secrets set`) -------------------
 //
-//   LLM_PROVIDER   gemini | groq | openai. Unset: gemini when GEMINI_API_KEY
-//                  is set, otherwise groq.
-//   GEMINI_API_KEY from aistudio.google.com
-//   GEMINI_MODEL   default: gemini-3.8-flash
-//   STT_MODEL      default: gemini-3.5-flash-lite  (voice notes to text)
-//   GROQ_API_KEY   from console.groq.com
+//   LLM_PROVIDER   groq (default) | openai
+//   GROQ_API_KEY   from console.groq.com. Also used for voice notes (Whisper).
 //   GROQ_MODEL     default: openai/gpt-oss-120b  (reasoning model — handles the
 //                  USDA per-100g portion scaling much better than llama-3.3-70b;
 //                  eval: 16.8% median kcal error vs 19.4%, no >400% blowups)
@@ -90,7 +86,7 @@ const json = (body: unknown, status = 200, origin: string | null = null) =>
 // only differences are the base URL, API key env var, and model name.
 
 interface LLMConfig {
-  provider: 'gemini' | 'groq' | 'openai';
+  provider: 'groq' | 'openai';
   url: string;
   key: string;
   model: string;
@@ -103,26 +99,8 @@ function getLLMConfig(
   modelOverride?: string | null,
 ): LLMConfig | null {
   const provider = (providerOverride ??
-    Deno.env.get('LLM_PROVIDER')?.trim() ??
-    (Deno.env.get('GEMINI_API_KEY')?.trim() ? 'gemini' : 'groq')) as
-    | 'gemini'
-    | 'groq'
-    | 'openai';
-
-  if (provider === 'gemini') {
-    const key = Deno.env.get('GEMINI_API_KEY')?.trim();
-    if (!key) return null;
-    return {
-      provider,
-      // Gemini's OpenAI compatible endpoint: same request shape as the others.
-      url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-      key,
-      model:
-        modelOverride ??
-        Deno.env.get('GEMINI_MODEL')?.trim() ??
-        'gemini-3.8-flash',
-    };
-  }
+    Deno.env.get('LLM_PROVIDER') ??
+    'groq') as 'groq' | 'openai';
 
   if (provider === 'openai') {
     const key = Deno.env.get('OPENAI_API_KEY')?.trim();
@@ -174,9 +152,8 @@ async function callLLM(
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: 'json_object' },
       // Selection + portion arithmetic, not prose: identical meals should give
-      // identical numbers rather than drifting between runs. Gemini 3 models
-      // are tuned for their default temperature and can loop below it.
-      ...(cfg.provider === 'gemini' ? {} : { temperature: 0 }),
+      // identical numbers rather than drifting between runs.
+      temperature: 0,
     }),
   });
   if (!res.ok) throw new Error(`llm ${res.status}`);
@@ -261,70 +238,28 @@ async function checkLLMLive(): Promise<{ ok: boolean; detail: string }> {
 }
 
 // ---- Voice to text -----------------------------------------------------------
-// The app records a voice note and sends it as 16 kHz mono WAV, a format every
-// provider accepts. Gemini transcribes it with a prompt that knows what a meal
-// sounds like (Hinglish, katori, besan, grams), which plain speech models get
-// wrong. Without a Gemini key it falls back to Whisper on the Groq key.
+// The app records a voice note and sends it as 16 kHz mono WAV. Whisper large
+// v3 on Groq transcribes it, on the same key as the engine. The prompt is a
+// sample of how meals are said here, which steers Whisper towards Roman
+// script Hinglish and the usual spellings of Indian foods.
 
 const MAX_AUDIO_BASE64 = 4_000_000; // about 2 minutes of 16 kHz mono WAV
 
-const TRANSCRIBE_PROMPT = `Transcribe this voice note. The speaker is describing food they ate, often in Indian English or Hinglish.
-Write exactly what they said, in Roman script, keeping Hindi words as spoken (for example "do roti, ek katori dal").
-Write numbers as digits and keep units as said (g, grams, ml, tablespoon, katori, scoop).
-Spell foods the usual way: roti, chapati, paneer, besan, dal, sabzi, poha, upma, idli, dosa, whey, ghee.
-Return only the transcript, no quotes and no commentary. If nothing is said, return an empty string.`;
+const WHISPER_PROMPT =
+  'do roti, ek katori dal, 200g chicken breast, 1 tablespoon ghee, paneer bhurji, besan chilla, 1 scoop whey';
 
 async function transcribe(audio: string, mime: string): Promise<string> {
-  const gemini = Deno.env.get('GEMINI_API_KEY')?.trim();
-  if (gemini) {
-    const model = Deno.env.get('STT_MODEL')?.trim() || 'gemini-3.5-flash-lite';
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': gemini,
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { inline_data: { mime_type: mime, data: audio } },
-                { text: TRANSCRIBE_PROMPT },
-              ],
-            },
-          ],
-        }),
-      },
-    );
-    if (!res.ok) throw new Error(`stt ${res.status}`);
-    const data = await res.json();
-    const parts = data?.candidates?.[0]?.content?.parts ?? [];
-    return parts
-      .map((p: any) => p?.text ?? '')
-      .join('')
-      .trim();
-  }
-
-  const groq = Deno.env.get('GROQ_API_KEY')?.trim();
-  if (!groq) throw new Error('No speech to text key configured');
+  const key = Deno.env.get('GROQ_API_KEY')?.trim();
+  if (!key) throw new Error('No GROQ_API_KEY configured');
   const bytes = Uint8Array.from(atob(audio), (c) => c.charCodeAt(0));
   const form = new FormData();
   form.append('file', new Blob([bytes], { type: mime }), 'meal.wav');
   form.append('model', 'whisper-large-v3');
   form.append('language', 'en');
-  form.append(
-    'prompt',
-    'do roti, ek katori dal, 200g chicken breast, 1 tablespoon ghee, paneer bhurji, besan chilla, whey scoop',
-  );
+  form.append('prompt', WHISPER_PROMPT);
   const res = await fetch(
     'https://api.groq.com/openai/v1/audio/transcriptions',
-    {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${groq}` },
-      body: form,
-    },
+    { method: 'POST', headers: { Authorization: `Bearer ${key}` }, body: form },
   );
   if (!res.ok) throw new Error(`stt ${res.status}`);
   const data = await res.json();

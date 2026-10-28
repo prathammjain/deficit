@@ -161,3 +161,16 @@ A pass to make every screen calmer and line up:
   "kg" floated across the weigh in card away from its number.
 - The engine status line only appears when the engine is offline. When it
   works, it needs no label.
+
+### Groq only, for now
+
+Same day, the engine went back to Groq: gpt-oss-120b for meals, as before,
+and Whisper large v3 on Groq for voice. One key, one bill, nothing new to set
+up, and Groq is fast and nearly free. Gemini is out of the code until the
+practice set can show it is worth paying for.
+
+Whisper is a general speech model, so it gets a sample of how meals are said
+here ("do roti, ek katori dal, 1 tablespoon ghee") as its prompt. That steers
+it to Roman script Hinglish and the usual spellings of Indian foods. Whisper
+costs $0.111 per hour of audio and bills at least 10 seconds per note, so a
+short note costs about 3 paise.

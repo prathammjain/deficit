@@ -36,10 +36,11 @@ The engine is the `food` Supabase Edge Function (`supabase/functions/food`).
    `Likely`, `Unsure`), and follows the entry into the log.
 
 Meals can be typed or spoken: the app records a voice note, and the engine
-transcribes it with a prompt that knows Hinglish and Indian portions.
+transcribes it with Whisper on Groq, steered towards Hinglish and Indian
+portions.
 
-The LLM is pluggable (Gemini `gemini-3.8-flash` by default, Groq or OpenAI by
-env switch). If the engine is unreachable, the app falls back to an offline parser
+The LLM is pluggable (Groq `openai/gpt-oss-120b` by default, OpenAI by env
+switch). If the engine is unreachable, the app falls back to an offline parser
 over the built-in Indian table, so logging never hard-fails.
 
 The engine's design, practice set and playground live in the separate,

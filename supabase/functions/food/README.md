@@ -43,7 +43,7 @@ Tests for `portion.ts`, `ifct.ts` and the IFCT table live in `src/lib/food/`.
 ## Deploy
 
 ```bash
-supabase secrets set GEMINI_API_KEY=... USDA_API_KEY=...
+supabase secrets set GROQ_API_KEY=... USDA_API_KEY=...
 supabase functions deploy food --no-verify-jwt
 ```
 
