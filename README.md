@@ -32,11 +32,14 @@ The engine is the `food` Supabase Edge Function (`supabase/functions/food`).
 4. **Calculate.** Portion arithmetic is done in code, not by the model: stated
    weights become exact multipliers, and raw-to-cooked conversion for rice and
    dals uses documented yield factors.
-5. **Flag.** Each item carries a source and a confidence (`✓ good match`,
-   `≈ likely`, `check this`), and follows the entry into the log.
+5. **Flag.** Each item carries a source and a confidence (`Matched`,
+   `Likely`, `Unsure`), and follows the entry into the log.
 
-The LLM is pluggable (Groq `openai/gpt-oss-120b` by default, OpenAI by env
-switch). If the engine is unreachable, the app falls back to an offline parser
+Meals can be typed or spoken: the app records a voice note, and the engine
+transcribes it with a prompt that knows Hinglish and Indian portions.
+
+The LLM is pluggable (Gemini `gemini-3.8-flash` by default, Groq or OpenAI by
+env switch). If the engine is unreachable, the app falls back to an offline parser
 over the built-in Indian table, so logging never hard-fails.
 
 The engine's design, practice set and playground live in the separate,

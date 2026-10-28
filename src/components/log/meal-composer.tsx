@@ -1,6 +1,19 @@
-import { useEffect, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
+import {
+  CloseIcon,
+  MicIcon,
+  PlusIcon,
+  SearchIcon,
+  StopIcon,
+} from '@/components/ui/icons';
 import { Card, GlassSurface, PrimaryButton } from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
 import {
@@ -10,16 +23,24 @@ import {
   type ParsedItem,
 } from '@/lib/food';
 import { portionedEntry, type LogEntry } from '@/lib/log-store';
+import { isWeighed, stepperLabel, stepQuantity } from '@/lib/quantity';
 import {
-  isWeighed,
-  quantityLabel,
-  stepperLabel,
-  stepQuantity,
-} from '@/lib/quantity';
+  canRecord,
+  MAX_SECONDS,
+  startRecording,
+  type Recording,
+} from '@/lib/voice';
 
 import { EngineStatus, SourceTag } from './engine-status';
-import { ConfidenceBadge, Stepper } from './meal-bits';
+import { ConfidenceBadge, FoodLine } from './meal-bits';
 import { st } from './styles';
+
+type Mode = 'describe' | 'search' | 'custom';
+const MODES: { id: Mode; label: string }[] = [
+  { id: 'describe', label: 'Describe' },
+  { id: 'search', label: 'Search' },
+  { id: 'custom', label: 'Custom' },
+];
 
 export function MealComposer({
   onAdd,
@@ -28,14 +49,46 @@ export function MealComposer({
   onAdd: (e: Omit<LogEntry, 'id' | 'at'>) => void;
   onAddMany: (e: Omit<LogEntry, 'id' | 'at'>[]) => void;
 }) {
+  // Describing the meal is the main way to log, so it is open by default.
+  const [mode, setMode] = useState<Mode>('describe');
+
+  return (
+    <View>
+      <View style={st.modeRow}>
+        {MODES.map((m) => (
+          <Pressable
+            key={m.id}
+            onPress={() => setMode(m.id)}
+            hitSlop={6}
+            style={st.modeBtn}
+          >
+            <Text style={[st.modeText, mode === m.id && st.modeTextActive]}>
+              {m.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      <EngineStatus />
+
+      {mode === 'describe' ? <DescribeMeal onLog={onAddMany} /> : null}
+      {mode === 'search' ? <SearchFood onAdd={onAdd} /> : null}
+      {mode === 'custom' ? <CustomMeal onAdd={onAdd} /> : null}
+    </View>
+  );
+}
+
+function SearchFood({
+  onAdd,
+}: {
+  onAdd: (e: Omit<LogEntry, 'id' | 'at'>) => void;
+}) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<FoodItem[]>([]);
-  const [panel, setPanel] = useState<'none' | 'describe' | 'custom'>('none');
 
   useEffect(() => {
     let alive = true;
     const q = query.trim();
-    // Debounce search-as-you-type — fewer redundant lookups, and it keeps
+    // Debounce search as you type: fewer redundant lookups, and it keeps
     // setState out of the synchronous effect body (no cascading renders).
     const id = setTimeout(() => {
       if (!alive) return;
@@ -55,21 +108,24 @@ export function MealComposer({
 
   return (
     <View>
-      <EngineStatus />
-      {/* Primary: search a food, tap to add (stays open for the next one) */}
       <GlassSurface style={st.searchWrap}>
-        <Text style={st.searchIcon}>⌕</Text>
+        <SearchIcon />
         <TextInput
           style={st.searchInput}
-          placeholder="Add a food. Try roti, dal, paneer"
+          placeholder="Roti, dal, paneer"
           placeholderTextColor={palette.textDim}
           value={query}
           onChangeText={setQuery}
           autoCorrect={false}
+          autoFocus
         />
         {query.length > 0 ? (
-          <Pressable onPress={() => setQuery('')} hitSlop={10}>
-            <Text style={st.searchClear}>✕</Text>
+          <Pressable
+            onPress={() => setQuery('')}
+            hitSlop={10}
+            accessibilityLabel="Clear"
+          >
+            <CloseIcon />
           </Pressable>
         ) : null}
       </GlassSurface>
@@ -90,62 +146,20 @@ export function MealComposer({
               ]}
             >
               <View style={st.flex1}>
-                <View style={st.resultNameRow}>
-                  <Text style={st.resultName}>{f.name}</Text>
+                <Text style={st.resultName}>{f.name}</Text>
+                <View style={st.resultMeta}>
+                  <Text style={st.resultSub}>{f.serving}</Text>
+                  <Text style={st.resultSub}>
+                    P {f.proteinG} C {f.carbsG} F {f.fatG}
+                  </Text>
                   <SourceTag source={f.source} />
                 </View>
-                <Text style={st.resultSub}>
-                  {f.serving} · P{f.proteinG} C{f.carbsG} F{f.fatG}
-                </Text>
               </View>
               <Text style={st.resultKcal}>{f.kcal}</Text>
-              <Text style={st.resultAdd}>＋</Text>
+              <PlusIcon color={palette.accent} />
             </Pressable>
           ))}
         </Card>
-      ) : null}
-
-      {/* Secondary actions */}
-      {query.length === 0 ? (
-        <View style={st.secondaryRow}>
-          <Pressable
-            onPress={() => setPanel(panel === 'describe' ? 'none' : 'describe')}
-            style={[st.pill, panel === 'describe' && st.pillActive]}
-          >
-            <Text
-              style={[st.pillText, panel === 'describe' && st.pillTextActive]}
-            >
-              ✦ Describe a meal
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setPanel(panel === 'custom' ? 'none' : 'custom')}
-            style={[st.pill, panel === 'custom' && st.pillActive]}
-          >
-            <Text
-              style={[st.pillText, panel === 'custom' && st.pillTextActive]}
-            >
-              ＋ Custom
-            </Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      {panel === 'describe' ? (
-        <DescribeMeal
-          onLog={(entries) => {
-            onAddMany(entries);
-            setPanel('none');
-          }}
-        />
-      ) : null}
-      {panel === 'custom' ? (
-        <CustomMeal
-          onAdd={(e) => {
-            onAdd(e);
-            setPanel('none');
-          }}
-        />
       ) : null}
     </View>
   );
@@ -180,6 +194,21 @@ function DescribeMeal({
     setBusy(false);
   };
 
+  const reset = () => {
+    setText('');
+    setItems([]);
+    setOrigins([]);
+    setRunId(undefined);
+    setNote(undefined);
+    setCalculated(false);
+    setExpanded(null);
+  };
+
+  // A spoken meal lands in the box, where it can be read and fixed before
+  // matching. A second note adds to the first.
+  const onHeard = (heard: string) =>
+    setText((t) => (t.trim() ? `${t.trim()}, ${heard}` : heard));
+
   const stepItem = (idx: number, dir: 1 | -1) =>
     setItems((arr) =>
       arr.map((it, i) =>
@@ -193,7 +222,7 @@ function DescribeMeal({
     setOrigins((arr) => arr.filter((_, i) => i !== idx));
   };
   // Swap a wrong match for one of its alternates. The rules live in
-  // swapParsedItem so they can be tested — getting them wrong logs a
+  // swapParsedItem so they can be tested: getting them wrong logs a
   // fabricated number under a confident badge.
   const swapItem = (idx: number, alt: FoodItem) => {
     setItems((arr) =>
@@ -214,19 +243,16 @@ function DescribeMeal({
     <Card style={st.describeCard}>
       <TextInput
         style={st.describeInput}
-        placeholder="“2 roti, mom’s dal, 1 katori rice, salad”. Say it your way."
+        placeholder="2 roti, 1 katori dal, 200g chicken breast"
         placeholderTextColor={palette.textDim}
         value={text}
         onChangeText={setText}
         multiline
       />
       <View style={st.describeFooter}>
-        <Text style={st.describeHint}>
-          We match each item — tap a flagged one to swap it, adjust portions,
-          then log.
-        </Text>
+        <VoiceButton onHeard={onHeard} />
         <PrimaryButton
-          label={busy ? '…' : 'Match'}
+          label={busy ? 'Matching' : 'Match'}
           disabled={busy || text.trim().length === 0}
           style={st.calcBtn}
           onPress={calc}
@@ -241,48 +267,42 @@ function DescribeMeal({
             const open = expanded === idx;
             return (
               <View key={`${it.item.id}-${idx}`}>
-                <View style={st.breakdownRow}>
-                  <Pressable
-                    style={st.flex1}
-                    disabled={!canSwap}
-                    onPress={() => setExpanded(open ? null : idx)}
-                  >
-                    <View style={st.breakdownNameRow}>
-                      <Text style={st.breakdownName}>{it.item.name}</Text>
-                      <ConfidenceBadge confidence={it.confidence} />
-                      <SourceTag source={it.item.source} />
-                    </View>
-                    <Text style={st.breakdownSub}>
-                      {isWeighed(it.item.serving)
-                        ? quantityLabel(it.item.serving, it.quantity)
-                        : it.item.serving}{' '}
-                      · {Math.round(it.item.kcal * it.quantity)} kcal
-                      {canSwap ? (
-                        <Text style={st.changeHint}>
-                          {open ? '  · close' : '  · change'}
-                        </Text>
-                      ) : null}
-                    </Text>
-                  </Pressable>
-                  <Stepper
-                    label={stepperLabel(it.item.serving, it.quantity)}
-                    onStep={(dir) => stepItem(idx, dir)}
-                  />
-                  <Pressable onPress={() => removeItem(idx)} hitSlop={8}>
-                    <Text style={st.removeText}>✕</Text>
-                  </Pressable>
-                </View>
+                <FoodLine
+                  name={it.item.name}
+                  kcal={Math.round(it.item.kcal * it.quantity)}
+                  tag={<ConfidenceBadge confidence={it.confidence} />}
+                  meta={[
+                    isWeighed(it.item.serving) ? null : it.item.serving,
+                    it.item.source && it.item.source !== 'local' ? (
+                      <SourceTag key="s" source={it.item.source} />
+                    ) : null,
+                    canSwap ? (
+                      <Text key="x" style={st.changeHint}>
+                        {open ? 'Close' : 'Change'}
+                      </Text>
+                    ) : null,
+                  ]}
+                  onPress={
+                    canSwap ? () => setExpanded(open ? null : idx) : undefined
+                  }
+                  stepper={{
+                    label: stepperLabel(it.item.serving, it.quantity),
+                    onStep: (dir) => stepItem(idx, dir),
+                  }}
+                  onRemove={() => removeItem(idx)}
+                />
                 {open ? (
                   <View style={st.altPanel}>
                     {it.reason ? (
                       <Text style={st.altReason}>{it.reason}</Text>
                     ) : null}
-                    {alts.map((alt) => (
+                    {alts.map((alt, ai) => (
                       <Pressable
                         key={alt.id}
                         onPress={() => swapItem(idx, alt)}
                         style={({ pressed }) => [
                           st.altRow,
+                          (ai > 0 || !!it.reason) && st.altRowBorder,
                           pressed && st.pressed,
                         ]}
                       >
@@ -300,7 +320,7 @@ function DescribeMeal({
           })}
           {items.length === 0 ? (
             <Text style={st.empty}>
-              Couldn’t match anything — try simpler names or use Custom.
+              Couldn’t match anything. Try simpler names, or use Custom.
             </Text>
           ) : null}
           {note ? <Text style={st.breakdownNote}>{note}</Text> : null}
@@ -309,7 +329,10 @@ function DescribeMeal({
               <View style={st.breakdownTotalRow}>
                 <Text style={st.breakdownTotalLabel}>Total</Text>
                 <Text style={st.breakdownTotalValue}>
-                  {total.kcal} kcal · {total.proteinG}g protein
+                  {total.kcal} kcal{'   '}
+                  <Text style={st.breakdownTotalSub}>
+                    {total.proteinG} g protein
+                  </Text>
                 </Text>
               </View>
               <PrimaryButton
@@ -335,6 +358,7 @@ function DescribeMeal({
                       portionedEntry(item, quantity, confidence),
                     ),
                   );
+                  reset();
                 }}
               />
             </>
@@ -342,6 +366,101 @@ function DescribeMeal({
         </View>
       ) : null}
     </Card>
+  );
+}
+
+/**
+ * Tap to talk, tap again to stop. The note is transcribed by the engine and
+ * handed back as text. Hidden where the browser can't record or there is no
+ * engine to transcribe (local mode).
+ */
+function VoiceButton({ onHeard }: { onHeard: (text: string) => void }) {
+  const [state, setState] = useState<'idle' | 'recording' | 'working'>('idle');
+  const [seconds, setSeconds] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const recording = useRef<Recording | null>(null);
+  const limit = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const finish = async () => {
+    const rec = recording.current;
+    if (!rec) return;
+    recording.current = null;
+    if (limit.current) clearTimeout(limit.current);
+    setState('working');
+    try {
+      const heard = await foodProvider.transcribe?.(await rec.stop());
+      if (heard) onHeard(heard);
+      else setError('Didn’t catch that. Try again.');
+    } catch {
+      setError('Didn’t catch that. Try again.');
+    }
+    setState('idle');
+  };
+
+  useEffect(() => {
+    if (state !== 'recording') return;
+    const id = setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [state]);
+
+  // Leaving the screen mid note discards it.
+  useEffect(
+    () => () => {
+      recording.current?.cancel();
+      if (limit.current) clearTimeout(limit.current);
+    },
+    [],
+  );
+
+  if (!foodProvider.transcribe || !canRecord())
+    return <View style={st.flex1} />;
+
+  const start = async () => {
+    setError(null);
+    try {
+      recording.current = await startRecording();
+      // A forgotten recording stops itself.
+      limit.current = setTimeout(() => void finish(), MAX_SECONDS * 1000);
+      setSeconds(0);
+      setState('recording');
+    } catch {
+      setError('Allow the microphone to speak your meal.');
+    }
+  };
+
+  const recordingNow = state === 'recording';
+  return (
+    <View style={st.voiceRow}>
+      <Pressable
+        onPress={recordingNow ? finish : start}
+        disabled={state === 'working'}
+        hitSlop={6}
+        accessibilityLabel={recordingNow ? 'Stop recording' : 'Speak your meal'}
+        style={({ pressed }) => [
+          st.micBtn,
+          recordingNow && st.micBtnLive,
+          pressed && st.pressed,
+        ]}
+      >
+        {state === 'working' ? (
+          <ActivityIndicator size="small" color={palette.textMuted} />
+        ) : recordingNow ? (
+          <StopIcon />
+        ) : (
+          <MicIcon />
+        )}
+      </Pressable>
+      <Text
+        style={[st.voiceText, recordingNow && st.voiceTextLive]}
+        numberOfLines={1}
+      >
+        {recordingNow
+          ? `Listening  ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+          : state === 'working'
+            ? 'Writing it down'
+            : (error ?? 'Speak it')}
+      </Text>
+    </View>
   );
 }
 

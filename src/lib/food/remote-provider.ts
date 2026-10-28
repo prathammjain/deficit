@@ -58,6 +58,18 @@ export class RemoteFoodProvider implements FoodProvider {
     }
   }
 
+  async transcribe(wavBase64: string): Promise<string | null> {
+    try {
+      const { data, error } = await this.client.functions.invoke('food', {
+        body: { action: 'transcribe', audio: wavBase64, mime: 'audio/wav' },
+      });
+      if (error || typeof data?.text !== 'string') return null;
+      return data.text;
+    } catch {
+      return null;
+    }
+  }
+
   /** Every edit before logging is the engine being corrected: the run log
    *  keeps it next to the engine's own answer. */
   reportLogged(runId: string, logged: LoggedItem[]): void {

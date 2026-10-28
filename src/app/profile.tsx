@@ -19,9 +19,9 @@ import Constants from 'expo-constants';
 import { OnboardingFlow } from '@/components/onboarding-flow';
 import { AddToHomeScreenButton } from '@/components/add-to-home-screen';
 import { Monogram } from '@/components/ui/monogram';
+import { ChevronIcon } from '@/components/ui/icons';
 import {
   Card,
-  Eyebrow,
   Hairline,
   Screen,
   SectionLabel,
@@ -108,12 +108,12 @@ export default function ProfileScreen() {
   return (
     <Screen>
       <Pressable onPress={() => router.back()} hitSlop={10} style={s.backBtn}>
-        <Text style={s.backText}>‹ Back</Text>
+        <ChevronIcon color={palette.textMuted} />
+        <Text style={s.backText}>Back</Text>
       </Pressable>
-      <Eyebrow>Account</Eyebrow>
       <Title>Profile</Title>
 
-      {/* Who — the account block */}
+      {/* Who: the account block */}
       <Card padded style={s.accountCard}>
         <View style={s.accountRow}>
           <Monogram letter={email} size={56} />
@@ -143,7 +143,7 @@ export default function ProfileScreen() {
           />
           <PlanRow
             label="Goal pace"
-            value={`${profile.goalRateKgWeek.toFixed(2)} kg per week`}
+            value={`${profile.goalRateKgWeek.toFixed(2)} kg a week`}
           />
           <PlanRow
             label="Daily target"
@@ -178,13 +178,12 @@ export default function ProfileScreen() {
             style={({ pressed }) => [s.signOutBtn, pressed && s.pressed]}
           >
             <Text style={s.signOutText}>
-              {signingOut ? 'Signing out…' : 'Sign out'}
+              {signingOut ? 'Signing out' : 'Sign out'}
             </Text>
           </Pressable>
         </>
       ) : null}
 
-      <SectionLabel>Quick access</SectionLabel>
       <AddToHomeScreenButton />
 
       <Text style={s.version}>Grain v{version}</Text>
@@ -223,7 +222,14 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backBtn: { alignSelf: 'flex-start', marginBottom: space.md },
+  backBtn: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    marginLeft: -4,
+    marginBottom: space.md,
+  },
   backText: { color: palette.textMuted, fontSize: 15, fontWeight: '600' },
   pressed: { opacity: 0.7 },
 

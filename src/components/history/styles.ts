@@ -10,22 +10,11 @@ export const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rangeRow: { flexDirection: 'row', gap: space.sm, marginTop: space.lg },
-  rangePill: {
-    flex: 1,
-    paddingVertical: space.sm,
-    borderRadius: radius.pill,
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.hairline,
-    alignItems: 'center',
-  },
-  rangePillActive: {
-    backgroundColor: palette.accentSoft,
-    borderColor: palette.accentBorder,
-  },
-  rangeText: { color: palette.textMuted, fontSize: 13, fontWeight: '700' },
-  rangeTextActive: { color: palette.accent },
+  // Same text tabs as the Log screen's Describe / Search / Custom.
+  rangeRow: { flexDirection: 'row', gap: space.xl, marginTop: space.lg },
+  rangePill: { paddingVertical: space.xs },
+  rangeText: { color: palette.textFaint, fontSize: 15, fontWeight: '600' },
+  rangeTextActive: { color: palette.text },
 
   emptyCard: { marginTop: space.xl, gap: space.sm },
   emptyTitle: { ...typo.heading, color: palette.text },
@@ -56,6 +45,9 @@ export const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: space.xl,
+    paddingTop: space.lg,
+    borderTopWidth: 1,
+    borderTopColor: palette.hairline,
   },
   heroStat: { flex: 1 },
   heroStatValue: {
@@ -90,13 +82,12 @@ export const st = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   statUnit: { color: palette.textFaint, fontSize: 12, marginTop: 2 },
+  alignRight: { textAlign: 'right' },
 
   legend: { alignItems: 'flex-end', gap: space.xs },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
-  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendDot: { width: 6, height: 6, borderRadius: 3 },
   legendLabel: { color: palette.textFaint, fontSize: 11 },
-
-  weightDelta: { fontSize: 16, fontWeight: '700' },
 
   splitBar: {
     flexDirection: 'row',
@@ -117,7 +108,7 @@ export const st = StyleSheet.create({
     marginTop: 4,
     fontVariant: ['tabular-nums'],
   },
-  macroSub: { color: palette.textFaint, fontSize: 12, fontWeight: '500' },
+  macroSub: { color: palette.textFaint, fontSize: 12, marginTop: 2 },
 
   footnote: {
     color: palette.textDim,
@@ -133,9 +124,12 @@ export const st = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: space.lg,
   },
-  calNavBtn: { width: 32, alignItems: 'center' },
-  calNav: { color: palette.accent, fontSize: 24, fontWeight: '700' },
-  calNavOff: { color: palette.textDim },
+  calNavBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   calMonth: {
     color: palette.text,
     fontSize: 16,

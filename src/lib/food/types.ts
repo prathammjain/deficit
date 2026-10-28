@@ -78,6 +78,9 @@ export interface FoodProvider {
   /** Optional: tell the engine what the user logged from run `runId`, after
    *  their edits. Fire and forget; never blocks logging. */
   reportLogged?(runId: string, logged: LoggedItem[]): void;
+  /** Optional: turn a voice note (base64 16 kHz WAV) into meal text. Null
+   *  when it couldn't be transcribed. */
+  transcribe?(wavBase64: string): Promise<string | null>;
 }
 
 /**
@@ -104,7 +107,7 @@ export function swapParsedItem(item: ParsedItem, alt: FoodItem): ParsedItem {
     confidence: sameServing ? 'high' : 'medium',
     reason: sameServing
       ? undefined
-      : `Portion reset to 1 — serving is now “${alt.serving}”.`,
+      : `Portion reset to 1, serving is now “${alt.serving}”.`,
     // The food it replaced stays available, so a swap is never a dead end.
     alternates: [
       item.item,

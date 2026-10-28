@@ -5,7 +5,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { Journey } from '@/components/history/journey';
 import { RangePills } from '@/components/history/range-pills';
 import { st } from '@/components/history/styles';
-import { Card, Eyebrow, Screen, Title } from '@/components/ui/primitives';
+import { Card, Screen, Title } from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
 import { gatherDailyRecords } from '@/lib/history';
 import {
@@ -65,8 +65,7 @@ export default function HistoryScreen() {
 
   return (
     <Screen>
-      <Eyebrow>Grain</Eyebrow>
-      <Title>Your journey</Title>
+      <Title>History</Title>
 
       <RangePills value={rangeDays} onChange={setRangeDays} />
 
@@ -80,8 +79,8 @@ export default function HistoryScreen() {
         <Card style={st.emptyCard}>
           <Text style={st.emptyTitle}>No history yet</Text>
           <Text style={st.emptyText}>
-            Log your meals on the Log tab — your trends, deficit, and a
-            day-by-day calendar will build up here.
+            Log your meals on the Log tab. Your trends, deficit and a day by day
+            calendar will build up here.
           </Text>
         </Card>
       ) : (

@@ -104,3 +104,60 @@ searches for. Now: a title and description built around what people type
 is a free web app, a robots file and a sitemap. The headline still leads every
 shared link. Next: verify the domain in Google Search Console so Google indexes
 it.
+
+## 2026-10-28
+
+### Say the meal
+
+"Describe a meal" now takes your voice. Tap the mic, say "do roti, ek katori
+dal, 200 g chicken breast", tap again, and the words land in the box to check
+before matching. The phone records in whatever format it likes (Chrome webm,
+Safari mp4); the app turns it into 16 kHz mono WAV before sending, because
+that is the one format every speech model reads, and speech models work at
+16 kHz anyway. A minute of audio is about 2 MB.
+
+The transcription is done by Gemini with a prompt that knows what a meal
+sounds like: Hinglish kept as spoken, numbers as digits, katori and besan
+spelled the usual way. Plain speech models (Whisper) tend to hear Hindi food
+words as English ones. Whisper on the existing Groq key stays as the fallback
+when no Gemini key is set. A note costs a few paise.
+
+### A stronger model for the engine
+
+The engine moves from gpt-oss-120b on Groq to Gemini 3.8 Flash, through
+Google's OpenAI compatible endpoint, so nothing else in the pipeline changed.
+Setting GEMINI_API_KEY is enough to switch; LLM_PROVIDER can still pick Groq
+or OpenAI. Gemini 3 models are tuned for their default temperature, so the
+engine no longer forces 0 for them. The cache key includes the model, so old
+answers from the previous model are not reused.
+
+Gemini Flash costs about $0.75 in and $3.75 out per million tokens, rising on
+1 January 2027. Roughly a rupee per uncached meal now, two after the rise.
+The proper bake off against
+the practice set is still step 5 of the engine plan; this is the switch, not
+the proof.
+
+### Quieter screens
+
+A pass to make every screen calmer and line up:
+
+- No dashes or minus signs anywhere in the UI. "Daily deficit 550",
+  "Predicted loss 0.42 kg", "Down 1.2 kg": the label carries the direction,
+  so the number needs no sign in front. The engine's own reasons are cleaned
+  of dashes too.
+- Describe is now the default on the Log screen, with Search and Custom as
+  plain text tabs beside it, instead of a search box plus two pills plus a
+  panel.
+- Each food is two lines: name and calories on top, details and controls
+  below. The name no longer gets cut to "Chicken brea…" by the stepper.
+- Text glyphs for search, close, plus and minus replaced by one set of line
+  icons. Glyphs render differently per font and never sit on the baseline.
+- Cards are flat with a hairline, no drop shadows. The active tab is ink, not
+  an orange pill. Macros are one card with three columns, not three tiles
+  that wrapped "140 g" onto two lines.
+- Fixed: the welcome screen's Get started button sat off to the right of an
+  empty Back slot; the disabled Next button had white text on a light grey
+  button; the focus underline on inputs stopped short of their rounded edges;
+  "kg" floated across the weigh in card away from its number.
+- The engine status line only appears when the engine is offline. When it
+  works, it needs no label.

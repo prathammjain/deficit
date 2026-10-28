@@ -228,7 +228,7 @@ export class LocalFoodProvider implements FoodProvider {
         confidence: measured && !scaled ? 'low' : localConfidence(best.score),
         ...(measured &&
           !scaled && {
-            reason: `${measured.amount} ${measured.unit} not converted to ${best.item.serving} — check the portion`,
+            reason: `${measured.amount} ${measured.unit} not converted to ${best.item.serving}, check the portion`,
           }),
         // Up to 4 other guesses so a wrong match is a one-tap fix.
         alternates: rest.slice(0, 4).map((r) => r.item),

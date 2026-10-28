@@ -36,7 +36,7 @@ export function Journey({
 
   return (
     <>
-      {/* Hero — the headline of the whole journey */}
+      {/* Hero: the headline of the whole journey */}
       <GlassSurface padded style={st.heroCard}>
         <Text style={st.heroLabel}>Total deficit maintained</Text>
         <View style={st.heroNumberRow}>
@@ -46,23 +46,27 @@ export function Journey({
           <Text style={st.heroUnit}>kcal</Text>
         </View>
         <Text style={st.heroSub}>
-          ≈ {summary.estFatLossKg.toFixed(1)} kg of fat, if it all held
+          About {summary.estFatLossKg.toFixed(1)} kg of fat, if it all held
         </Text>
         <View style={st.heroStatsRow}>
           <HeroStat
-            value={`${summary.daysLogged}`}
-            label={`of ${summary.daysInRange} days logged`}
+            value={`${summary.daysLogged} of ${summary.daysInRange}`}
+            label="Days logged"
           />
           <View style={st.heroStatDivider} />
-          <HeroStat value={`${summary.currentStreak}`} label="day streak" />
+          <HeroStat value={`${summary.currentStreak}`} label="Day streak" />
           <View style={st.heroStatDivider} />
           <HeroStat
             value={
               summary.avgDeficitKcal != null
-                ? `${signed(summary.avgDeficitKcal)}`
-                : '—'
+                ? Math.abs(Math.round(summary.avgDeficitKcal)).toLocaleString()
+                : '0'
             }
-            label="avg / day"
+            label={
+              (summary.avgDeficitKcal ?? 0) < 0
+                ? 'Daily surplus'
+                : 'Daily deficit'
+            }
           />
         </View>
       </GlassSurface>
@@ -72,16 +76,15 @@ export function Journey({
       <Card>
         <View style={st.cardHead}>
           <Stat
-            big={`${summary.avgKcal?.toLocaleString() ?? '—'}`}
-            unit="avg kcal"
+            big={`${summary.avgKcal?.toLocaleString() ?? 0}`}
+            unit="Average kcal"
           />
           <Legend
             items={[
-              { color: palette.accent, label: 'eaten' },
+              { color: palette.accent, label: 'Eaten' },
               {
-                color: palette.textFaint,
-                label: `target ${targets.targetKcal.toLocaleString()}`,
-                dashed: true,
+                color: palette.textDim,
+                label: `Target ${targets.targetKcal.toLocaleString()}`,
               },
             ]}
           />
@@ -93,7 +96,7 @@ export function Journey({
         />
       </Card>
 
-      {/* Deficit maintained — daily signed bars */}
+      {/* Deficit maintained: daily signed bars */}
       <SectionLabel>Deficit maintained</SectionLabel>
       <Card>
         <View style={st.cardHead}>
@@ -101,21 +104,21 @@ export function Journey({
             big={
               summary.onTargetRate != null
                 ? `${Math.round(summary.onTargetRate * 100)}%`
-                : '—'
+                : '0%'
             }
-            unit="days on target"
+            unit="Days on target"
           />
           <Legend
             items={[
-              { color: palette.good, label: 'deficit' },
-              { color: palette.danger, label: 'surplus' },
+              { color: palette.good, label: 'Deficit' },
+              { color: palette.danger, label: 'Surplus' },
             ]}
           />
         </View>
         <BarChart values={deficitSeries} />
       </Card>
 
-      {/* Macros — average split */}
+      {/* Macros: average split */}
       <SectionLabel>Average macros</SectionLabel>
       <Card>
         <MacroSplit summary={summary} proteinTarget={targets.proteinG} />
@@ -128,25 +131,22 @@ export function Journey({
           <>
             <View style={st.cardHead}>
               <Stat
-                big={`${summary.weightEndKg?.toFixed(1) ?? '—'}`}
-                unit="kg now"
+                big={`${summary.weightEndKg?.toFixed(1) ?? 0} kg`}
+                unit="Now"
               />
               {summary.weightChangeKg != null ? (
-                <Text
-                  style={[
-                    st.weightDelta,
-                    {
-                      color:
-                        summary.weightChangeKg < 0
-                          ? palette.good
-                          : summary.weightChangeKg > 0
-                            ? palette.danger
-                            : palette.textMuted,
-                    },
-                  ]}
-                >
-                  {signed(summary.weightChangeKg, 1)} kg
-                </Text>
+                <Stat
+                  big={`${Math.abs(summary.weightChangeKg).toFixed(1)} kg`}
+                  unit={
+                    summary.weightChangeKg < 0
+                      ? 'Down'
+                      : summary.weightChangeKg > 0
+                        ? 'Up'
+                        : 'No change'
+                  }
+                  align="right"
+                  tone={summary.weightChangeKg > 0 ? palette.danger : undefined}
+                />
               ) : null}
             </View>
             <LineChart values={weightSeries} color={palette.protein} showDots />
@@ -158,14 +158,13 @@ export function Journey({
         )}
       </Card>
 
-      {/* Calendar — pick any day to see its totals, macros, and deficit */}
+      {/* Calendar: pick any day to see its totals, macros, and deficit */}
       <SectionLabel>Calendar</SectionLabel>
       <MonthCalendar targets={targets} />
 
       <Text style={st.footnote}>
-        Deficit uses your current maintenance (
-        {targets.maintenanceKcal.toLocaleString()} kcal) as the reference.
-        Micronutrients aren’t tracked yet.
+        Deficit is measured against your current maintenance of{' '}
+        {targets.maintenanceKcal.toLocaleString()} kcal.
       </Text>
     </>
   );
@@ -180,31 +179,32 @@ function HeroStat({ value, label }: { value: string; label: string }) {
   );
 }
 
-function Stat({ big, unit }: { big: string; unit: string }) {
+function Stat({
+  big,
+  unit,
+  align,
+  tone,
+}: {
+  big: string;
+  unit: string;
+  align?: 'right';
+  tone?: string;
+}) {
+  const a = align === 'right' ? st.alignRight : null;
   return (
     <View>
-      <Text style={st.statBig}>{big}</Text>
-      <Text style={st.statUnit}>{unit}</Text>
+      <Text style={[st.statBig, a, tone ? { color: tone } : null]}>{big}</Text>
+      <Text style={[st.statUnit, a]}>{unit}</Text>
     </View>
   );
 }
 
-function Legend({
-  items,
-}: {
-  items: { color: string; label: string; dashed?: boolean }[];
-}) {
+function Legend({ items }: { items: { color: string; label: string }[] }) {
   return (
     <View style={st.legend}>
       {items.map((it) => (
         <View key={it.label} style={st.legendItem}>
-          <View
-            style={[
-              st.legendDot,
-              { backgroundColor: it.dashed ? 'transparent' : it.color },
-              it.dashed && { borderWidth: 1, borderColor: it.color },
-            ]}
-          />
+          <View style={[st.legendDot, { backgroundColor: it.color }]} />
           <Text style={st.legendLabel}>{it.label}</Text>
         </View>
       ))}
@@ -238,11 +238,11 @@ function MacroSplit({
         <MacroCell
           color={palette.protein}
           label="Protein"
-          value={`${p}g`}
-          sub={`/ ${proteinTarget}g`}
+          value={`${p} g`}
+          sub={`of ${proteinTarget} g`}
         />
-        <MacroCell color={palette.carb} label="Carbs" value={`${c}g`} />
-        <MacroCell color={palette.fat} label="Fat" value={`${f}g`} />
+        <MacroCell color={palette.carb} label="Carbs" value={`${c} g`} />
+        <MacroCell color={palette.fat} label="Fat" value={`${f} g`} />
       </View>
     </View>
   );
@@ -265,16 +265,8 @@ function MacroCell({
         <View style={[st.macroDot, { backgroundColor: color }]} />
         <Text style={st.macroLabel}>{label}</Text>
       </View>
-      <Text style={st.macroValue}>
-        {value}
-        {sub ? <Text style={st.macroSub}> {sub}</Text> : null}
-      </Text>
+      <Text style={st.macroValue}>{value}</Text>
+      {sub ? <Text style={st.macroSub}>{sub}</Text> : null}
     </View>
   );
-}
-
-/** Format a signed integer with an explicit + / − and thousands separators. */
-function signed(n: number, digits = 0): string {
-  const v = digits ? n.toFixed(digits) : Math.round(n).toLocaleString();
-  return n > 0 ? `+${v}` : `${v}`;
 }

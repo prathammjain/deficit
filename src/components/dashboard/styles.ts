@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { palette, radius, space, type as typo } from '@/constants/palette';
+import { palette, space, type as typo } from '@/constants/palette';
 
 /** Shared styles for the Dashboard (home) feature. */
 export const st = StyleSheet.create({
@@ -13,17 +13,11 @@ export const st = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
   },
-  dateLine: {
-    ...typo.label,
-    color: palette.textFaint,
-    marginTop: space.xs,
-  },
+  dateLine: { ...typo.label, color: palette.textFaint },
 
-  heroCard: {
-    marginTop: space.lg,
-  },
+  heroCard: { marginTop: space.xl },
   heroLabel: {
     ...typo.label,
     color: palette.textMuted,
@@ -57,29 +51,29 @@ export const st = StyleSheet.create({
     backgroundColor: palette.hairline,
     marginHorizontal: space.lg,
   },
-  tile: { flex: 1, alignItems: 'center', paddingVertical: space.lg },
+  // One card, three columns, left aligned like every other stat row.
+  tile: { flex: 1 },
   tileLabel: {
     color: palette.textFaint,
     fontSize: 12,
-    marginTop: space.sm,
+    marginTop: space.xxs,
     letterSpacing: 0.2,
   },
-  macroRow: { flexDirection: 'row', gap: space.md },
-  dot: { width: 8, height: 8, borderRadius: 4, marginBottom: space.sm },
+  macroRow: { flexDirection: 'row' },
   macroGrams: { ...typo.stat, fontSize: 22, color: palette.text },
 
   weighCard: {},
   weighRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  // Sized to its number so "kg" sits right beside it, not across the card.
   weighInput: {
-    flex: 1,
-    minWidth: 0, // let the field shrink so the unit + Save stay on-screen (RNW)
+    width: 88,
     color: palette.text,
     fontSize: 28,
     fontWeight: '600',
     letterSpacing: -0.5,
     padding: 0,
   },
-  weighUnit: { color: palette.textFaint, fontSize: 16, marginRight: space.sm },
+  weighUnit: { flex: 1, color: palette.textFaint, fontSize: 16 },
   weighBtn: { paddingHorizontal: space.xl },
   weighHint: {
     color: palette.textFaint,
@@ -102,7 +96,7 @@ export const st = StyleSheet.create({
   adaptiveProgressRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.sm,
+    gap: space.lg,
     marginTop: space.lg,
   },
   adaptiveProgressText: {
@@ -110,24 +104,12 @@ export const st = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-  adaptiveProgressDot: { color: palette.textDim },
   adaptiveHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  confidenceChip: {
-    backgroundColor: palette.accentSoft,
-    borderRadius: radius.pill,
-    paddingHorizontal: space.md,
-    paddingVertical: space.xs,
-  },
-  confidenceText: {
-    color: palette.accent,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
+  confidenceText: { color: palette.textFaint, fontSize: 12 },
   adaptiveBig: { marginTop: space.lg },
   adaptiveTdee: { ...typo.stat, fontSize: 40, color: palette.text },
   adaptiveTdeeUnit: { color: palette.textFaint, fontSize: 13, marginTop: 2 },
@@ -135,6 +117,7 @@ export const st = StyleSheet.create({
     flexDirection: 'row',
     gap: space.xl,
     marginTop: space.lg,
+    marginBottom: space.lg,
   },
   adaptiveStat: {},
   adaptiveStatValue: { fontSize: 17, fontWeight: '600' },

@@ -32,11 +32,9 @@ import {
   maxContentWidth,
   palette,
   radius,
-  shadow,
   type as typo,
 } from '@/constants/palette';
 import {
-  ACTIVITY_FACTORS,
   computeTargets,
   type ActivityLevel,
   type ProfileInput,
@@ -65,10 +63,10 @@ const ACTIVITY_OPTIONS: {
 ];
 
 const RATE_OPTIONS: { value: number; title: string; hint: string }[] = [
-  { value: 0.25, title: 'Gentle', hint: '0.25 kg / week' },
-  { value: 0.5, title: 'Steady', hint: '0.5 kg / week' },
-  { value: 0.75, title: 'Brisk', hint: '0.75 kg / week' },
-  { value: 1.0, title: 'Aggressive', hint: '1.0 kg / week' },
+  { value: 0.25, title: 'Gentle', hint: '0.25 kg a week' },
+  { value: 0.5, title: 'Steady', hint: '0.5 kg a week' },
+  { value: 0.75, title: 'Brisk', hint: '0.75 kg a week' },
+  { value: 1.0, title: 'Aggressive', hint: '1.0 kg a week' },
 ];
 
 type StepId =
@@ -162,7 +160,7 @@ export function OnboardingFlow({
                 made up.
               </Text>
               <View style={styles.proofRow}>
-                <ProofLine text="No signup. Nothing leaves your device." />
+                <ProofLine text="Describe meals in your own words, or say them" />
                 <ProofLine text="Works for Indian home cooked meals" />
                 <ProofLine text="Takes about a minute to set up" />
               </View>
@@ -173,7 +171,7 @@ export function OnboardingFlow({
             <Question
               eyebrow={stepLabel}
               title="What's your biological sex?"
-              hint="Used by the Mifflin-St Jeor formula. It changes the calorie math."
+              hint="It changes how many calories your body burns."
             >
               <OptionRow>
                 <OptionCard
@@ -247,7 +245,6 @@ export function OnboardingFlow({
                     key={o.value}
                     title={o.title}
                     hint={o.hint}
-                    trailing={`×${ACTIVITY_FACTORS[o.value]}`}
                     selected={draft.activityLevel === o.value}
                     onPress={() => set({ activityLevel: o.value })}
                   />
@@ -281,17 +278,25 @@ export function OnboardingFlow({
 
         {/* Nav */}
         <View style={styles.nav}>
-          <Pressable style={styles.backBtn} onPress={back}>
-            <Text style={styles.backText}>
-              {index === 0 ? (onCancel ? 'Cancel' : '') : 'Back'}
-            </Text>
-          </Pressable>
+          {/* Nothing to go back to on the first screen: the main button
+              takes the full width instead of leaving a gap beside it. */}
+          {index > 0 || onCancel ? (
+            <Pressable style={styles.backBtn} onPress={back}>
+              <Text style={styles.backText}>
+                {index === 0 ? 'Cancel' : 'Back'}
+              </Text>
+            </Pressable>
+          ) : null}
           <Pressable
             style={[styles.nextBtn, !canAdvance && styles.nextBtnDisabled]}
             disabled={!canAdvance}
             onPress={next}
           >
-            <Text style={styles.nextText}>{nextLabel}</Text>
+            <Text
+              style={[styles.nextText, !canAdvance && styles.nextTextDisabled]}
+            >
+              {nextLabel}
+            </Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -306,20 +311,25 @@ function ReviewStep({ draft }: { draft: Draft }) {
     <Question
       eyebrow="Last step"
       title="Here's your daily target"
-      hint="You can fine-tune anything later."
+      hint="You can change anything later."
     >
       {t ? (
         <View style={styles.previewCard}>
           <DotMatrix style={styles.previewNumber}>
             {t.targetKcal.toLocaleString()}
           </DotMatrix>
-          <Text style={styles.previewUnit}>kcal / day</Text>
+          <Text style={styles.previewUnit}>kcal a day</Text>
           <View style={styles.previewMacros}>
-            <Text style={styles.previewMacro}>P {t.proteinG}g</Text>
-            <Text style={styles.previewDot}>·</Text>
-            <Text style={styles.previewMacro}>C {t.carbsG}g</Text>
-            <Text style={styles.previewDot}>·</Text>
-            <Text style={styles.previewMacro}>F {t.fatG}g</Text>
+            <Text style={styles.previewMacro}>
+              {t.proteinG} g{' '}
+              <Text style={styles.previewMacroLabel}>protein</Text>
+            </Text>
+            <Text style={styles.previewMacro}>
+              {t.carbsG} g <Text style={styles.previewMacroLabel}>carbs</Text>
+            </Text>
+            <Text style={styles.previewMacro}>
+              {t.fatG} g <Text style={styles.previewMacroLabel}>fat</Text>
+            </Text>
           </View>
           {t.safetyNote ? (
             <Text style={styles.previewSafety}>{t.safetyNote}</Text>
@@ -427,13 +437,11 @@ function OptionCard({
 function ListOption({
   title,
   hint,
-  trailing,
   selected,
   onPress,
 }: {
   title: string;
   hint?: string;
-  trailing?: string;
   selected: boolean;
   onPress: () => void;
 }) {
@@ -450,7 +458,6 @@ function ListOption({
         </Text>
         {hint ? <Text style={styles.listHint}>{hint}</Text> : null}
       </View>
-      {trailing ? <Text style={styles.listTrailing}>{trailing}</Text> : null}
     </Pressable>
   );
 }
@@ -566,7 +573,6 @@ const styles = StyleSheet.create({
   },
   listTitle: { color: palette.textMuted, fontSize: 17, fontWeight: '700' },
   listHint: { color: palette.textFaint, fontSize: 13, marginTop: 3 },
-  listTrailing: { color: palette.textFaint, fontSize: 14, fontWeight: '600' },
   numberField: {
     flexDirection: 'row',
     alignItems: 'baseline',
@@ -589,13 +595,12 @@ const styles = StyleSheet.create({
     backgroundColor: palette.surface,
     borderWidth: 1,
     borderColor: palette.hairline,
-    ...shadow.card,
   },
   previewNumber: { ...typo.hero, fontSize: 56, color: palette.text },
   previewUnit: { color: palette.textFaint, fontSize: 16, marginTop: 4 },
-  previewMacros: { flexDirection: 'row', gap: 8, marginTop: 16 },
+  previewMacros: { flexDirection: 'row', gap: 20, marginTop: 16 },
   previewMacro: { color: palette.text, fontSize: 15, fontWeight: '600' },
-  previewDot: { color: palette.textDim, fontSize: 15 },
+  previewMacroLabel: { color: palette.textFaint, fontWeight: '400' },
   previewSafety: {
     color: palette.warn,
     fontSize: 13,
@@ -625,6 +630,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
   },
-  nextBtnDisabled: { backgroundColor: palette.surface2, opacity: 0.6 },
-  nextText: { color: palette.accentText, fontSize: 17, fontWeight: '700' },
+  nextBtnDisabled: { backgroundColor: palette.surface2 },
+  nextText: { color: palette.accentText, fontSize: 16, fontWeight: '700' },
+  nextTextDisabled: { color: palette.textFaint },
 });

@@ -12,11 +12,11 @@ import { Monogram } from '@/components/ui/monogram';
 import {
   Card,
   DotMatrix,
-  Eyebrow,
   GlassSurface,
   Hairline,
   Screen,
   SectionLabel,
+  Title,
 } from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
 import {
@@ -112,7 +112,10 @@ export default function HomeScreen() {
   return (
     <Screen>
       <View style={st.headerRow}>
-        <Eyebrow>Grain</Eyebrow>
+        <View>
+          <Text style={st.dateLine}>{formatToday()}</Text>
+          <Title>Your plan</Title>
+        </View>
         <Pressable
           onPress={() => router.push('/profile')}
           hitSlop={8}
@@ -121,8 +124,7 @@ export default function HomeScreen() {
           <Monogram letter={session?.user?.email} size={34} />
         </Pressable>
       </View>
-      <Text style={st.dateLine}>{formatToday()}</Text>
-      {/* Hero balance card — the focal point, lifted by an accent glow */}
+      {/* Hero: the one number the day is built around */}
       <GlassSurface padded style={st.heroCard}>
         <Text style={st.heroLabel}>Your daily target</Text>
         <View style={st.heroNumberRow}>
@@ -141,15 +143,15 @@ export default function HomeScreen() {
           </View>
           <View style={st.heroStatDivider} />
           <View style={st.heroStat}>
-            <Text style={[st.heroStatValue, { color: palette.accent }]}>
-              −{t.dailyDeficitKcal}
+            <Text style={st.heroStatValue}>
+              {t.dailyDeficitKcal.toLocaleString()}
             </Text>
             <Text style={st.heroStatLabel}>Daily deficit</Text>
           </View>
         </View>
       </GlassSurface>
 
-      {/* This week — on pace to lose */}
+      {/* This week: on pace to lose */}
       <SectionLabel>This week</SectionLabel>
       <WeekCard
         prediction={predictWeeklyLoss(
@@ -161,14 +163,13 @@ export default function HomeScreen() {
 
       {/* Macros */}
       <SectionLabel>Macros</SectionLabel>
-      <View style={st.macroRow}>
-        <MacroTile label="Protein" grams={t.proteinG} color={palette.protein} />
-        <MacroTile label="Carbs" grams={t.carbsG} color={palette.carb} />
-        <MacroTile label="Fat" grams={t.fatG} color={palette.fat} />
-      </View>
+      <Card style={st.macroRow}>
+        <MacroTile label="Protein" grams={t.proteinG} />
+        <MacroTile label="Carbs" grams={t.carbsG} />
+        <MacroTile label="Fat" grams={t.fatG} />
+      </Card>
 
-      {/* Weigh-in */}
-      <SectionLabel>Today’s weigh-in</SectionLabel>
+      <SectionLabel>Weigh in</SectionLabel>
       <WeighInCard last={lastWeight} onSave={handleWeighIn} />
 
       {/* Adaptive TDEE */}
@@ -182,11 +183,14 @@ export default function HomeScreen() {
 
       {/* Meta */}
       <Card style={st.metaCard} padded={false}>
-        <MetaRow label="BMR · Mifflin-St Jeor" value={`${t.bmr} kcal`} />
+        <MetaRow
+          label="Resting burn (BMR)"
+          value={`${t.bmr.toLocaleString()} kcal`}
+        />
         <Hairline style={st.metaDivider} />
         <MetaRow
           label="Pace"
-          value={`${t.appliedRateKgWeek.toFixed(2)} kg / week`}
+          value={`${t.appliedRateKgWeek.toFixed(2)} kg a week`}
         />
       </Card>
 

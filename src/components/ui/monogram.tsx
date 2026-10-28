@@ -12,7 +12,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { palette, shadow } from '@/constants/palette';
+import { palette } from '@/constants/palette';
 
 export function Monogram({
   letter,
@@ -44,7 +44,6 @@ const s = StyleSheet.create({
     borderColor: palette.hairline,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadow.soft,
   },
   letter: { color: palette.text, fontWeight: '700' },
 });

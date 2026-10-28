@@ -3,10 +3,11 @@
 Powers "Describe a meal". Grounds an LLM on three food sources and does the
 portion arithmetic in code, so a number is either measured or visibly flagged.
 
-| action   | body                        | returns                                                        |
-| -------- | --------------------------- | -------------------------------------------------------------- |
-| `health` | `{ action: 'health' }`      | `{ ok, provider, model, usda, llm }`; `llm` explains a failure |
-| `parse`  | `{ action: 'parse', text }` | `ParsedMeal`: items, macros, confidence, one-tap alternates    |
+| action       | body                                                 | returns                                                        |
+| ------------ | ---------------------------------------------------- | -------------------------------------------------------------- |
+| `health`     | `{ action: 'health' }`                               | `{ ok, provider, model, usda, llm }`; `llm` explains a failure |
+| `parse`      | `{ action: 'parse', text }`                          | `ParsedMeal`: items, macros, confidence, one-tap alternates    |
+| `transcribe` | `{ action: 'transcribe', audio, mime: 'audio/wav' }` | `{ text }`: a spoken meal as text                              |
 
 Both require a signed-in user. Requests are accepted only from the origins in
 `ALLOWED_ORIGINS`.
@@ -42,7 +43,7 @@ Tests for `portion.ts`, `ifct.ts` and the IFCT table live in `src/lib/food/`.
 ## Deploy
 
 ```bash
-supabase secrets set GROQ_API_KEY=... USDA_API_KEY=...
+supabase secrets set GEMINI_API_KEY=... USDA_API_KEY=...
 supabase functions deploy food --no-verify-jwt
 ```
 

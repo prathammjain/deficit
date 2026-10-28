@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { ActivityIndicator, Text, View } from 'react-native';
 
-import { MacroChip } from '@/components/log/meal-bits';
+import { MacroStat } from '@/components/log/meal-bits';
 import { MealComposer } from '@/components/log/meal-composer';
 import { MealRow } from '@/components/log/meal-row';
 import { st } from '@/components/log/styles';
@@ -10,7 +10,6 @@ import { ArcGauge } from '@/components/charts';
 import {
   Card,
   DotMatrix,
-  Eyebrow,
   GlassSurface,
   Screen,
   SectionLabel,
@@ -110,9 +109,8 @@ export default function LogScreen() {
 
   return (
     <Screen>
-      <Eyebrow>Today</Eyebrow>
-      <Title>Daily log</Title>
       <Text style={st.dateLine}>{formatToday()}</Text>
+      <Title>Today</Title>
 
       {budget == null ? (
         <Card style={st.noProfile}>
@@ -150,23 +148,22 @@ export default function LogScreen() {
             </ArcGauge>
           </View>
           <View style={st.macroLine}>
-            <MacroChip
-              text={`P ${sum.proteinG}${proteinTarget ? ` / ${proteinTarget}` : ''}g`}
-              color={palette.protein}
+            <MacroStat
+              value={`${sum.proteinG} g`}
+              label={proteinTarget ? `Protein of ${proteinTarget}` : 'Protein'}
             />
-            <MacroChip text={`C ${sum.carbsG}g`} color={palette.carb} />
-            <MacroChip text={`F ${sum.fatG}g`} color={palette.fat} />
+            <MacroStat value={`${sum.carbsG} g`} label="Carbs" />
+            <MacroStat value={`${sum.fatG} g`} label="Fat" />
           </View>
         </GlassSurface>
       )}
 
-      {/* Meals: add + list on one screen */}
-      <SectionLabel>
-        {meals.length ? `Meals · ${sum.kcal} kcal` : 'Meals'}
-      </SectionLabel>
+      {/* Meals: add and list on one screen */}
+      <SectionLabel>Add a meal</SectionLabel>
       <MealComposer onAdd={onAddMeal} onAddMany={onAddMeals} />
 
-      <View style={st.list}>
+      <SectionLabel>Eaten</SectionLabel>
+      <View>
         {meals.map((e) => (
           <MealRow
             key={e.id}
@@ -177,7 +174,7 @@ export default function LogScreen() {
         ))}
         {meals.length === 0 ? (
           <Text style={st.empty}>
-            Nothing logged yet. Add your first meal above.
+            Nothing yet. Describe your first meal above.
           </Text>
         ) : null}
       </View>

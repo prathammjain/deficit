@@ -4,6 +4,7 @@
 //   { action: 'parse',  text }               -> ParsedMeal (with runId)
 //   { action: 'health' }                     -> { ok, provider, model, usda }
 //   { action: 'correction', runId, logged }  -> { ok }  what the user logged
+//   { action: 'transcribe', audio, mime }    -> { text }  a spoken meal as text
 //
 // The engine grounds each food on real candidates from TWO sources — the app's
 // curated Indian home-cooking table (home portions, ghee/butter included) and
@@ -14,7 +15,11 @@
 //
 // ---- LLM provider config (set via `supabase secrets set`) -------------------
 //
-//   LLM_PROVIDER   groq (default) | openai
+//   LLM_PROVIDER   gemini | groq | openai. Unset: gemini when GEMINI_API_KEY
+//                  is set, otherwise groq.
+//   GEMINI_API_KEY from aistudio.google.com
+//   GEMINI_MODEL   default: gemini-3.8-flash
+//   STT_MODEL      default: gemini-3.5-flash-lite  (voice notes to text)
 //   GROQ_API_KEY   from console.groq.com
 //   GROQ_MODEL     default: openai/gpt-oss-120b  (reasoning model — handles the
 //                  USDA per-100g portion scaling much better than llama-3.3-70b;
@@ -85,7 +90,7 @@ const json = (body: unknown, status = 200, origin: string | null = null) =>
 // only differences are the base URL, API key env var, and model name.
 
 interface LLMConfig {
-  provider: 'groq' | 'openai';
+  provider: 'gemini' | 'groq' | 'openai';
   url: string;
   key: string;
   model: string;
@@ -98,8 +103,26 @@ function getLLMConfig(
   modelOverride?: string | null,
 ): LLMConfig | null {
   const provider = (providerOverride ??
-    Deno.env.get('LLM_PROVIDER') ??
-    'groq') as 'groq' | 'openai';
+    Deno.env.get('LLM_PROVIDER')?.trim() ??
+    (Deno.env.get('GEMINI_API_KEY')?.trim() ? 'gemini' : 'groq')) as
+    | 'gemini'
+    | 'groq'
+    | 'openai';
+
+  if (provider === 'gemini') {
+    const key = Deno.env.get('GEMINI_API_KEY')?.trim();
+    if (!key) return null;
+    return {
+      provider,
+      // Gemini's OpenAI compatible endpoint: same request shape as the others.
+      url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+      key,
+      model:
+        modelOverride ??
+        Deno.env.get('GEMINI_MODEL')?.trim() ??
+        'gemini-3.8-flash',
+    };
+  }
 
   if (provider === 'openai') {
     const key = Deno.env.get('OPENAI_API_KEY')?.trim();
@@ -151,8 +174,9 @@ async function callLLM(
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: 'json_object' },
       // Selection + portion arithmetic, not prose: identical meals should give
-      // identical numbers rather than drifting between runs.
-      temperature: 0,
+      // identical numbers rather than drifting between runs. Gemini 3 models
+      // are tuned for their default temperature and can loop below it.
+      ...(cfg.provider === 'gemini' ? {} : { temperature: 0 }),
     }),
   });
   if (!res.ok) throw new Error(`llm ${res.status}`);
@@ -234,6 +258,77 @@ async function checkLLMLive(): Promise<{ ok: boolean; detail: string }> {
 
   liveness = { at: Date.now(), ...result };
   return result;
+}
+
+// ---- Voice to text -----------------------------------------------------------
+// The app records a voice note and sends it as 16 kHz mono WAV, a format every
+// provider accepts. Gemini transcribes it with a prompt that knows what a meal
+// sounds like (Hinglish, katori, besan, grams), which plain speech models get
+// wrong. Without a Gemini key it falls back to Whisper on the Groq key.
+
+const MAX_AUDIO_BASE64 = 4_000_000; // about 2 minutes of 16 kHz mono WAV
+
+const TRANSCRIBE_PROMPT = `Transcribe this voice note. The speaker is describing food they ate, often in Indian English or Hinglish.
+Write exactly what they said, in Roman script, keeping Hindi words as spoken (for example "do roti, ek katori dal").
+Write numbers as digits and keep units as said (g, grams, ml, tablespoon, katori, scoop).
+Spell foods the usual way: roti, chapati, paneer, besan, dal, sabzi, poha, upma, idli, dosa, whey, ghee.
+Return only the transcript, no quotes and no commentary. If nothing is said, return an empty string.`;
+
+async function transcribe(audio: string, mime: string): Promise<string> {
+  const gemini = Deno.env.get('GEMINI_API_KEY')?.trim();
+  if (gemini) {
+    const model = Deno.env.get('STT_MODEL')?.trim() || 'gemini-3.5-flash-lite';
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': gemini,
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { inline_data: { mime_type: mime, data: audio } },
+                { text: TRANSCRIBE_PROMPT },
+              ],
+            },
+          ],
+        }),
+      },
+    );
+    if (!res.ok) throw new Error(`stt ${res.status}`);
+    const data = await res.json();
+    const parts = data?.candidates?.[0]?.content?.parts ?? [];
+    return parts
+      .map((p: any) => p?.text ?? '')
+      .join('')
+      .trim();
+  }
+
+  const groq = Deno.env.get('GROQ_API_KEY')?.trim();
+  if (!groq) throw new Error('No speech to text key configured');
+  const bytes = Uint8Array.from(atob(audio), (c) => c.charCodeAt(0));
+  const form = new FormData();
+  form.append('file', new Blob([bytes], { type: mime }), 'meal.wav');
+  form.append('model', 'whisper-large-v3');
+  form.append('language', 'en');
+  form.append(
+    'prompt',
+    'do roti, ek katori dal, 200g chicken breast, 1 tablespoon ghee, paneer bhurji, besan chilla, whey scoop',
+  );
+  const res = await fetch(
+    'https://api.groq.com/openai/v1/audio/transcriptions',
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${groq}` },
+      body: form,
+    },
+  );
+  if (!res.ok) throw new Error(`stt ${res.status}`);
+  const data = await res.json();
+  return String(data?.text ?? '').trim();
 }
 
 // ---- Candidate sources ------------------------------------------------------
@@ -432,6 +527,9 @@ function calcConfidence(
   return 'low';
 }
 
+/** The model writes reasons in its own style; the app shows no dashes. */
+const plain = (t?: string) => t?.replace(/\s*[\u2014\u2013]\s*/g, ', ');
+
 function buildReason(
   confidence: 'high' | 'medium' | 'low',
   dbKcalTotal: number,
@@ -439,15 +537,16 @@ function buildReason(
   portionCertainty: 'clear' | 'unsure',
   modelReason: string | undefined,
 ): string | undefined {
+  modelReason = plain(modelReason);
   if (confidence === 'high') return modelReason || undefined;
   if (!aiKcal) {
     return portionCertainty === 'unsure'
-      ? 'Portion uncertain — double-check.'
+      ? 'Portion uncertain, worth a check.'
       : modelReason || undefined;
   }
   const portionNote =
-    portionCertainty === 'unsure' ? ', portion uncertain' : ' — recipe varies';
-  return `Database ${Math.round(dbKcalTotal)} kcal vs AI estimate ~${Math.round(aiKcal)} kcal${portionNote}.`;
+    portionCertainty === 'unsure' ? ', portion uncertain' : ', recipes vary';
+  return `Database says ${Math.round(dbKcalTotal)} kcal, AI estimate about ${Math.round(aiKcal)} kcal${portionNote}.`;
 }
 
 // ---- Auth gate --------------------------------------------------------------
@@ -658,7 +757,17 @@ Deno.serve(async (req: Request) => {
       return json({ error: 'sign in required' }, 401, origin);
     }
 
-    const { action, text, runId, logged } = await req.json();
+    const { action, text, runId, logged, audio, mime } = await req.json();
+
+    if (action === 'transcribe') {
+      const valid =
+        typeof audio === 'string' &&
+        audio.length > 0 &&
+        audio.length <= MAX_AUDIO_BASE64 &&
+        mime === 'audio/wav';
+      if (!valid) return json({ error: 'bad audio' }, 400, origin);
+      return json({ text: await transcribe(audio, mime) }, 200, origin);
+    }
 
     if (action === 'health') {
       const cfg = getLLMConfig();
@@ -875,7 +984,7 @@ async function parseUncached(
               portionCertainty,
               decision?.reason,
             )
-          : 'Not cross-checked — verify this portion.',
+          : 'Not cross checked, verify this portion.',
         alternates: candidates.filter((_, ci) => ci !== chosen),
       });
     } else if (decision?.estimate) {
@@ -904,7 +1013,7 @@ async function parseUncached(
         // describes the amount once it is scaled to the user's weight.
         reason: scaled
           ? `No database match. AI estimate per ${estServing}, scaled to the ${d.grams} g you gave.`
-          : decision.reason || 'No database match — AI estimate.',
+          : plain(decision.reason) || 'No database match, AI estimate.',
         alternates: candidates,
       });
     } else {
@@ -928,7 +1037,7 @@ async function parseUncached(
   if (unmatched.length) notes.push(`Couldn't match: ${unmatched.join(', ')}.`);
   if (degraded) {
     notes.push(
-      'Grounding was incomplete for this meal — the numbers are less reliable than usual. Re-run it in a minute for a better match.',
+      'Grounding was incomplete for this meal, so these numbers are less reliable than usual. Try again in a minute for a better match.',
     );
   }
 

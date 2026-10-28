@@ -34,12 +34,11 @@ export function AdaptiveCard({
         <Text style={st.adaptiveBody}>
           The formula is a starting estimate. Keep logging meals and weighing
           in. After about a week I’ll back out your true expenditure from the
-          data and fine-tune this target.
+          data and adjust this target.
         </Text>
         <View style={st.adaptiveProgressRow}>
-          <Text style={st.adaptiveProgressText}>{days}/7 days logged</Text>
-          <Text style={st.adaptiveProgressDot}>·</Text>
-          <Text style={st.adaptiveProgressText}>{weighIns}/3 weigh-ins</Text>
+          <Text style={st.adaptiveProgressText}>{days} of 7 days logged</Text>
+          <Text style={st.adaptiveProgressText}>{weighIns} of 3 weigh ins</Text>
         </View>
       </Card>
     );
@@ -60,11 +59,9 @@ export function AdaptiveCard({
         <Text style={st.adaptiveLead}>
           From your last {adaptive.intakeDays} days
         </Text>
-        <View style={st.confidenceChip}>
-          <Text style={st.confidenceText}>
-            {CONFIDENCE_COPY[adaptive.confidence]}
-          </Text>
-        </View>
+        <Text style={st.confidenceText}>
+          {CONFIDENCE_COPY[adaptive.confidence]}
+        </Text>
       </View>
 
       <View style={st.adaptiveBig}>
@@ -74,20 +71,20 @@ export function AdaptiveCard({
 
       <View style={st.adaptiveStatsRow}>
         <AdaptiveStat
-          label="Weight trend"
-          value={`${trend > 0 ? '+' : ''}${trend.toFixed(2)} kg/wk`}
-          tone={
+          label={
             trend < 0
-              ? palette.good
+              ? 'Losing weight'
               : trend > 0
-                ? palette.danger
-                : palette.textMuted
+                ? 'Gaining weight'
+                : 'Weight steady'
           }
+          value={`${Math.abs(trend).toFixed(2)} kg a week`}
+          tone={trend > 0 ? palette.danger : palette.text}
         />
         <AdaptiveStat
-          label="vs formula"
-          value={`${delta >= 0 ? '+' : ''}${delta} kcal`}
-          tone={palette.textMuted}
+          label={delta >= 0 ? 'Above formula' : 'Below formula'}
+          value={`${Math.abs(delta).toLocaleString()} kcal`}
+          tone={palette.text}
         />
       </View>
 

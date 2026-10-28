@@ -99,13 +99,11 @@ export function TabButton({
       {...props}
       style={({ pressed }) => [styles.tabButton, pressed && styles.pressed]}
     >
-      <View style={[styles.iconWrap, isFocused && styles.iconWrapActive]}>
-        <Icon color={isFocused ? palette.accentText : INACTIVE} />
-      </View>
+      <Icon color={isFocused ? palette.text : INACTIVE} />
       <Text
         style={[
           styles.tabLabel,
-          { color: isFocused ? palette.accent : INACTIVE },
+          { color: isFocused ? palette.text : INACTIVE },
         ]}
       >
         {label}
@@ -137,7 +135,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 420,
     borderRadius: radius.xl,
-    ...shadow.raised,
+    ...shadow.soft,
   },
   tabRow: {
     flexDirection: 'row',
@@ -150,16 +148,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: space.xs,
-    gap: 3,
+    paddingVertical: space.sm,
+    gap: 4,
   },
-  iconWrap: {
-    paddingHorizontal: space.lg,
-    paddingVertical: 6,
-    borderRadius: radius.md,
-  },
-  iconWrapActive: { backgroundColor: palette.accent },
-  tabLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
+  tabLabel: { fontSize: 11, fontWeight: '600', letterSpacing: 0.2 },
   hiddenTrigger: { display: 'none' },
   pressed: { opacity: 0.6 },
 });

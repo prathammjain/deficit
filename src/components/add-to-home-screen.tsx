@@ -65,6 +65,7 @@ export function AddToHomeScreenButton() {
 
 const s = StyleSheet.create({
   btn: {
+    marginTop: space.md,
     backgroundColor: palette.surface,
     borderWidth: 1,
     borderColor: palette.hairline,
@@ -75,9 +76,10 @@ const s = StyleSheet.create({
   btnText: { color: palette.text, fontSize: 15, fontWeight: '600' },
   pressed: { opacity: 0.7 },
   hint: {
-    color: palette.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
-    paddingVertical: space.lg,
+    color: palette.textFaint,
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: 'center',
+    marginTop: space.xl,
   },
 });

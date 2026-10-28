@@ -1,10 +1,7 @@
-import { Pressable, Text, View } from 'react-native';
-
 import type { LogEntry } from '@/lib/log-store';
-import { quantityLabel, stepperLabel, stepQuantity } from '@/lib/quantity';
+import { isWeighed, stepperLabel, stepQuantity } from '@/lib/quantity';
 
-import { Stepper } from './meal-bits';
-import { st } from './styles';
+import { FoodLine } from './meal-bits';
 
 export function MealRow({
   entry,
@@ -17,35 +14,28 @@ export function MealRow({
 }) {
   const portioned = entry.unitKcal != null && entry.quantity != null;
   return (
-    <View style={st.entryRow}>
-      <View style={st.flex1}>
-        <View style={st.entryTitleRow}>
-          <Text style={st.entryLabel} numberOfLines={1}>
-            {entry.label}
-          </Text>
-          {/* Quiet by default; flag only the genuinely-uncertain ones. */}
-          {entry.confidence === 'low' ? <View style={st.entryFlagDot} /> : null}
-        </View>
-        <Text style={st.entrySub}>
-          {portioned
-            ? quantityLabel(entry.serving, entry.quantity as number)
-            : entry.proteinG
-              ? `${entry.proteinG}g protein`
-              : 'custom'}
-        </Text>
-      </View>
-      {portioned ? (
-        <Stepper
-          label={stepperLabel(entry.serving, entry.quantity as number)}
-          onStep={(dir) =>
-            onQty(stepQuantity(entry.serving, entry.quantity as number, dir))
-          }
-        />
-      ) : null}
-      <Text style={st.entryKcal}>{entry.kcal}</Text>
-      <Pressable onPress={onRemove} hitSlop={10} style={st.removeBtn}>
-        <Text style={st.removeText}>✕</Text>
-      </Pressable>
-    </View>
+    <FoodLine
+      name={entry.label}
+      kcal={entry.kcal}
+      // Quiet by default; flag only the genuinely uncertain ones.
+      flagged={entry.confidence === 'low'}
+      meta={[
+        portioned && !isWeighed(entry.serving) ? entry.serving : null,
+        entry.proteinG != null ? `${entry.proteinG} g protein` : null,
+        !portioned && entry.proteinG == null ? 'Custom' : null,
+      ]}
+      stepper={
+        portioned
+          ? {
+              label: stepperLabel(entry.serving, entry.quantity as number),
+              onStep: (dir) =>
+                onQty(
+                  stepQuantity(entry.serving, entry.quantity as number, dir),
+                ),
+            }
+          : undefined
+      }
+      onRemove={onRemove}
+    />
   );
 }

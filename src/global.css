@@ -51,12 +51,12 @@ body {
   -webkit-user-select: none;
 }
 
-/* Focused text fields get the accent underline (the number-field language
-   from onboarding), instead of the browser's default ring. */
+/* No focus ring or underline on text fields: each field already sits in its
+   own card or on its own rule, and the caret shows where you are. A drawn
+   underline stopped short of the field's rounded edges. */
 input:focus-visible,
 textarea:focus-visible {
   outline: none;
-  box-shadow: inset 0 -2px 0 0 #f4511e;
 }
 
 /* Gentle hover feedback on anything pressable (desktop only). */

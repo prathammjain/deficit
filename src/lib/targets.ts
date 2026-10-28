@@ -176,7 +176,7 @@ export function computeTargets(profile: ProfileInput): Targets {
   });
 
   const safetyNote = clamped
-    ? "We've set a safer pace — aggressive deficits backfire and erode muscle."
+    ? "We've set a safer pace. Aggressive deficits backfire and erode muscle."
     : undefined;
 
   return {

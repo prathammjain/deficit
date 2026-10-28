@@ -50,7 +50,7 @@ export function WeekCard({
             {formatKg(predictedKgPerWeek as number)}
           </Text>
           <Text style={st.weekGoal}>
-            goal −{goalRateKgWeek.toFixed(2)} kg / week
+            Goal {goalRateKgWeek.toFixed(2)} kg a week
           </Text>
         </>
       ) : state === 'building' ? (
@@ -67,9 +67,7 @@ export function WeekCard({
   );
 }
 
-/** Positive = loss → "−0.48 kg"; negative = gain → "+0.21 kg". */
+/** The label already says loss or gain, so the number carries no sign. */
 function formatKg(kgPerWeek: number): string {
-  if (kgPerWeek === 0) return '0.00 kg';
-  const abs = Math.abs(kgPerWeek).toFixed(2);
-  return kgPerWeek > 0 ? `−${abs} kg` : `+${abs} kg`;
+  return `${Math.abs(kgPerWeek).toFixed(2)} kg`;
 }

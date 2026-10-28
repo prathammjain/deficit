@@ -3,7 +3,7 @@
  * Keeping these in one place is what makes the app feel like one product:
  * identical spacing, hairlines, radii, and the single accent everywhere.
  *
- * Skin: "Warm Instrument" — soft outlined warm-white cards on a bone canvas,
+ * Skin: "Warm Instrument": flat outlined warm-white cards on a bone canvas,
  * one orange action pill, thin tracks, dot-matrix hero numerals (DotMatrix).
  */
 
@@ -24,7 +24,6 @@ import {
   maxContentWidth,
   palette,
   radius,
-  shadow,
   space,
   type,
 } from '@/constants/palette';
@@ -211,12 +210,12 @@ const s = StyleSheet.create({
   sectionLabelWrap: { marginTop: space.xxl, marginBottom: space.md },
   sectionLabel: { ...type.eyebrow, color: palette.textFaint },
   dotMatrix: { ...type.hero, color: palette.text },
+  // Flat: a hairline is enough to lift a card off the bone canvas.
   card: {
     backgroundColor: palette.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: palette.hairline,
-    ...shadow.soft,
   },
   cardPadded: { padding: space.xl },
   raised: {
@@ -224,28 +223,22 @@ const s = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: palette.hairline,
-    ...shadow.card,
   },
   hairline: { height: 1, backgroundColor: palette.hairline },
   primaryBtn: {
     backgroundColor: palette.accent,
     borderRadius: radius.pill,
-    paddingVertical: space.lg,
+    paddingVertical: 14,
     paddingHorizontal: space.xl,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadow.soft,
   },
-  primaryBtnDisabled: {
-    backgroundColor: palette.surface2,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
+  primaryBtnDisabled: { backgroundColor: palette.surface2 },
   primaryBtnText: {
     color: palette.accentText,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
   },
   primaryBtnTextDisabled: { color: palette.textFaint },
   pressed: { opacity: 0.7 },

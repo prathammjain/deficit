@@ -108,7 +108,7 @@ export const type = {
   label: { fontSize: 12, fontWeight: '500' as const, letterSpacing: 0.1 },
   /** The "167 km" value under a label. */
   value: { fontSize: 17, fontWeight: '700' as const, letterSpacing: -0.2 },
-  title: { fontSize: 32, fontWeight: '800' as const, letterSpacing: -0.5 },
+  title: { fontSize: 30, fontWeight: '700' as const, letterSpacing: -0.6 },
   heading: { fontSize: 20, fontWeight: '700' as const, letterSpacing: -0.2 },
   body: { fontSize: 15, fontWeight: '400' as const },
   /** The dot-matrix hero numeral (pair with the DotMatrix primitive). */

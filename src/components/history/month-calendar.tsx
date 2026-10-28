@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
+import { ChevronIcon } from '@/components/ui/icons';
 import { Card, Hairline, ProgressBar } from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
 import { gatherMonthRecords } from '@/lib/history';
@@ -64,8 +65,13 @@ export function MonthCalendar({ targets }: { targets: HistoryTargets }) {
   return (
     <Card padded>
       <View style={st.calHead}>
-        <Pressable onPress={() => shift(-1)} hitSlop={10} style={st.calNavBtn}>
-          <Text style={st.calNav}>‹</Text>
+        <Pressable
+          onPress={() => shift(-1)}
+          hitSlop={10}
+          style={st.calNavBtn}
+          accessibilityLabel="Previous month"
+        >
+          <ChevronIcon direction="left" />
         </Pressable>
         <Text style={st.calMonth}>
           {anchor.toLocaleDateString('en-US', {
@@ -78,8 +84,12 @@ export function MonthCalendar({ targets }: { targets: HistoryTargets }) {
           hitSlop={10}
           disabled={isCurrentMonth}
           style={st.calNavBtn}
+          accessibilityLabel="Next month"
         >
-          <Text style={[st.calNav, isCurrentMonth && st.calNavOff]}>›</Text>
+          <ChevronIcon
+            direction="right"
+            color={isCurrentMonth ? palette.textDim : palette.text}
+          />
         </Pressable>
       </View>
 
@@ -161,7 +171,7 @@ function DaySummary({
     );
   }
 
-  const def = dayDeficit(rec, targets); // maintenance − intake
+  const def = dayDeficit(rec, targets); // maintenance minus intake
   const over = rec.kcal > targets.targetKcal;
 
   return (
@@ -174,9 +184,10 @@ function DaySummary({
             { color: def >= 0 ? palette.good : palette.danger },
           ]}
         >
-          {def >= 0 ? '+' : ''}
-          {def.toLocaleString()}
-          <Text style={st.calSumDeficitUnit}> deficit</Text>
+          {Math.abs(def).toLocaleString()}
+          <Text style={st.calSumDeficitUnit}>
+            {def >= 0 ? ' deficit' : ' surplus'}
+          </Text>
         </Text>
       </View>
 
@@ -185,7 +196,7 @@ function DaySummary({
           {rec.kcal.toLocaleString()}
           <Text style={st.calSumKcalUnit}>
             {' '}
-            / {targets.targetKcal.toLocaleString()} kcal
+            of {targets.targetKcal.toLocaleString()} kcal
           </Text>
         </Text>
         {rec.weightKg != null ? (
@@ -218,7 +229,7 @@ function Macro({
         <View style={[st.calMacroDot, { backgroundColor: color }]} />
         <Text style={st.calMacroLabel}>{label}</Text>
       </View>
-      <Text style={st.calMacroValue}>{value}g</Text>
+      <Text style={st.calMacroValue}>{value} g</Text>
     </View>
   );
 }

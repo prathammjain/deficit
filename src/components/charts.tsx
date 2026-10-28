@@ -102,7 +102,7 @@ export function LineChart({
   values: (number | null)[];
   height?: number;
   color?: string;
-  /** Optional dashed reference line (e.g. the calorie target). */
+  /** Optional reference line, e.g. the calorie target. */
   target?: number | null;
   showDots?: boolean;
 }) {
@@ -174,9 +174,8 @@ export function LineChart({
               y1={py(target)}
               x2={w - PADX}
               y2={py(target)}
-              stroke={palette.textFaint}
+              stroke={palette.textDim}
               strokeWidth={1}
-              strokeDasharray="4 5"
             />
           ) : null}
           {segments.map((d, i) => (

@@ -49,7 +49,7 @@ export function SignInScreen() {
         >
           <GoogleLogo />
           <Text style={st.googleText}>
-            {googleBusy ? 'Opening Google…' : 'Continue with Google'}
+            {googleBusy ? 'Opening Google' : 'Continue with Google'}
           </Text>
         </Pressable>
         {error ? <Text style={st.error}>{error}</Text> : null}

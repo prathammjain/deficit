@@ -3,10 +3,10 @@ import { Pressable, Text, View } from 'react-native';
 import { st } from './styles';
 
 export const RANGES = [
-  { label: '7D', days: 7 },
-  { label: '30D', days: 30 },
-  { label: '90D', days: 90 },
-  { label: 'All', days: 365 },
+  { label: '7 days', days: 7 },
+  { label: '30 days', days: 30 },
+  { label: '90 days', days: 90 },
+  { label: 'Year', days: 365 },
 ];
 
 export function RangePills({
@@ -24,7 +24,7 @@ export function RangePills({
           <Pressable
             key={r.label}
             onPress={() => onChange(r.days)}
-            style={[st.rangePill, active && st.rangePillActive]}
+            style={st.rangePill}
           >
             <Text style={[st.rangeText, active && st.rangeTextActive]}>
               {r.label}

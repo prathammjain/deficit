@@ -4,26 +4,24 @@ import { palette, radius, space, type as typo } from '@/constants/palette';
 
 /** Shared styles for the Log feature (daily-log screen + meal composer/rows). */
 export const st = StyleSheet.create({
+  modeRow: {
+    flexDirection: 'row',
+    gap: space.xl,
+    marginBottom: space.md,
+  },
+  modeBtn: { paddingVertical: space.xs },
+  modeText: { color: palette.textFaint, fontSize: 15, fontWeight: '600' },
+  modeTextActive: { color: palette.text },
+
   engineRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
     marginBottom: space.md,
   },
-  engineDot: { width: 7, height: 7, borderRadius: 4 },
-  engineText: {
-    color: palette.textFaint,
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.2,
-  },
-  resultNameRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  sourceTag: {
-    color: palette.textDim,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-  },
+  engineDot: { width: 6, height: 6, borderRadius: 3 },
+  engineText: { color: palette.textMuted, fontSize: 13 },
+  sourceTag: { color: palette.textFaint, fontSize: 13 },
   loadingRoot: {
     flex: 1,
     backgroundColor: palette.bg,
@@ -32,16 +30,12 @@ export const st = StyleSheet.create({
   },
   flex1: { flex: 1 },
   pressed: { opacity: 0.7 },
-  dateLine: {
-    ...typo.label,
-    color: palette.textFaint,
-    marginTop: space.xs,
-  },
+  dateLine: { ...typo.label, color: palette.textFaint },
 
   noProfile: { marginTop: space.lg },
   noProfileText: { color: palette.textMuted, fontSize: 15, lineHeight: 21 },
 
-  summaryCard: { marginTop: space.lg },
+  summaryCard: { marginTop: space.xl },
   summaryTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -68,21 +62,18 @@ export const st = StyleSheet.create({
 
   macroLine: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space.sm,
-    marginTop: space.lg,
+    paddingTop: space.lg,
+    borderTopWidth: 1,
+    borderTopColor: palette.hairline,
   },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.xs,
-    backgroundColor: palette.surface2,
-    paddingVertical: space.xs,
-    paddingHorizontal: space.md,
-    borderRadius: radius.pill,
+  macroStat: { flex: 1 },
+  macroStatValue: {
+    color: palette.text,
+    fontSize: 17,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
-  chipDot: { width: 6, height: 6, borderRadius: 3 },
-  chipText: { color: palette.textMuted, fontSize: 12, fontWeight: '600' },
+  macroStatLabel: { color: palette.textFaint, fontSize: 12, marginTop: 2 },
 
   searchWrap: {
     flexDirection: 'row',
@@ -91,7 +82,6 @@ export const st = StyleSheet.create({
     paddingHorizontal: space.lg,
     gap: space.sm,
   },
-  searchIcon: { color: palette.textFaint, fontSize: 18 },
   searchInput: {
     flex: 1,
     minWidth: 0,
@@ -99,8 +89,6 @@ export const st = StyleSheet.create({
     fontSize: 16,
     paddingVertical: space.lg,
   },
-  searchClear: { color: palette.textFaint, fontSize: 14 },
-
   resultsCard: { marginTop: space.sm, overflow: 'hidden' },
   resultRow: {
     flexDirection: 'row',
@@ -111,91 +99,84 @@ export const st = StyleSheet.create({
   },
   resultRowBorder: { borderTopWidth: 1, borderTopColor: palette.hairline },
   resultName: { color: palette.text, fontSize: 15, fontWeight: '600' },
-  resultSub: { color: palette.textFaint, fontSize: 12, marginTop: 2 },
+  resultMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: space.md,
+    marginTop: 2,
+  },
+  resultSub: { color: palette.textFaint, fontSize: 12 },
   resultKcal: {
     color: palette.text,
     fontSize: 15,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },
-  resultAdd: { color: palette.accent, fontSize: 18, fontWeight: '700' },
 
-  secondaryRow: { flexDirection: 'row', gap: space.sm, marginTop: space.md },
-  pill: {
-    paddingVertical: space.sm,
-    paddingHorizontal: space.lg,
-    borderRadius: radius.pill,
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.hairline,
-  },
-  pillActive: {
-    backgroundColor: palette.accentSoft,
-    borderColor: palette.accentBorder,
-  },
-  pillText: { color: palette.textMuted, fontSize: 13, fontWeight: '600' },
-  pillTextActive: { color: palette.accent },
-
-  describeCard: { gap: space.md, marginTop: space.md },
+  describeCard: { gap: space.lg },
   describeInput: {
     color: palette.text,
-    fontSize: 16,
-    lineHeight: 22,
-    minHeight: 60,
+    fontSize: 17,
+    lineHeight: 24,
+    minHeight: 72,
     textAlignVertical: 'top',
     padding: 0,
   },
   describeFooter: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     gap: space.md,
   },
-  describeHint: {
+  calcBtn: { paddingHorizontal: space.xl, paddingVertical: space.md },
+
+  voiceRow: {
     flex: 1,
-    color: palette.textFaint,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  calcBtn: { paddingHorizontal: space.xl },
-  breakdown: { gap: space.sm, marginTop: space.sm },
-  breakdownRow: {
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
-    paddingVertical: space.sm,
   },
-  breakdownNameRow: {
-    flexDirection: 'row',
+  micBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
-    gap: space.sm,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: palette.hairline,
   },
-  breakdownName: { color: palette.text, fontSize: 15, fontWeight: '600' },
-  breakdownSub: { color: palette.textFaint, fontSize: 12, marginTop: 2 },
-  changeHint: { color: palette.accent, fontSize: 12, fontWeight: '600' },
-  confidence: { fontSize: 11, fontWeight: '700', letterSpacing: 0.2 },
+  micBtnLive: { backgroundColor: palette.accent, borderColor: palette.accent },
+  voiceText: { flexShrink: 1, color: palette.textFaint, fontSize: 13 },
+  voiceTextLive: { color: palette.accent, fontVariant: ['tabular-nums'] },
+  breakdown: {
+    gap: space.xs,
+    paddingTop: space.sm,
+    borderTopWidth: 1,
+    borderTopColor: palette.hairline,
+  },
+  changeHint: { color: palette.accent, fontSize: 13, fontWeight: '600' },
+  confidence: { fontSize: 13, fontWeight: '500' },
 
   altPanel: {
     backgroundColor: palette.surface2,
     borderRadius: radius.sm,
     paddingHorizontal: space.md,
     paddingVertical: space.xs,
-    marginBottom: space.sm,
+    marginVertical: space.sm,
   },
   altReason: {
     color: palette.textFaint,
     fontSize: 12,
-    fontStyle: 'italic',
     paddingVertical: space.sm,
-    lineHeight: 16,
+    lineHeight: 17,
   },
   altRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
     paddingVertical: space.md,
-    borderTopWidth: 1,
-    borderTopColor: palette.hairline,
   },
+  altRowBorder: { borderTopWidth: 1, borderTopColor: palette.hairline },
   altName: { color: palette.text, fontSize: 14, fontWeight: '500' },
   altSub: { color: palette.textFaint, fontSize: 12, marginTop: 1 },
   altKcal: { color: palette.textMuted, fontSize: 14, fontWeight: '600' },
@@ -205,13 +186,12 @@ export const st = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: space.md,
-    borderTopWidth: 1,
-    borderTopColor: palette.hairline,
   },
   breakdownTotalLabel: { color: palette.textMuted, fontSize: 14 },
-  breakdownTotalValue: { color: palette.text, fontSize: 14, fontWeight: '600' },
+  breakdownTotalValue: { color: palette.text, fontSize: 15, fontWeight: '700' },
+  breakdownTotalSub: { color: palette.textFaint, fontWeight: '500' },
 
-  manualCard: { gap: space.md, marginTop: space.md },
+  manualCard: { gap: space.md },
   manualLabelInput: {
     backgroundColor: palette.surface2,
     borderRadius: radius.sm,
@@ -232,59 +212,64 @@ export const st = StyleSheet.create({
   },
   manualBtn: { paddingHorizontal: space.lg },
 
-  list: { marginTop: space.md },
   empty: { color: palette.textDim, fontSize: 14, paddingVertical: space.sm },
-  entryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  foodLine: {
     paddingVertical: space.md,
     borderBottomWidth: 1,
     borderBottomColor: palette.hairline,
-    gap: space.md,
+    gap: space.sm,
   },
-  entryTitleRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
-  entryLabel: {
+  foodTop: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  foodName: {
+    flexShrink: 1,
     color: palette.text,
     fontSize: 15,
-    fontWeight: '500',
-    flexShrink: 1,
+    fontWeight: '600',
   },
-  entryFlagDot: {
+  foodFlag: {
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: palette.warn,
   },
-  entrySub: { color: palette.textFaint, fontSize: 13, marginTop: 2 },
-  entryKcal: {
+  foodKcal: {
+    marginLeft: 'auto',
     color: palette.text,
     fontSize: 15,
     fontWeight: '700',
-    minWidth: 44,
-    textAlign: 'right',
     fontVariant: ['tabular-nums'],
   },
-  removeBtn: { paddingHorizontal: space.xs },
-  removeText: { color: palette.textFaint, fontSize: 15 },
+  foodBottom: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  foodMeta: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    columnGap: space.md,
+    rowGap: 2,
+  },
+  foodMetaText: { color: palette.textFaint, fontSize: 13 },
+  // The icon's edge lines up with the calories above it.
+  removeBtn: { padding: space.xs, marginRight: -space.xs },
 
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.md,
+    gap: space.sm,
     backgroundColor: palette.surface2,
     borderRadius: radius.pill,
-    paddingHorizontal: space.md,
-    paddingVertical: space.xs,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
-  stepBtn: { minWidth: 16, alignItems: 'center' },
-  stepText: { color: palette.accent, fontSize: 16, fontWeight: '700' },
+  stepBtn: { minWidth: 16, alignItems: 'center', justifyContent: 'center' },
   stepQty: {
     color: palette.text,
     fontSize: 14,
     fontWeight: '600',
     // Wide enough for "1000 g" / "250 ml". The stepper is right-aligned, so a
-    // label that resizes as it steps ("100 g" -> "5 g") would slide the −
-    // button out from under a thumb mid-tap. Tabular digits keep the number
+    // label that resizes as it steps ("100 g" to "5 g") would slide the minus
+    // button out from under a thumb mid tap. Tabular digits keep the number
     // itself from shimmying inside that width.
     minWidth: 52,
     textAlign: 'center',
