@@ -7,6 +7,8 @@
 //   { action: 'transcribe', audio, mime }    -> { text }  a spoken meal as text
 //   { action: 'roast', meal, items, day }    -> { line }  GrainAI's verdict
 //
+//   ROAST_MODEL    optional: the roast's model (default qwen/qwen3.8-27b)
+//
 // The engine grounds each food on real candidates from TWO sources — the app's
 // curated Indian home-cooking table (home portions, ghee/butter included) and
 // USDA FoodData Central (measured macros per 100g) — then the LLM picks the best
@@ -47,6 +49,13 @@
 // @ts-nocheck
 import { INDIAN_FOODS } from './_indian-foods.ts';
 import { ifctSearch } from './ifct.ts';
+import {
+  parseCandidates,
+  pickRoast,
+  roastUserMessage,
+  ROAST_SYSTEM,
+  type RoastInput,
+} from './roast.ts';
 import {
   estimateMultiplier,
   portionCertainty as statedCertainty,
@@ -267,69 +276,43 @@ async function transcribe(audio: string, mime: string): Promise<string> {
   return String(data?.text ?? '').trim();
 }
 
-// ---- GrainAI roast mode ------------------------------------------------------
-// Opt in from the app. One brutal line about the meal: the choice, the timing,
-// the excuses, the love life. Never the body. The prompt says so, and a word
-// filter drops any line that slips through, so a bad roast shows nothing
-// rather than something hurtful.
+// ---- GrainAI ----------------------------------------------------------------
+// One brutal line for every meal. Prompt and filter live in roast.ts. The
+// roast runs on Qwen, which writes like a person; gpt-oss, the engine's model,
+// writes roasts like a corporate apology, so it is only the fallback.
 
-const ROAST_PROMPT = `You are GrainAI, the roast comic inside Grain, a calorie and protein tracker for people who train. The user has opted in to be roasted. You get the meal they just logged and their day so far. Reply with JSON: {"line": "..."}.
-
-The line: one or two sentences, at most 30 words. Brutal, specific, funny, like a savage gym friend. Mild swearing is fine (dumbass, damn, hell). Hinglish is fine when it lands.
-
-Roast: the food choice, the timing, the excuses, the discipline, the protein, the cheat meal pretending to be healthy, their gym ego, their love life (an ex, a crush, a situationship, a Greek god stealing their date), their mom's cooking.
-Never mention or imply: body, weight, size, fatness, looks, appearance, eating disorders, starving, purging, skipping meals, illness, religion, caste, race, gender, sexuality, disability, death, self harm. Never assume the user's gender or who they date. Never tell them to eat less than their target.
-If they are far under their calorie target late in the day, roast them for under eating and tell them to go eat some protein.
-A good meal still gets roasted, with a backhanded compliment.
-No dashes. No hashtags. No emojis.
-
-Examples of the tone:
-"A McDonald's brownie. Good job, your dumbass won't take things seriously until your ex leaves you for a Greek god who meal preps."
-"Brownie at 11 pm. Discipline left the chat, and honestly, so would I."
-"Chicken and rice again. You eat like a spreadsheet, but at least your protein shows up more than your situationship ever did."
-"800 kcal by 9 pm? That's not a cut, that's a hunger strike nobody asked for. Go eat some paneer, champ."
-"Greek yogurt and berries. Look at you cosplaying as a fitness influencer. Keep this up and someone might actually believe you."`;
-
-const ROAST_BANNED =
-  /\b(fat|fatso|fatass|fatty|obese|chubby|belly|gut|weight|kgs?|kilos?|ugly|body|skinny|thin|starv\w*|purg\w*|vomit\w*|anorexi\w*|bulimi\w*|skip(ping)? (a |your )?meals?|suicid\w*|kill yourself)\b/i;
+const ROAST_MODEL = 'qwen/qwen3.8-27b';
 
 async function roastLine(
   cfg: LLMConfig,
-  input: unknown,
+  input: RoastInput,
 ): Promise<string | null> {
-  const res = await fetch(cfg.url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${cfg.key}`,
-    },
-    body: JSON.stringify({
-      model: cfg.model,
-      messages: [
-        { role: 'system', content: ROAST_PROMPT },
-        { role: 'user', content: JSON.stringify(input) },
-      ],
-      response_format: { type: 'json_object' },
-      // Comedy, not arithmetic: let it vary.
-      temperature: 1,
-    }),
-  });
+  const ask = (model: string) =>
+    fetch(cfg.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${cfg.key}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: ROAST_SYSTEM },
+          { role: 'user', content: roastUserMessage(input) },
+        ],
+        // Comedy, not arithmetic: let it swing.
+        temperature: 1,
+        ...(model.startsWith('openai/gpt-oss')
+          ? { reasoning_effort: 'low' }
+          : {}),
+      }),
+    });
+
+  let res = await ask(Deno.env.get('ROAST_MODEL')?.trim() || ROAST_MODEL);
+  if (!res.ok && cfg.provider === 'groq') res = await ask(cfg.model);
   if (!res.ok) return null;
   const data = await res.json();
-  let line = '';
-  try {
-    line = String(
-      JSON.parse(data?.choices?.[0]?.message?.content ?? '{}')?.line ?? '',
-    );
-  } catch {
-    return null;
-  }
-  line = line
-    .replace(/\s*[\u2014\u2013]\s*/g, ', ')
-    .replace(/^["']|["']$/g, '')
-    .trim();
-  if (!line || line.length > 240 || ROAST_BANNED.test(line)) return null;
-  return line;
+  return pickRoast(parseCandidates(data?.choices?.[0]?.message?.content ?? ''));
 }
 
 // ---- Candidate sources ------------------------------------------------------
@@ -765,7 +748,7 @@ Deno.serve(async (req: Request) => {
       const cfg = getLLMConfig();
       if (!cfg) return json({ line: null }, 200, origin);
       const n = (v: unknown) => Math.round(Number(v) || 0);
-      const input = {
+      const input: RoastInput = {
         meal: String(meal ?? '').slice(0, 300),
         items: (Array.isArray(items) ? items : []).slice(0, 15).map((i) => ({
           name: String(i?.name ?? '').slice(0, 80),

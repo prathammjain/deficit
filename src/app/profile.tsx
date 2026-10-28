@@ -33,6 +33,7 @@ import {
   saveProfile,
   type StoredProfile,
 } from '@/lib/profile-store';
+import { loadRoastMode, saveRoastMode } from '@/lib/roast-setting';
 import { useAuth } from '@/lib/supabase/auth';
 import {
   computeTargets,
@@ -54,14 +55,16 @@ export default function ProfileScreen() {
   const [profile, setProfile] = useState<StoredProfile | null>(null);
   const [editing, setEditing] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [roastOn, setRoastOn] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
       let alive = true;
       (async () => {
-        const p = await loadProfile();
+        const [p, roast] = await Promise.all([loadProfile(), loadRoastMode()]);
         if (!alive) return;
         setProfile(p);
+        setRoastOn(roast);
         setLoading(false);
       })();
       return () => {
@@ -168,6 +171,29 @@ export default function ProfileScreen() {
         </Pressable>
       ) : null}
 
+      <SectionLabel>GrainAI</SectionLabel>
+      <Card padded={false}>
+        <Pressable
+          onPress={() => {
+            setRoastOn(!roastOn);
+            void saveRoastMode(!roastOn);
+          }}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: roastOn }}
+          style={s.planRow}
+        >
+          <View style={s.roastText}>
+            <Text style={s.planValue}>Roasts</Text>
+            <Text style={s.roastSub}>
+              One brutal line about every meal you describe.
+            </Text>
+          </View>
+          <Text style={[s.roastState, roastOn && s.roastStateOn]}>
+            {roastOn ? 'On' : 'Off'}
+          </Text>
+        </Pressable>
+      </Card>
+
       {/* Leaving is not an alarm: quiet outlined button, ink text. */}
       {email ? (
         <>
@@ -261,6 +287,10 @@ const s = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   emptyText: { color: palette.textMuted, fontSize: 14, lineHeight: 21 },
+  roastText: { flex: 1, marginRight: space.lg },
+  roastSub: { color: palette.textFaint, fontSize: 13, marginTop: 2 },
+  roastState: { color: palette.textFaint, fontSize: 15, fontWeight: '600' },
+  roastStateOn: { color: palette.accent },
 
   editBtn: {
     marginTop: space.md,

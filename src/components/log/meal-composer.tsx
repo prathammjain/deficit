@@ -25,7 +25,7 @@ import {
 } from '@/lib/food';
 import { portionedEntry, type LogEntry } from '@/lib/log-store';
 import { isWeighed, stepperLabel, stepQuantity } from '@/lib/quantity';
-import { loadRoastMode, saveRoastMode } from '@/lib/roast-setting';
+import { loadRoastMode } from '@/lib/roast-setting';
 import {
   canRecord,
   MAX_SECONDS,
@@ -58,14 +58,11 @@ export function MealComposer({
 }) {
   // Describing the meal is the main way to log, so it is open by default.
   const [mode, setMode] = useState<Mode>('describe');
+  // GrainAI roasts every meal unless the user switched it off in Profile.
   const [roastOn, setRoastOn] = useState(false);
   useEffect(() => {
     loadRoastMode().then(setRoastOn);
   }, []);
-  const toggleRoast = () => {
-    setRoastOn(!roastOn);
-    void saveRoastMode(!roastOn);
-  };
 
   return (
     <View>
@@ -82,19 +79,6 @@ export function MealComposer({
             </Text>
           </Pressable>
         ))}
-        {mode === 'describe' && foodProvider.roast ? (
-          <Pressable
-            onPress={toggleRoast}
-            hitSlop={6}
-            accessibilityRole="switch"
-            accessibilityState={{ checked: roastOn }}
-            style={[st.roastToggle, roastOn && st.roastToggleOn]}
-          >
-            <Text style={[st.roastToggleText, roastOn && st.roastToggleTextOn]}>
-              Roast me
-            </Text>
-          </Pressable>
-        ) : null}
       </View>
       <EngineStatus />
 

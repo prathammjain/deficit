@@ -205,3 +205,32 @@ on the server drops any line that slips through, so a bad roast shows nothing.
 It runs on the same Groq model as the engine, after the numbers appear, so it
 never slows a meal down. It also never assumes the user's gender or who they
 date: "your ex", not "your girlfriend".
+
+### GrainAI is the app, not a setting
+
+The "Roast me" switch is gone: every described meal gets roasted. It is
+Grain's personality now, not a feature to discover. The only way out is a
+quiet Roasts switch on the Profile screen, for the few who need it.
+
+First real use: the roasts read formal and polite, like an AI apologising.
+Three causes, three fixes:
+
+- The model. gpt-oss is tuned to be careful and sounds corporate when asked to
+  be rude. Roasts now run on Qwen 3.8 on Groq, with gpt-oss only as a
+  fallback. The engine itself stays on gpt-oss.
+- The prompt. It now describes a person (the most savage friend in the group
+  chat, texting in lowercase, Hinglish when it lands) instead of rules for a
+  bot, lists the phrases that give an AI away ("ah", "keep it up",
+  "moderation", exclamation marks) and shows seventeen roasts at the right
+  pitch. The meal goes in as a short note instead of JSON, because JSON in
+  pulls formal language out.
+- One shot. It now writes four roasts and the server picks one, skipping any
+  that cross the line or sound like a bot. Random among the good ones, so
+  the same meal doesn't get the same joke twice.
+
+The body rule is unchanged and enforced the same way. Words that assume a
+gender ("bhai", "bro", "girlfriend") are filtered too.
+
+supabase/functions/food/roast-try.ts runs the roast on a dozen sample meals
+straight against Groq, so the prompt can be tuned on real output before it
+ships.

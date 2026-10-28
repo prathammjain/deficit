@@ -10,23 +10,6 @@ export const st = StyleSheet.create({
     marginBottom: space.md,
   },
   modeBtn: { paddingVertical: space.xs },
-  roastToggle: {
-    marginLeft: 'auto',
-    alignSelf: 'center',
-    paddingVertical: space.xs,
-    paddingHorizontal: space.md,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: palette.hairline,
-  },
-  roastToggleOn: { backgroundColor: palette.text, borderColor: palette.text },
-  roastToggleText: {
-    color: palette.textMuted,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  roastToggleTextOn: { color: palette.surface },
-
   roast: { paddingVertical: space.md, gap: space.xs },
   roastLabel: {
     color: palette.accent,
@@ -36,9 +19,10 @@ export const st = StyleSheet.create({
   },
   roastLine: {
     color: palette.text,
-    fontSize: 16,
-    fontWeight: '500',
-    lineHeight: 23,
+    fontSize: 18,
+    fontWeight: '600',
+    lineHeight: 25,
+    letterSpacing: -0.2,
   },
   modeText: { color: palette.textFaint, fontSize: 15, fontWeight: '600' },
   modeTextActive: { color: palette.text },
