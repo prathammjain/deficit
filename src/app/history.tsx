@@ -5,6 +5,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { Journey } from '@/components/history/journey';
 import { RangePills } from '@/components/history/range-pills';
 import { st } from '@/components/history/styles';
+import { WeekShare } from '@/components/history/week-share';
 import { Card, Screen, Title } from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
 import { gatherDailyRecords } from '@/lib/history';
@@ -66,6 +67,8 @@ export default function HistoryScreen() {
   return (
     <Screen>
       <Title>History</Title>
+
+      {targets ? <WeekShare records={records} targets={targets} /> : null}
 
       <RangePills value={rangeDays} onChange={setRangeDays} />
 

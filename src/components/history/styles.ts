@@ -17,6 +17,16 @@ export const st = StyleSheet.create({
   rangeTextActive: { color: palette.text },
 
   emptyCard: { marginTop: space.xl, gap: space.sm },
+
+  weekShare: { gap: space.md, marginBottom: space.lg },
+  weekLabel: { marginBottom: 0 },
+  weekImage: {
+    width: '100%',
+    aspectRatio: 1080 / 1350,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: palette.hairline,
+  },
   emptyTitle: { ...typo.heading, color: palette.text },
   emptyText: { color: palette.textMuted, fontSize: 14, lineHeight: 21 },
 

@@ -174,3 +174,14 @@ here ("do roti, ek katori dal, 1 tablespoon ghee") as its prompt. That steers
 it to Roman script Hinglish and the usual spellings of Indian foods. Whisper
 costs $0.111 per hour of audio and bills at least 10 seconds per note, so a
 short note costs about 3 paise.
+
+### A week worth sharing
+
+History now opens with "Your week": a card with the week's deficit, days
+logged, days the protein target was hit, average calories against target and
+the weight change, and one button to share it. The image is drawn on a canvas
+at 1080 by 1350, Instagram's portrait size, in the app's own look, with
+getgrain.fit at the bottom. The preview in the app is the exact file that gets
+shared, and the share sheet opens straight to Instagram or WhatsApp on a phone;
+desktop browsers download it instead. This is the marketing loop for an
+audience that already posts its progress.
