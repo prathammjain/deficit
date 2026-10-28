@@ -9,7 +9,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { setProviderStatus } from './provider-status';
-import type { FoodItem, FoodProvider, LoggedItem, ParsedMeal } from './types';
+import type {
+  FoodItem,
+  FoodProvider,
+  LoggedItem,
+  ParsedMeal,
+  RoastInput,
+} from './types';
 
 export class RemoteFoodProvider implements FoodProvider {
   readonly name = 'remote';
@@ -65,6 +71,18 @@ export class RemoteFoodProvider implements FoodProvider {
       });
       if (error || typeof data?.text !== 'string') return null;
       return data.text;
+    } catch {
+      return null;
+    }
+  }
+
+  async roast(input: RoastInput): Promise<string | null> {
+    try {
+      const { data, error } = await this.client.functions.invoke('food', {
+        body: { action: 'roast', ...input },
+      });
+      if (error || typeof data?.line !== 'string') return null;
+      return data.line;
     } catch {
       return null;
     }

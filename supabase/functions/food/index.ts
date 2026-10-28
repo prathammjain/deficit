@@ -5,6 +5,7 @@
 //   { action: 'health' }                     -> { ok, provider, model, usda }
 //   { action: 'correction', runId, logged }  -> { ok }  what the user logged
 //   { action: 'transcribe', audio, mime }    -> { text }  a spoken meal as text
+//   { action: 'roast', meal, items, day }    -> { line }  GrainAI's verdict
 //
 // The engine grounds each food on real candidates from TWO sources — the app's
 // curated Indian home-cooking table (home portions, ghee/butter included) and
@@ -264,6 +265,71 @@ async function transcribe(audio: string, mime: string): Promise<string> {
   if (!res.ok) throw new Error(`stt ${res.status}`);
   const data = await res.json();
   return String(data?.text ?? '').trim();
+}
+
+// ---- GrainAI roast mode ------------------------------------------------------
+// Opt in from the app. One brutal line about the meal: the choice, the timing,
+// the excuses, the love life. Never the body. The prompt says so, and a word
+// filter drops any line that slips through, so a bad roast shows nothing
+// rather than something hurtful.
+
+const ROAST_PROMPT = `You are GrainAI, the roast comic inside Grain, a calorie and protein tracker for people who train. The user has opted in to be roasted. You get the meal they just logged and their day so far. Reply with JSON: {"line": "..."}.
+
+The line: one or two sentences, at most 30 words. Brutal, specific, funny, like a savage gym friend. Mild swearing is fine (dumbass, damn, hell). Hinglish is fine when it lands.
+
+Roast: the food choice, the timing, the excuses, the discipline, the protein, the cheat meal pretending to be healthy, their gym ego, their love life (an ex, a crush, a situationship, a Greek god stealing their date), their mom's cooking.
+Never mention or imply: body, weight, size, fatness, looks, appearance, eating disorders, starving, purging, skipping meals, illness, religion, caste, race, gender, sexuality, disability, death, self harm. Never assume the user's gender or who they date. Never tell them to eat less than their target.
+If they are far under their calorie target late in the day, roast them for under eating and tell them to go eat some protein.
+A good meal still gets roasted, with a backhanded compliment.
+No dashes. No hashtags. No emojis.
+
+Examples of the tone:
+"A McDonald's brownie. Good job, your dumbass won't take things seriously until your ex leaves you for a Greek god who meal preps."
+"Brownie at 11 pm. Discipline left the chat, and honestly, so would I."
+"Chicken and rice again. You eat like a spreadsheet, but at least your protein shows up more than your situationship ever did."
+"800 kcal by 9 pm? That's not a cut, that's a hunger strike nobody asked for. Go eat some paneer, champ."
+"Greek yogurt and berries. Look at you cosplaying as a fitness influencer. Keep this up and someone might actually believe you."`;
+
+const ROAST_BANNED =
+  /\b(fat|fatso|fatass|fatty|obese|chubby|belly|gut|weight|kgs?|kilos?|ugly|body|skinny|thin|starv\w*|purg\w*|vomit\w*|anorexi\w*|bulimi\w*|skip(ping)? (a |your )?meals?|suicid\w*|kill yourself)\b/i;
+
+async function roastLine(
+  cfg: LLMConfig,
+  input: unknown,
+): Promise<string | null> {
+  const res = await fetch(cfg.url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${cfg.key}`,
+    },
+    body: JSON.stringify({
+      model: cfg.model,
+      messages: [
+        { role: 'system', content: ROAST_PROMPT },
+        { role: 'user', content: JSON.stringify(input) },
+      ],
+      response_format: { type: 'json_object' },
+      // Comedy, not arithmetic: let it vary.
+      temperature: 1,
+    }),
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  let line = '';
+  try {
+    line = String(
+      JSON.parse(data?.choices?.[0]?.message?.content ?? '{}')?.line ?? '',
+    );
+  } catch {
+    return null;
+  }
+  line = line
+    .replace(/\s*[\u2014\u2013]\s*/g, ', ')
+    .replace(/^["']|["']$/g, '')
+    .trim();
+  if (!line || line.length > 240 || ROAST_BANNED.test(line)) return null;
+  return line;
 }
 
 // ---- Candidate sources ------------------------------------------------------
@@ -692,7 +758,30 @@ Deno.serve(async (req: Request) => {
       return json({ error: 'sign in required' }, 401, origin);
     }
 
-    const { action, text, runId, logged, audio, mime } = await req.json();
+    const { action, text, runId, logged, audio, mime, meal, items, day } =
+      await req.json();
+
+    if (action === 'roast') {
+      const cfg = getLLMConfig();
+      if (!cfg) return json({ line: null }, 200, origin);
+      const n = (v: unknown) => Math.round(Number(v) || 0);
+      const input = {
+        meal: String(meal ?? '').slice(0, 300),
+        items: (Array.isArray(items) ? items : []).slice(0, 15).map((i) => ({
+          name: String(i?.name ?? '').slice(0, 80),
+          kcal: n(i?.kcal),
+          proteinG: n(i?.proteinG),
+        })),
+        day: {
+          eatenKcalBefore: n(day?.eatenKcal),
+          targetKcal: n(day?.targetKcal),
+          proteinGBefore: n(day?.proteinG),
+          proteinTargetG: n(day?.proteinTargetG),
+          localHour: n(day?.hour),
+        },
+      };
+      return json({ line: await roastLine(cfg, input) }, 200, origin);
+    }
 
     if (action === 'transcribe') {
       const valid =

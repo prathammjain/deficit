@@ -21,9 +21,11 @@ import {
   swapParsedItem,
   type FoodItem,
   type ParsedItem,
+  type RoastInput,
 } from '@/lib/food';
 import { portionedEntry, type LogEntry } from '@/lib/log-store';
 import { isWeighed, stepperLabel, stepQuantity } from '@/lib/quantity';
+import { loadRoastMode, saveRoastMode } from '@/lib/roast-setting';
 import {
   canRecord,
   MAX_SECONDS,
@@ -42,15 +44,28 @@ const MODES: { id: Mode; label: string }[] = [
   { id: 'custom', label: 'Custom' },
 ];
 
+/** The day so far, which GrainAI roasts against. */
+type DaySoFar = Omit<RoastInput['day'], 'hour'>;
+
 export function MealComposer({
   onAdd,
   onAddMany,
+  day,
 }: {
   onAdd: (e: Omit<LogEntry, 'id' | 'at'>) => void;
   onAddMany: (e: Omit<LogEntry, 'id' | 'at'>[]) => void;
+  day: DaySoFar;
 }) {
   // Describing the meal is the main way to log, so it is open by default.
   const [mode, setMode] = useState<Mode>('describe');
+  const [roastOn, setRoastOn] = useState(false);
+  useEffect(() => {
+    loadRoastMode().then(setRoastOn);
+  }, []);
+  const toggleRoast = () => {
+    setRoastOn(!roastOn);
+    void saveRoastMode(!roastOn);
+  };
 
   return (
     <View>
@@ -67,10 +82,29 @@ export function MealComposer({
             </Text>
           </Pressable>
         ))}
+        {mode === 'describe' && foodProvider.roast ? (
+          <Pressable
+            onPress={toggleRoast}
+            hitSlop={6}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: roastOn }}
+            style={[st.roastToggle, roastOn && st.roastToggleOn]}
+          >
+            <Text style={[st.roastToggleText, roastOn && st.roastToggleTextOn]}>
+              Roast me
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
       <EngineStatus />
 
-      {mode === 'describe' ? <DescribeMeal onLog={onAddMany} /> : null}
+      {mode === 'describe' ? (
+        <DescribeMeal
+          onLog={onAddMany}
+          day={day}
+          roastOn={roastOn && !!foodProvider.roast}
+        />
+      ) : null}
       {mode === 'search' ? <SearchFood onAdd={onAdd} /> : null}
       {mode === 'custom' ? <CustomMeal onAdd={onAdd} /> : null}
     </View>
@@ -167,8 +201,12 @@ function SearchFood({
 
 function DescribeMeal({
   onLog,
+  day,
+  roastOn,
 }: {
   onLog: (entries: Omit<LogEntry, 'id' | 'at'>[]) => void;
+  day: DaySoFar;
+  roastOn: boolean;
 }) {
   const [text, setText] = useState('');
   const [items, setItems] = useState<ParsedItem[]>([]);
@@ -180,11 +218,28 @@ function DescribeMeal({
   const [calculated, setCalculated] = useState(false);
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [roast, setRoast] = useState<string | null>(null);
 
   const calc = async () => {
     if (!text.trim() || !foodProvider.parseMeal) return;
     setBusy(true);
+    setRoast(null);
     const parsed = await foodProvider.parseMeal(text);
+    // GrainAI's line arrives a moment after the numbers; it never holds
+    // them up.
+    if (roastOn) {
+      foodProvider
+        .roast?.({
+          meal: text,
+          items: parsed.items.map(({ item, quantity }) => ({
+            name: item.name,
+            kcal: Math.round(item.kcal * quantity),
+            proteinG: Math.round(item.proteinG * quantity),
+          })),
+          day: { ...day, hour: new Date().getHours() },
+        })
+        .then(setRoast);
+    }
     setItems(parsed.items);
     setOrigins(parsed.items.map((_, i) => i));
     setRunId(parsed.runId);
@@ -196,6 +251,7 @@ function DescribeMeal({
 
   const reset = () => {
     setText('');
+    setRoast(null);
     setItems([]);
     setOrigins([]);
     setRunId(undefined);
@@ -261,6 +317,12 @@ function DescribeMeal({
 
       {calculated ? (
         <View style={st.breakdown}>
+          {roast ? (
+            <View style={st.roast}>
+              <Text style={st.roastLabel}>GRAINAI</Text>
+              <Text style={st.roastLine}>{roast}</Text>
+            </View>
+          ) : null}
           {items.map((it, idx) => {
             const alts = it.alternates ?? [];
             const canSwap = alts.length > 0;
@@ -318,7 +380,7 @@ function DescribeMeal({
               </View>
             );
           })}
-          {items.length === 0 ? (
+          {items.length === 0 && !note ? (
             <Text style={st.empty}>
               Couldn’t match anything. Try simpler names, or use Custom.
             </Text>

@@ -160,7 +160,16 @@ export default function LogScreen() {
 
       {/* Meals: add and list on one screen */}
       <SectionLabel>Add a meal</SectionLabel>
-      <MealComposer onAdd={onAddMeal} onAddMany={onAddMeals} />
+      <MealComposer
+        onAdd={onAddMeal}
+        onAddMany={onAddMeals}
+        day={{
+          eatenKcal: sum.kcal,
+          targetKcal: targetKcal ?? 0,
+          proteinG: sum.proteinG,
+          proteinTargetG: proteinTarget ?? 0,
+        }}
+      />
 
       <SectionLabel>Eaten</SectionLabel>
       <View>

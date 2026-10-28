@@ -65,6 +65,20 @@ export interface LoggedItem {
   proteinG: number;
 }
 
+/** What GrainAI sees when it roasts a meal. */
+export interface RoastInput {
+  meal: string;
+  items: { name: string; kcal: number; proteinG: number }[];
+  /** The day before this meal, and the local hour. */
+  day: {
+    eatenKcal: number;
+    targetKcal: number;
+    proteinG: number;
+    proteinTargetG: number;
+    hour: number;
+  };
+}
+
 export interface FoodProvider {
   readonly name: string;
   /** Free-text search over food names. */
@@ -81,6 +95,9 @@ export interface FoodProvider {
   /** Optional: turn a voice note (base64 16 kHz WAV) into meal text. Null
    *  when it couldn't be transcribed. */
   transcribe?(wavBase64: string): Promise<string | null>;
+  /** Optional: GrainAI's one line roast of a meal, for users who opted in.
+   *  Null when there's nothing safe or funny to say. */
+  roast?(input: RoastInput): Promise<string | null>;
 }
 
 /**

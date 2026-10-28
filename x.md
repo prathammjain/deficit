@@ -185,3 +185,23 @@ getgrain.fit at the bottom. The preview in the app is the exact file that gets
 shared, and the share sheet opens straight to Instagram or WhatsApp on a phone;
 desktop browsers download it instead. This is the marketing loop for an
 audience that already posts its progress.
+
+### GrainAI, the roast
+
+Describe now has a "Roast me" switch. Turned on, GrainAI answers every meal
+with one brutal line: the choice, the timing, the excuses, the love life.
+"A McDonald's brownie. Good job, your dumbass won't take things seriously
+until your ex leaves you for a Greek god who meal preps." It's off until the
+user turns it on, and the choice is remembered.
+
+The one line it never crosses is the body. No weight, size, looks or fat
+jokes, nothing about eating disorders, and it never tells anyone to eat less
+than their target; late in the day and far under target, it roasts them for
+under eating instead. Grain's users are exactly the people most at risk from
+food and body shame, and a tracker that mocks people for logging the brownie
+teaches them to stop logging it. The prompt says all this, and a word filter
+on the server drops any line that slips through, so a bad roast shows nothing.
+
+It runs on the same Groq model as the engine, after the numbers appear, so it
+never slows a meal down. It also never assumes the user's gender or who they
+date: "your ex", not "your girlfriend".
