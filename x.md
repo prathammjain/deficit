@@ -234,3 +234,39 @@ gender ("bhai", "bro", "girlfriend") are filtered too.
 supabase/functions/food/roast-try.ts runs the roast on a dozen sample meals
 straight against Groq, so the prompt can be tuned on real output before it
 ships.
+
+## 2026-10-29
+
+### The first real roasts
+
+Ran the roast on twelve meals against both models. Qwen sounds like a person
+("eat an egg, demon"); gpt-oss reads every number back like a bank statement
+and tacks "yaar" on the end. Qwen stays.
+
+What went wrong, and the fix for each:
+
+- Looks slipped through ("your crush thinks you're hot", "you look like a gym
+  bro", "your abs are waiting for a text"), plus a line about dying and one
+  crude one. The filter now covers looks and body parts, death, gendered
+  words and anything sexual. Run against all 64 lines from the test, it drops
+  every one that crossed the line.
+- Wrong numbers ("217 g protein deficit"). The models did their own maths.
+  The facts now arrive already worked out (calories left, protein still
+  needed) and the prompt allows at most one number.
+- Qwen copied the examples word for word. Fewer examples now, and an
+  explicit "never reuse these".
+- Hidden hyphens from gpt-oss ("missing‑person"). Every kind of hyphen is
+  now turned into a space.
+- Lines stuffed with three or more numbers, or over 120 characters, lose to
+  shorter ones.
+
+No more fallback to gpt-oss when Qwen fails: Groq limits are per model, and
+a roast must never use up capacity that meal matching needs.
+
+### Groq's free tier is a ceiling
+
+The test hit Groq's free tier limits within a minute: Qwen allows 1,000
+output tokens a minute, gpt-oss 8,000 tokens a minute, for the whole
+account. Meal matching runs on gpt-oss, so in production that is a handful
+of meals a minute across every user. Before any marketing push, the Groq
+account needs the paid Developer tier.

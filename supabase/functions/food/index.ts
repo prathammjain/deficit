@@ -278,8 +278,10 @@ async function transcribe(audio: string, mime: string): Promise<string> {
 
 // ---- GrainAI ----------------------------------------------------------------
 // One brutal line for every meal. Prompt and filter live in roast.ts. The
-// roast runs on Qwen, which writes like a person; gpt-oss, the engine's model,
-// writes roasts like a corporate apology, so it is only the fallback.
+// roast runs on Qwen, which writes like a person (gpt-oss, the engine's model,
+// writes roasts like a bank statement). No fallback to gpt-oss: Groq limits
+// are per model, and the roast must never use up the engine's share. If Qwen
+// is busy, that meal simply gets no roast.
 
 const ROAST_MODEL = 'qwen/qwen3.8-27b';
 
@@ -287,29 +289,22 @@ async function roastLine(
   cfg: LLMConfig,
   input: RoastInput,
 ): Promise<string | null> {
-  const ask = (model: string) =>
-    fetch(cfg.url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${cfg.key}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: ROAST_SYSTEM },
-          { role: 'user', content: roastUserMessage(input) },
-        ],
-        // Comedy, not arithmetic: let it swing.
-        temperature: 1,
-        ...(model.startsWith('openai/gpt-oss')
-          ? { reasoning_effort: 'low' }
-          : {}),
-      }),
-    });
-
-  let res = await ask(Deno.env.get('ROAST_MODEL')?.trim() || ROAST_MODEL);
-  if (!res.ok && cfg.provider === 'groq') res = await ask(cfg.model);
+  const res = await fetch(cfg.url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${cfg.key}`,
+    },
+    body: JSON.stringify({
+      model: Deno.env.get('ROAST_MODEL')?.trim() || ROAST_MODEL,
+      messages: [
+        { role: 'system', content: ROAST_SYSTEM },
+        { role: 'user', content: roastUserMessage(input) },
+      ],
+      // Comedy, not arithmetic: let it swing.
+      temperature: 1,
+    }),
+  });
   if (!res.ok) return null;
   const data = await res.json();
   return pickRoast(parseCandidates(data?.choices?.[0]?.message?.content ?? ''));

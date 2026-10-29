@@ -2,7 +2,11 @@
 // deploying. Prints every candidate and the one the app would show.
 //
 //   GROQ_API_KEY=... npx tsx supabase/functions/food/roast-try.ts
-//   MODELS=openai/gpt-oss-120b,qwen/qwen3.8-27b  (optional, comma separated)
+//   MODELS=qwen/qwen3.8-27b,openai/gpt-oss-120b  (optional, comma separated)
+//
+// On Groq's free tier Qwen allows about 1,000 output tokens a minute, so the
+// script waits out rate limits rather than failing; a full run takes a few
+// minutes.
 //
 // Not deployed: the function only bundles what index.ts imports.
 
@@ -96,18 +100,15 @@ const MEALS: RoastInput[] = [
 
 const key = process.env.GROQ_API_KEY;
 if (!key) throw new Error('Set GROQ_API_KEY');
-const models = (
-  process.env.MODELS ?? 'qwen/qwen3.8-27b,openai/gpt-oss-120b'
-).split(',');
+const models = (process.env.MODELS ?? 'qwen/qwen3.8-27b').split(',');
 
 async function main() {
   for (const model of models) {
     console.log(`\n=== ${model} ===`);
     for (const input of MEALS) {
       const started = Date.now();
-      const res = await fetch(
-        'https://api.groq.com/openai/v1/chat/completions',
-        {
+      const res = await askWaiting(() =>
+        fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -120,11 +121,8 @@ async function main() {
               { role: 'user', content: roastUserMessage(input) },
             ],
             temperature: 1,
-            ...(model.startsWith('openai/gpt-oss')
-              ? { reasoning_effort: 'low' }
-              : {}),
           }),
-        },
+        }),
       );
       const ms = Date.now() - started;
       if (!res.ok) {
@@ -141,6 +139,17 @@ async function main() {
       for (const c of candidates) console.log(`  . ${c}`);
       console.log(`  >> ${pickRoast(candidates) ?? '(nothing safe)'}`);
     }
+  }
+}
+
+/** Retries a rate limited call after the wait Groq asks for (or 15 s). */
+async function askWaiting(call: () => Promise<Response>): Promise<Response> {
+  for (let tries = 0; ; tries++) {
+    const res = await call();
+    if (res.status !== 429 || tries >= 5) return res;
+    const wait = Number(res.headers.get('retry-after')) || 15;
+    console.log(`  (rate limited, waiting ${wait} s)`);
+    await new Promise((r) => setTimeout(r, wait * 1000));
   }
 }
 
