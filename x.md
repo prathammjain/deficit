@@ -270,3 +270,29 @@ output tokens a minute, gpt-oss 8,000 tokens a minute, for the whole
 account. Meal matching runs on gpt-oss, so in production that is a handful
 of meals a minute across every user. Before any marketing push, the Groq
 account needs the paid Developer tier.
+
+### Brutal, with one line it doesn't cross
+
+A real log, "1 large double cheese pizza with choco brownie", got back "double
+cheese pizza at noon is just bold and self harm". Two failures: it was polite
+("bold" is what an AI says when it won't commit), and it joked about self
+harm, which the filter didn't cover. It does now, along with depression,
+trauma and therapy.
+
+To make the roasts actually hurt:
+
+- A verdict, worked out from the numbers before the model sees the meal:
+  disaster (900 kcal or more, over the day's target, or a big meal with
+  almost no protein), sloppy, clean, or under eating late in the day. A
+  disaster gets told to go nuclear, "the kind they screenshot and send to the
+  group chat". A clean meal gets mocked for being boring.
+- The soft words are named and banned ("bold", "brave", "interesting choice",
+  "living your best life", "self care"), and lines using them lose.
+- Harder examples, swearing allowed (shit, clown, menace), and the targets
+  widened to the wallet and personal life: "your date tonight is a double
+  cheese pizza and it's still the most committed relationship you've had".
+
+Asked for roasts about the user's belly and their sex life. Declined: the
+roast goes as far as it likes on choices, discipline and love life, but
+never the body and nothing sexual. For this audience body shame is the
+product failing, not the joke landing.

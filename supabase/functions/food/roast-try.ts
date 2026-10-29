@@ -28,6 +28,14 @@ const day = (eaten: number, protein: number, hour: number) => ({
 
 const MEALS: RoastInput[] = [
   {
+    meal: '1 large double cheese pizza with choco brownie',
+    items: [
+      { name: 'Double cheese pizza, large', kcal: 1800, proteinG: 70 },
+      { name: 'Choco brownie', kcal: 380, proteinG: 4 },
+    ],
+    day: day(400, 20, 12),
+  },
+  {
     meal: 'a chocolate brownie from mcdonalds',
     items: [{ name: 'Chocolate brownie', kcal: 380, proteinG: 4 }],
     day: day(1400, 70, 23),
