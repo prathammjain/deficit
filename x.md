@@ -296,3 +296,45 @@ Asked for roasts about the user's belly and their sex life. Declined: the
 roast goes as far as it likes on choices, discipline and love life, but
 never the body and nothing sexual. For this audience body shame is the
 product failing, not the joke landing.
+
+## 2026-11-08
+
+### Grain becomes an ecosystem for people who train
+
+Grain grows from a calorie tracker into one place for everything a serious
+lifter tracks: food, training with every exercise, set and weight, plans,
+and the history they already keep in other apps and notes, all on one
+timeline. The engine stays the moat and the north star; everything else is
+a service around it.
+
+Why not stay a single vertical: the space is crowded and scattered, and
+this audience wants it all in one place. The bar for each piece is the best
+single purpose app, and the reason to switch is what only one timeline can
+show, like strength held through a cut.
+
+Growth starts with athletes and creators, in India first, with features
+built alongside them. One subscription for everyone, price not set yet.
+Athletes Grain works with get premium as a gift.
+
+### A back office
+
+An admin screen inside the app, opened from Profile and visible only to
+admins, with three parts.
+
+Creators is a small CRM for outreach: stage, a follow up date, an outreach
+log, and numbers per platform (followers, reach, weekly and total views,
+engagement). Every update is kept, so growth shows over time instead of one
+number. A creator can be linked to their Grain account and gifted premium
+from the same page.
+
+Users lists everyone with an account and how active they are, and gifts
+premium by hand, with no end date or for 3, 6 or 12 months. A paywall switch
+stays off until payments exist; off means everyone gets every feature.
+
+Stats shows signups, people logging each day, activation, second week
+retention, the engine's week and premium counts, refreshed every minute.
+
+The database decides who sees what. Admin functions refuse anyone who isn't
+an admin, the CRM and premium tables only open to admins, and nobody can
+gift themselves premium. The screens show counts, never anyone's meals. 31
+checks on those rules passed in a local Postgres before this shipped.

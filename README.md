@@ -50,7 +50,7 @@ private `grain_engine` repository. The build log for the app is
 ## Repository
 
 ```
-src/app/           screens (expo-router): home, log, history, profile
+src/app/           screens (expo-router): home, log, history, profile, admin
 src/components/    UI by feature: dashboard/, log/, history/, ui/
 src/lib/           logic and storage: food engine client, targets, adaptive
                    TDEE, history, quantity rules, local or Supabase storage

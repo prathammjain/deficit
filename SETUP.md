@@ -91,3 +91,26 @@ The food tables are generated; don't edit them by hand.
 
 IFCT 2017's publisher requires written permission to reproduce its data in a
 product. That permission is an open item to settle before wider launch.
+
+## 5. Admin: creators, users and stats
+
+The admin screen (`/admin`, opened from Profile) holds the creator CRM, the
+user list with premium gifts and the paywall switch, and the business
+numbers. Only admins see it, and the database enforces that: the admin
+functions refuse everyone else, and the CRM and premium tables only open to
+admins.
+
+1. Run [`supabase/schema.sql`](supabase/schema.sql) again in the SQL editor.
+   It is safe to run again, and adds the admin, access and CRM tables.
+2. Make yourself an admin, with the email you sign in to Grain with:
+
+   ```sql
+   insert into public.admins (user_id)
+   select id from auth.users where email = 'you@example.com';
+   ```
+
+3. Reload the app. Profile now has an Admin section.
+
+The paywall stays off until payments exist; off means everyone gets every
+feature. A gift of premium shows on that person's Profile. Until step 1 is
+done the app simply shows nothing new.

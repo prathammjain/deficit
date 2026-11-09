@@ -28,12 +28,14 @@ import {
   Title,
 } from '@/components/ui/primitives';
 import { palette, radius, space, type as typo } from '@/constants/palette';
+import { planLine, type Access } from '@/lib/access';
 import {
   loadProfile,
   saveProfile,
   type StoredProfile,
 } from '@/lib/profile-store';
 import { loadRoastMode, saveRoastMode } from '@/lib/roast-setting';
+import { fetchAccess } from '@/lib/supabase/access';
 import { useAuth } from '@/lib/supabase/auth';
 import {
   computeTargets,
@@ -56,15 +58,21 @@ export default function ProfileScreen() {
   const [editing, setEditing] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [roastOn, setRoastOn] = useState(true);
+  const [access, setAccess] = useState<Access | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       let alive = true;
       (async () => {
-        const [p, roast] = await Promise.all([loadProfile(), loadRoastMode()]);
+        const [p, roast, a] = await Promise.all([
+          loadProfile(),
+          loadRoastMode(),
+          fetchAccess(),
+        ]);
         if (!alive) return;
         setProfile(p);
         setRoastOn(roast);
+        setAccess(a);
         setLoading(false);
       })();
       return () => {
@@ -107,6 +115,7 @@ export default function ProfileScreen() {
   const email = session?.user?.email ?? null;
   const t = profile ? computeTargets(profile) : null;
   const version = Constants.expoConfig?.version ?? '1.0.0';
+  const plan = access ? planLine(access) : null;
 
   return (
     <Screen>
@@ -129,6 +138,7 @@ export default function ProfileScreen() {
                 ? 'Signed in. Your data syncs to this account.'
                 : 'No account. Your data stays on this device.'}
             </Text>
+            {plan ? <Text style={s.accountPlan}>{plan}</Text> : null}
           </View>
         </View>
       </Card>
@@ -193,6 +203,18 @@ export default function ProfileScreen() {
           </Text>
         </Pressable>
       </Card>
+
+      {access?.admin ? (
+        <>
+          <SectionLabel>Admin</SectionLabel>
+          <Pressable
+            onPress={() => router.push('/admin')}
+            style={({ pressed }) => [s.signOutBtn, pressed && s.pressed]}
+          >
+            <Text style={s.signOutText}>Creators, users and stats</Text>
+          </Pressable>
+        </>
+      ) : null}
 
       {/* Leaving is not an alarm: quiet outlined button, ink text. */}
       {email ? (
@@ -268,6 +290,12 @@ const s = StyleSheet.create({
     fontSize: 12,
     marginTop: space.xxs,
     lineHeight: 17,
+  },
+  accountPlan: {
+    color: palette.accent,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: space.xs,
   },
 
   planCard: { overflow: 'hidden' },

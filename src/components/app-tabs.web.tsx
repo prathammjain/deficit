@@ -79,6 +79,8 @@ export default function AppTabs() {
             href="/profile"
             style={styles.hiddenTrigger}
           />
+          {/* Same for the admin screen, opened from Profile by admins. */}
+          <TabTrigger name="admin" href="/admin" style={styles.hiddenTrigger} />
         </BottomTabList>
       </TabList>
     </Tabs>
