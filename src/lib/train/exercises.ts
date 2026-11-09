@@ -341,6 +341,15 @@ export function matchExercise(
   list: Exercise[],
   min = 30,
 ): Exercise | null {
+  const hit = bestMatch(query, list);
+  return hit && hit.score >= min ? hit.exercise : null;
+}
+
+/** The closest exercise and how close, 0 to 100 (100 is an exact name). */
+export function bestMatch(
+  query: string,
+  list: Exercise[],
+): { exercise: Exercise; score: number } | null {
   const { tokens, compact } = prepare(query);
   if (!compact) return null;
   let best: Exercise | null = null;
@@ -352,7 +361,7 @@ export function matchExercise(
       bestScore = s;
     }
   }
-  return bestScore >= min ? best : null;
+  return best ? { exercise: best, score: bestScore } : null;
 }
 
 /**

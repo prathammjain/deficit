@@ -445,3 +445,217 @@ drop policy if exists "admin all" on public.crm_touches;
 create policy "admin all" on public.crm_touches
   for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
+
+-- ---- Consent, programs, follows, account deletion (added 2026-11-09) ---------
+-- Safe to run again: every statement checks before it creates.
+
+-- Consent: one row each time someone agrees, never edited afterwards. The app
+-- asks again whenever it raises the version it expects.
+create table if not exists public.consents (
+  id         uuid        primary key default gen_random_uuid(),
+  user_id    uuid        not null default auth.uid()
+             references auth.users (id) on delete cascade,
+  version    text        not null,
+  adult      boolean     not null,   -- confirmed they are 18 or older
+  terms      boolean     not null,   -- accepted the terms and privacy policy
+  health     boolean     not null,   -- agreed to their health data being used
+  created_at timestamptz not null default now(),
+  check (adult and terms and health)
+);
+create index if not exists consents_user on public.consents (user_id, created_at desc);
+alter table public.consents enable row level security;
+
+drop policy if exists "own insert" on public.consents;
+create policy "own insert" on public.consents
+  for insert to authenticated with check (user_id = auth.uid());
+
+drop policy if exists "own select" on public.consents;
+create policy "own select" on public.consents
+  for select to authenticated using (user_id = auth.uid());
+
+drop policy if exists "admin select" on public.consents;
+create policy "admin select" on public.consents
+  for select to authenticated using (public.is_admin());
+-- No update or delete policies: a consent record can't be changed.
+
+-- Programs: training plans (and an optional meal plan) that anyone can write
+-- and publish. Followers join with the share code.
+create table if not exists public.programs (
+  id          uuid        primary key default gen_random_uuid(),
+  owner_id    uuid        not null default auth.uid()
+              references auth.users (id) on delete cascade,
+  code        text        not null unique check (code ~ '^[A-Z0-9]{6}$'),
+  title       text        not null check (length(title) between 1 and 80),
+  author_name text        not null default '',
+  description text        not null default '',
+  weeks       integer     not null default 8 check (weeks between 1 and 52),
+  days        jsonb       not null default '[]'::jsonb,  -- the training days
+  nutrition   jsonb,                                    -- the meal plan, if any
+  exercises   jsonb       not null default '[]'::jsonb,  -- the author's own exercises it uses
+  published   boolean     not null default false,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+create index if not exists programs_owner on public.programs (owner_id);
+alter table public.programs enable row level security;
+
+-- Follows: who follows which program. coach_id is the program's owner.
+-- Followers choose whether their coach sees their summary (share_stats).
+create table if not exists public.follows (
+  id           uuid        primary key default gen_random_uuid(),
+  follower_id  uuid        not null references auth.users (id) on delete cascade,
+  program_id   uuid        not null references public.programs (id) on delete cascade,
+  coach_id     uuid        not null references auth.users (id) on delete cascade,
+  display_name text        not null default '',
+  share_stats  boolean     not null default false,
+  stats        jsonb,          -- the follower's summary, only while sharing
+  stats_at     timestamptz,
+  started_at   timestamptz not null default now(),
+  unique (follower_id, program_id)
+);
+create index if not exists follows_coach on public.follows (coach_id, program_id);
+alter table public.follows enable row level security;
+
+drop policy if exists "owner all" on public.programs;
+create policy "owner all" on public.programs
+  for all to authenticated
+  using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+
+-- Anyone signed in can read a published program; people already following
+-- keep it even after the author unpublishes it to stop new joiners.
+drop policy if exists "published read" on public.programs;
+create policy "published read" on public.programs
+  for select to authenticated using (
+    published or exists (
+      select 1 from public.follows f
+      where f.program_id = programs.id and f.follower_id = auth.uid()
+    )
+  );
+
+drop policy if exists "follower read" on public.follows;
+create policy "follower read" on public.follows
+  for select to authenticated using (follower_id = auth.uid());
+
+drop policy if exists "coach read shared" on public.follows;
+create policy "coach read shared" on public.follows
+  for select to authenticated using (coach_id = auth.uid() and share_stats);
+-- No insert, update or delete policies: changes go through the functions
+-- below, which fix coach_id to the program's owner and drop the summary
+-- whenever sharing is off.
+
+-- Follow a published program by its code, or update an existing follow.
+-- Following a different program replaces the current one.
+create or replace function public.follow_program(
+  p_code text, p_share boolean, p_name text
+)
+returns public.follows
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  prog public.programs;
+  result public.follows;
+begin
+  if auth.uid() is null then
+    raise exception 'sign in first';
+  end if;
+  select * into prog from public.programs
+  where code = upper(trim(p_code)) and published;
+  if prog.id is null then
+    raise exception 'no published program has that code';
+  end if;
+  -- One program at a time: following a new one leaves the others.
+  delete from public.follows
+  where follower_id = auth.uid() and program_id <> prog.id;
+  insert into public.follows
+    (follower_id, program_id, coach_id, display_name, share_stats)
+  values
+    (auth.uid(), prog.id, prog.owner_id,
+     coalesce(left(trim(p_name), 60), ''), coalesce(p_share, false))
+  on conflict (follower_id, program_id) do update
+    set share_stats = excluded.share_stats,
+        display_name = excluded.display_name,
+        stats = case when excluded.share_stats then public.follows.stats end
+  returning * into result;
+  return result;
+end;
+$$;
+
+-- Change sharing or the shown name, or push a fresh summary. Turning sharing
+-- off wipes the summary the coach could see.
+create or replace function public.update_follow(
+  p_id uuid, p_share boolean, p_name text, p_stats jsonb
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update public.follows f
+  set share_stats = coalesce(p_share, f.share_stats),
+      display_name = coalesce(left(trim(p_name), 60), f.display_name),
+      stats = case
+        when coalesce(p_share, f.share_stats) then coalesce(p_stats, f.stats)
+      end,
+      stats_at = case
+        when coalesce(p_share, f.share_stats) and p_stats is not null then now()
+        when coalesce(p_share, f.share_stats) then f.stats_at
+      end
+  where f.id = p_id and f.follower_id = auth.uid();
+end;
+$$;
+
+create or replace function public.unfollow(p_id uuid)
+returns void
+language sql
+security definer
+set search_path = ''
+as $$
+  delete from public.follows where id = p_id and follower_id = auth.uid();
+$$;
+
+-- How many people follow each of the caller's programs, sharing or not.
+create or replace function public.my_program_followers()
+returns table (program_id uuid, followers integer)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select p.id, count(f.id)::integer
+  from public.programs p
+  left join public.follows f on f.program_id = p.id
+  where p.owner_id = auth.uid()
+  group by p.id;
+$$;
+
+-- Deletes the caller's account. The foreign keys take everything tied to it
+-- with it: stored data, consents, programs (and their follows), follows,
+-- premium access. Engine logs keep only a salted reference, never the id.
+create or replace function public.delete_my_account()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'sign in first';
+  end if;
+  delete from auth.users where id = auth.uid();
+end;
+$$;
+
+-- Signed in users only. (Each function also checks auth.uid() itself.)
+revoke execute on function public.delete_my_account() from public, anon;
+revoke execute on function public.follow_program(text, boolean, text) from public, anon;
+revoke execute on function public.update_follow(uuid, boolean, text, jsonb) from public, anon;
+revoke execute on function public.unfollow(uuid) from public, anon;
+revoke execute on function public.my_program_followers() from public, anon;
+grant execute on function public.delete_my_account() to authenticated;
+grant execute on function public.follow_program(text, boolean, text) to authenticated;
+grant execute on function public.update_follow(uuid, boolean, text, jsonb) to authenticated;
+grant execute on function public.unfollow(uuid) to authenticated;
+grant execute on function public.my_program_followers() to authenticated;

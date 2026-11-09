@@ -289,4 +289,26 @@ export const st = StyleSheet.create({
     textAlign: 'center',
     fontVariant: ['tabular-nums'],
   },
+
+  // A meal that didn't save, waiting for a retry.
+  unsavedCard: {
+    marginTop: space.md,
+    gap: space.md,
+    borderColor: palette.accentBorder,
+  },
+  unsavedText: { color: palette.text, fontSize: 14, lineHeight: 20 },
+  unsavedRow: { flexDirection: 'row', alignItems: 'center', gap: space.lg },
+  unsavedBtn: {
+    backgroundColor: palette.accent,
+    borderRadius: radius.pill,
+    paddingVertical: 8,
+    paddingHorizontal: space.lg,
+  },
+  unsavedBtnText: {
+    color: palette.accentText,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  unsavedDiscard: { color: palette.textMuted, fontSize: 14, fontWeight: '600' },
+  saveError: { color: palette.accent, fontSize: 13, marginTop: space.md },
 });

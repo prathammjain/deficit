@@ -9,6 +9,8 @@ import { useCallback, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import {
   ActivityIndicator,
+  Linking,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -36,6 +38,7 @@ import {
 } from '@/lib/profile-store';
 import { loadRoastMode, saveRoastMode } from '@/lib/roast-setting';
 import { fetchAccess } from '@/lib/supabase/access';
+import { deleteMyAccount, exportMyData } from '@/lib/supabase/account';
 import { useAuth } from '@/lib/supabase/auth';
 import {
   computeTargets,
@@ -59,6 +62,9 @@ export default function ProfileScreen() {
   const [signingOut, setSigningOut] = useState(false);
   const [roastOn, setRoastOn] = useState(true);
   const [access, setAccess] = useState<Access | null>(null);
+  const [dataBusy, setDataBusy] = useState<'export' | 'delete' | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -86,6 +92,42 @@ export default function ProfileScreen() {
     setProfile(saved);
     setEditing(false);
   }, []);
+
+  const handleExport = async () => {
+    if (dataBusy) return;
+    setDataBusy('export');
+    setDataError(null);
+    try {
+      const json = await exportMyData(session?.user?.email ?? null);
+      if (Platform.OS === 'web') {
+        const url = URL.createObjectURL(
+          new Blob([json], { type: 'application/json' }),
+        );
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `grain_data_${new Date().toISOString().slice(0, 10).replace(/\D/g, '')}.json`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+    } catch {
+      setDataError('Couldn’t prepare your data. Check your connection.');
+    }
+    setDataBusy(null);
+  };
+
+  const handleDelete = async () => {
+    if (dataBusy) return;
+    setDataBusy('delete');
+    setDataError(null);
+    try {
+      await deleteMyAccount();
+      // The account is gone; the gate returns to the sign in screen.
+      await signOut();
+    } catch {
+      setDataError('Couldn’t delete the account. Check your connection.');
+      setDataBusy(null);
+    }
+  };
 
   const handleSignOut = useCallback(async () => {
     if (signingOut) return;
@@ -232,6 +274,68 @@ export default function ProfileScreen() {
         </>
       ) : null}
 
+      {email ? (
+        <>
+          <SectionLabel>Your data</SectionLabel>
+          <Card padded={false}>
+            <Pressable
+              onPress={() => void handleExport()}
+              disabled={dataBusy != null}
+              style={({ pressed }) => [s.planRow, pressed && s.pressed]}
+            >
+              <View style={s.roastText}>
+                <Text style={s.planValue}>Download my data</Text>
+                <Text style={s.roastSub}>
+                  Everything you’ve logged, in one file.
+                </Text>
+              </View>
+              <Text style={s.roastState}>
+                {dataBusy === 'export' ? 'Preparing' : 'Download'}
+              </Text>
+            </Pressable>
+            <Hairline style={s.planDivider} />
+            <Pressable
+              onPress={() => setConfirmDelete(!confirmDelete)}
+              disabled={dataBusy != null}
+              style={({ pressed }) => [s.planRow, pressed && s.pressed]}
+            >
+              <View style={s.roastText}>
+                <Text style={s.planValue}>Delete my account</Text>
+                <Text style={s.roastSub}>
+                  Removes the account and everything in it.
+                </Text>
+              </View>
+            </Pressable>
+            {confirmDelete ? (
+              <View style={s.confirm}>
+                <Text style={s.confirmText}>
+                  This deletes your meals, weigh ins, workouts, programs and
+                  your account. It can’t be undone.
+                </Text>
+                <View style={s.confirmRow}>
+                  <Pressable
+                    onPress={() => void handleDelete()}
+                    disabled={dataBusy != null}
+                    style={({ pressed }) => [s.dangerBtn, pressed && s.pressed]}
+                  >
+                    <Text style={s.dangerText}>
+                      {dataBusy === 'delete' ? 'Deleting' : 'Delete everything'}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setConfirmDelete(false)}
+                    style={({ pressed }) => [s.keepBtn, pressed && s.pressed]}
+                  >
+                    <Text style={s.keepText}>Keep my account</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
+          </Card>
+          {dataError ? <Text style={s.dataError}>{dataError}</Text> : null}
+        </>
+      ) : null}
+
       <AddToHomeScreenButton />
 
       <Text style={s.version}>Grain v{version}</Text>
@@ -239,6 +343,22 @@ export default function ProfileScreen() {
         Meals you describe are saved without your name, to make Grain’s
         estimates better.
       </Text>
+      <View style={s.legal}>
+        <Text
+          style={s.legalLink}
+          accessibilityRole="link"
+          onPress={() => void Linking.openURL('https://getgrain.fit/terms')}
+        >
+          Terms
+        </Text>
+        <Text
+          style={s.legalLink}
+          accessibilityRole="link"
+          onPress={() => void Linking.openURL('https://getgrain.fit/privacy')}
+        >
+          Privacy
+        </Text>
+      </View>
     </Screen>
   );
 }
@@ -352,6 +472,41 @@ const s = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     textAlign: 'center',
+    marginTop: space.sm,
+  },
+  legal: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: space.xl,
+    marginTop: space.md,
+  },
+  legalLink: { color: palette.textMuted, fontSize: 12, fontWeight: '600' },
+
+  confirm: {
+    paddingHorizontal: space.xl,
+    paddingBottom: space.lg,
+    gap: space.md,
+  },
+  confirmText: { color: palette.text, fontSize: 14, lineHeight: 20 },
+  confirmRow: { flexDirection: 'row', gap: space.sm, flexWrap: 'wrap' },
+  dangerBtn: {
+    backgroundColor: palette.accent,
+    borderRadius: radius.pill,
+    paddingVertical: space.md,
+    paddingHorizontal: space.lg,
+  },
+  dangerText: { color: palette.accentText, fontSize: 14, fontWeight: '700' },
+  keepBtn: {
+    borderWidth: 1,
+    borderColor: palette.hairline,
+    borderRadius: radius.pill,
+    paddingVertical: space.md,
+    paddingHorizontal: space.lg,
+  },
+  keepText: { color: palette.text, fontSize: 14, fontWeight: '600' },
+  dataError: {
+    color: palette.accent,
+    fontSize: 13,
     marginTop: space.sm,
   },
 });

@@ -94,11 +94,14 @@ export function OnboardingFlow({
   onCancel,
 }: {
   initial?: ProfileInput;
-  onComplete: (profile: ProfileInput) => void;
+  /** Saves the profile; a rejection keeps the flow open with an error. */
+  onComplete: (profile: ProfileInput) => void | Promise<void>;
   onCancel?: () => void;
 }) {
   const [draft, setDraft] = useState<Draft>(initial ?? {});
   const [index, setIndex] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   // Fresh users get a branded welcome first; editing jumps straight in.
   const steps = useMemo<StepId[]>(
     () => (initial ? QUESTION_STEPS : ['welcome', ...QUESTION_STEPS]),
@@ -126,9 +129,20 @@ export function OnboardingFlow({
     else setIndex((i) => i - 1);
   };
   const next = () => {
-    if (!canAdvance) return;
-    if (isLast) onComplete(draft as ProfileInput);
-    else setIndex((i) => i + 1);
+    if (!canAdvance || saving) return;
+    if (!isLast) {
+      setIndex((i) => i + 1);
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    Promise.resolve(onComplete(draft as ProfileInput))
+      .catch(() =>
+        setSaveError(
+          'Couldn’t save your profile. Check your connection and try again.',
+        ),
+      )
+      .finally(() => setSaving(false));
   };
 
   return (
@@ -192,7 +206,7 @@ export function OnboardingFlow({
             <Question
               eyebrow={stepLabel}
               title="How old are you?"
-              hint="Years."
+              hint="Years. Grain is for adults, 18 and over."
             >
               <NumberField
                 value={draft.age}
@@ -276,6 +290,8 @@ export function OnboardingFlow({
           {step === 'review' && <ReviewStep draft={draft} />}
         </ScrollView>
 
+        {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
+
         {/* Nav */}
         <View style={styles.nav}>
           {/* Nothing to go back to on the first screen: the main button
@@ -295,7 +311,7 @@ export function OnboardingFlow({
             <Text
               style={[styles.nextText, !canAdvance && styles.nextTextDisabled]}
             >
-              {nextLabel}
+              {saving ? 'Saving' : nextLabel}
             </Text>
           </Pressable>
         </View>
@@ -351,7 +367,7 @@ function stepIsValid(step: StepId, d: Draft): boolean {
     case 'sex':
       return d.sex === 'male' || d.sex === 'female';
     case 'age':
-      return isNum(d.age) && d.age >= 13 && d.age <= 100;
+      return isNum(d.age) && d.age >= 18 && d.age <= 100;
     case 'height':
       return isNum(d.heightCm) && d.heightCm >= 120 && d.heightCm <= 230;
     case 'weight':
@@ -633,4 +649,11 @@ const styles = StyleSheet.create({
   nextBtnDisabled: { backgroundColor: palette.surface2 },
   nextText: { color: palette.accentText, fontSize: 16, fontWeight: '700' },
   nextTextDisabled: { color: palette.textFaint },
+  saveError: {
+    color: palette.accent,
+    fontSize: 14,
+    textAlign: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
 });

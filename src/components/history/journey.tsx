@@ -10,6 +10,7 @@ import {
 import { palette } from '@/constants/palette';
 import {
   dayDeficit,
+  dayStatus,
   type DayRecord,
   type HistorySummary,
   type HistoryTargets,
@@ -22,39 +23,55 @@ export function Journey({
   records,
   targets,
   summary,
+  complete,
+  onToggleComplete,
 }: {
   records: DayRecord[];
   targets: HistoryTargets;
   summary: HistorySummary;
+  /** Low days the user confirmed as full. */
+  complete: ReadonlySet<string>;
+  onToggleComplete: (date: string, complete: boolean) => Promise<void>;
 }) {
-  const kcalSeries = records.map((d) => (d.logged ? d.kcal : null));
-  const deficitSeries = records.map((d) =>
-    d.logged ? dayDeficit(d, targets) : 0,
+  // Only full days are drawn: a missing or unfinished day is a gap, not a 0.
+  const counted = records.map(
+    (d) => dayStatus(d, targets.targetKcal, complete) === 'counted',
+  );
+  const kcalSeries = records.map((d, i) => (counted[i] ? d.kcal : null));
+  const deficitSeries = records.map((d, i) =>
+    counted[i] ? dayDeficit(d, targets) : 0,
   );
   const weightSeries = records.map((d) => d.weightKg);
   const hasWeight = summary.weightStartKg != null;
+  const surplus = summary.totalDeficitKcal < 0;
+  const fullDays = `${summary.daysCounted} full ${summary.daysCounted === 1 ? 'day' : 'days'}`;
+  const unfinished = summary.unfinishedDates.length;
 
   return (
     <>
       {/* Hero: the headline of the whole journey */}
       <GlassSurface padded style={st.heroCard}>
-        <Text style={st.heroLabel}>Total deficit maintained</Text>
+        <Text style={st.heroLabel}>
+          {surplus ? 'Total surplus' : 'Total deficit maintained'}
+        </Text>
         <View style={st.heroNumberRow}>
           <DotMatrix style={st.heroNumber}>
-            {summary.totalDeficitKcal.toLocaleString()}
+            {Math.abs(summary.totalDeficitKcal).toLocaleString()}
           </DotMatrix>
           <Text style={st.heroUnit}>kcal</Text>
         </View>
         <Text style={st.heroSub}>
-          About {summary.estFatLossKg.toFixed(1)} kg of fat, if it all held
+          {summary.daysCounted === 0
+            ? 'No full days in this range yet'
+            : `${surplus ? 'Worth about' : 'About'} ${Math.abs(summary.estFatLossKg).toFixed(1)} kg ${surplus ? 'gained' : 'of fat'}, across the ${fullDays} you logged`}
         </Text>
         <View style={st.heroStatsRow}>
           <HeroStat
-            value={`${summary.daysLogged} of ${summary.daysInRange}`}
-            label="Days logged"
+            value={`${summary.daysCounted} of ${summary.daysInRange}`}
+            label="Full days logged"
           />
           <View style={st.heroStatDivider} />
-          <HeroStat value={`${summary.currentStreak}`} label="Day streak" />
+          <HeroStat value={`${summary.currentStreak}`} label="Days in a row" />
           <View style={st.heroStatDivider} />
           <HeroStat
             value={
@@ -69,6 +86,13 @@ export function Journey({
             }
           />
         </View>
+        {unfinished ? (
+          <Text style={st.heroNote}>
+            {unfinished === 1
+              ? '1 day looks unfinished (under half your target), so it isn’t counted. Open it in the calendar to finish or confirm it.'
+              : `${unfinished} days look unfinished (under half your target), so they aren’t counted. Open them in the calendar to finish or confirm them.`}
+          </Text>
+        ) : null}
       </GlassSurface>
 
       {/* Calories vs target */}
@@ -160,11 +184,17 @@ export function Journey({
 
       {/* Calendar: pick any day to see its totals, macros, and deficit */}
       <SectionLabel>Calendar</SectionLabel>
-      <MonthCalendar targets={targets} />
+      <MonthCalendar
+        targets={targets}
+        complete={complete}
+        onToggleComplete={onToggleComplete}
+      />
 
       <Text style={st.footnote}>
         Deficit is measured against your current maintenance of{' '}
-        {targets.maintenanceKcal.toLocaleString()} kcal.
+        {targets.maintenanceKcal.toLocaleString()} kcal. Only full days count: a
+        day you didn’t log adds nothing either way, and nothing is ever guessed
+        to fill a gap.
       </Text>
     </>
   );

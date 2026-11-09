@@ -4,6 +4,7 @@
  */
 
 import {
+  dayStatus,
   summarizeHistory,
   type DayRecord,
   type HistoryTargets,
@@ -13,14 +14,15 @@ export interface WeekReport {
   /** First and last day covered, YYYY-MM-DD. */
   from: string;
   to: string;
+  /** Full days logged (see dayStatus): the only days the numbers use. */
   daysLogged: number;
-  /** Sum of maintenance minus intake over logged days; negative is a surplus. */
+  /** Sum of maintenance minus intake over full days; negative is a surplus. */
   totalDeficitKcal: number;
   /** Fat the deficit is worth, in kg (negative for a surplus). */
   estFatLossKg: number;
   avgKcal: number | null;
   targetKcal: number;
-  /** Logged days that reached the protein target. */
+  /** Full days that reached the protein target. */
   proteinDays: number;
   avgProteinG: number | null;
   /** Last weigh in minus first, within the week. */
@@ -28,19 +30,26 @@ export interface WeekReport {
 }
 
 /** The report for the last seven days of `days` (oldest first). */
-export function weekReport(days: DayRecord[], t: HistoryTargets): WeekReport {
+export function weekReport(
+  days: DayRecord[],
+  t: HistoryTargets,
+  complete?: ReadonlySet<string>,
+): WeekReport {
   const week = days.slice(-7);
-  const s = summarizeHistory(week, t);
+  const s = summarizeHistory(week, t, complete);
   return {
     from: week[0]?.date ?? '',
     to: week[week.length - 1]?.date ?? '',
-    daysLogged: s.daysLogged,
+    daysLogged: s.daysCounted,
     totalDeficitKcal: s.totalDeficitKcal,
     estFatLossKg: s.estFatLossKg,
     avgKcal: s.avgKcal,
     targetKcal: t.targetKcal,
-    proteinDays: week.filter((d) => d.logged && d.proteinG >= t.proteinG)
-      .length,
+    proteinDays: week.filter(
+      (d) =>
+        dayStatus(d, t.targetKcal, complete) === 'counted' &&
+        d.proteinG >= t.proteinG,
+    ).length,
     avgProteinG: s.avgProteinG,
     weightChangeKg: s.weightChangeKg,
   };

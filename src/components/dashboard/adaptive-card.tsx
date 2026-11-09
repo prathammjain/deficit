@@ -25,6 +25,29 @@ export function AdaptiveCard({
   dailyDeficit: number;
   bmr: number;
 }) {
+  // Enough data, but too many days in it went unlogged to trust the maths.
+  if (
+    adaptive &&
+    adaptive.confidence === 'none' &&
+    adaptive.intakeDays >= 7 &&
+    adaptive.weighIns >= 3 &&
+    adaptive.coverage != null &&
+    adaptive.coverage < 0.7
+  ) {
+    const span = adaptive.spanDays + 1;
+    return (
+      <Card>
+        <Text style={st.adaptiveLead}>Waiting for steadier logging</Text>
+        <Text style={st.adaptiveBody}>
+          Between your weigh ins, {Math.round(adaptive.coverage * span)} of{' '}
+          {span} days were logged in full. The scale counts every day, logged or
+          not, so the gaps would make your maintenance look lower than it is. So
+          there’s no new estimate until most days are logged again.
+        </Text>
+      </Card>
+    );
+  }
+
   if (!adaptive || adaptive.confidence === 'none') {
     const days = adaptive?.intakeDays ?? 0;
     const weighIns = adaptive?.weighIns ?? 0;

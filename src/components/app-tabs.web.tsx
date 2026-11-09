@@ -115,6 +115,23 @@ export default function AppTabs() {
             href="/exercise"
             style={styles.hiddenTrigger}
           />
+          <TabTrigger
+            name="import"
+            href="/import"
+            style={styles.hiddenTrigger}
+          />
+          {/* Programs: the list, one program, and the editor. */}
+          <TabTrigger
+            name="programs"
+            href="/programs"
+            style={styles.hiddenTrigger}
+          />
+          <TabTrigger
+            name="program"
+            href="/program"
+            style={styles.hiddenTrigger}
+          />
+          <TabTrigger name="write" href="/write" style={styles.hiddenTrigger} />
         </BottomTabList>
       </TabList>
     </Tabs>
@@ -151,12 +168,14 @@ export function TabButton({
 export function BottomTabList(props: TabListProps) {
   // The laptop admin is a full screen workspace with its own sidebar, and
   // the workout logger needs the bottom of the screen for its rest timer,
-  // so the bar steps aside there. The triggers stay mounted for routing.
+  // so the bar steps aside there, as it does in the program editor, which
+  // is left only with Save or Cancel. The triggers stay mounted for routing.
   const pathname = usePathname();
   const { width } = useWindowDimensions();
   const hidden =
     (pathname.startsWith('/admin') && width >= 1024) ||
-    pathname.startsWith('/workout');
+    pathname.startsWith('/workout') ||
+    pathname.startsWith('/write');
   return (
     <View
       style={[styles.tabBarOuter, hidden && styles.hiddenTrigger]}

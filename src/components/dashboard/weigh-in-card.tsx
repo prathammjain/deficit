@@ -11,9 +11,12 @@ export function WeighInCard({
   onSave,
 }: {
   last: number | null;
-  onSave: (kg: number) => void;
+  /** Saves the weigh in; a rejection keeps the number typed, with an error. */
+  onSave: (kg: number) => Promise<void>;
 }) {
   const [val, setVal] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const num = Number(val);
   const valid = val !== '' && num >= 30 && num <= 300;
 
@@ -32,19 +35,28 @@ export function WeighInCard({
         <Text style={st.weighUnit}>kg</Text>
         <PrimaryButton
           label="Save"
-          disabled={!valid}
+          disabled={!valid || saving}
           style={st.weighBtn}
           onPress={() => {
-            if (!valid) return;
-            onSave(Math.round(num * 10) / 10);
-            setVal('');
+            if (!valid || saving) return;
+            setSaving(true);
+            setError(null);
+            onSave(Math.round(num * 10) / 10)
+              .then(() => setVal(''))
+              .catch(() =>
+                setError(
+                  'That weigh in didn’t save. Check your connection and try again.',
+                ),
+              )
+              .finally(() => setSaving(false));
           }}
         />
       </View>
-      <Text style={st.weighHint}>
-        {last != null
-          ? `Last logged ${last} kg. Weigh in each morning for the best read.`
-          : 'Weigh in each morning, same time, same conditions.'}
+      <Text style={[st.weighHint, error ? { color: palette.accent } : null]}>
+        {error ??
+          (last != null
+            ? `Last logged ${last} kg. Weigh in each morning for the best read.`
+            : 'Weigh in each morning, same time, same conditions.')}
       </Text>
     </GlassSurface>
   );

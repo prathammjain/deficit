@@ -12,6 +12,7 @@ import { BarChart } from '@/components/charts';
 import { ChevronIcon } from '@/components/ui/icons';
 import { Card, SectionLabel } from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
+import { loadCompleteDays } from '@/lib/fulldays';
 import { gatherRange } from '@/lib/history';
 import type { DayRecord } from '@/lib/history-stats';
 import { loadProfile } from '@/lib/profile-store';
@@ -74,6 +75,7 @@ export function ProgressView({
     proteinG: number;
   } | null>(null);
   const [weights, setWeights] = useState<WeightEntry[]>([]);
+  const [complete, setComplete] = useState<Set<string>>(() => new Set());
   const [allLifts, setAllLifts] = useState(false);
 
   const period = shiftPeriod(periodOf(kind, today), offset);
@@ -91,6 +93,9 @@ export function ProgressView({
       .catch(() => {});
     loadWeights()
       .then(setWeights)
+      .catch(() => {});
+    loadCompleteDays()
+      .then(setComplete)
       .catch(() => {});
   }, []);
 
@@ -127,7 +132,7 @@ export function ProgressView({
   );
 
   const days = food?.key === foodKey ? food.days : [];
-  const fs = foodSummary(days, period, today, targets);
+  const fs = foodSummary(days, period, today, targets, complete);
   const body = bodySummary(weights, period);
   const read = periodRead({
     kind,

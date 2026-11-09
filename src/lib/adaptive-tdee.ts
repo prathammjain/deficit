@@ -13,6 +13,11 @@
  * The weight trend is a least-squares slope over the weigh-ins (robust to the
  * day-to-day water-weight noise that wrecks naive endpoint differences). We
  * only surface an estimate once there's enough data to trust it.
+ *
+ * That includes coverage: the scale keeps counting through days nobody
+ * logged, the intake average doesn't. Ten unlogged days of holiday eating
+ * would show up as weight gained on the logged intake, and read as a slow
+ * metabolism. So most days across the weigh in span must be logged.
  */
 
 import { KCAL_PER_KG_FAT } from './targets';
@@ -39,6 +44,8 @@ export interface AdaptiveTdee {
   /** Smoothed weight trend (negative = losing). null until enough weigh-ins. */
   trendKgPerWeek: number | null;
   avgIntakeKcal: number | null;
+  /** Share of days across the weigh in span with intake logged (0..1). */
+  coverage: number | null;
   /** Data-driven maintenance estimate. null until confidence > 'none'. */
   estimatedTdeeKcal: number | null;
 }
@@ -50,6 +57,8 @@ export interface AdaptiveOptions {
   minWeighIns?: number;
   /** Minimum calendar span (days) of weigh-ins. Default 7. */
   minSpanDays?: number;
+  /** Minimum share of the weigh in span with intake logged. Default 0.7. */
+  minCoverage?: number;
 }
 
 const EPOCH_DAY = 86_400_000;
@@ -63,6 +72,7 @@ export function estimateAdaptiveTdee(
   const minIntakeDays = opts.minIntakeDays ?? 7;
   const minWeighIns = opts.minWeighIns ?? 3;
   const minSpanDays = opts.minSpanDays ?? 7;
+  const minCoverage = opts.minCoverage ?? 0.7;
 
   const intakes = data.filter(
     (d) => typeof d.intakeKcal === 'number' && (d.intakeKcal as number) > 0,
@@ -84,6 +94,15 @@ export function estimateAdaptiveTdee(
         )
       : null;
 
+  const coverage =
+    weighIns >= 2
+      ? intakes.filter((d) => {
+          const x = toDayIndex(d.date);
+          return x >= weights[0].x && x <= weights[weighIns - 1].x;
+        }).length /
+        (spanDays + 1)
+      : null;
+
   const slopeKgPerDay = weighIns >= 2 ? leastSquaresSlope(weights) : null;
   const trendKgPerWeek =
     slopeKgPerDay != null ? round1(slopeKgPerDay * 7) : null;
@@ -92,6 +111,8 @@ export function estimateAdaptiveTdee(
     intakeDays >= minIntakeDays &&
     weighIns >= minWeighIns &&
     spanDays >= minSpanDays &&
+    coverage != null &&
+    coverage >= minCoverage &&
     slopeKgPerDay != null &&
     avgIntakeKcal != null;
 
@@ -115,6 +136,7 @@ export function estimateAdaptiveTdee(
     spanDays,
     trendKgPerWeek,
     avgIntakeKcal,
+    coverage: coverage != null ? Math.round(coverage * 100) / 100 : null,
     estimatedTdeeKcal,
   };
 }

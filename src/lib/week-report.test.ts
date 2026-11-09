@@ -70,3 +70,19 @@ describe('formatWeekRange', () => {
     expect(formatWeekRange('2026-09-29', '2026-10-05')).toBe('29 Sep to 5 Oct');
   });
 });
+
+describe('weekReport with unfinished days', () => {
+  it('leaves a half logged day out instead of calling it a big deficit', () => {
+    const days = [
+      day('2026-10-21', 2000, 140),
+      day('2026-10-22', 400, 30), // only breakfast logged
+      day('2026-10-23', 1900, 150),
+    ];
+    const r = weekReport(days, t);
+    expect(r.daysLogged).toBe(2);
+    expect(r.totalDeficitKcal).toBe(1100);
+    expect(weekReport(days, t, new Set(['2026-10-22'])).totalDeficitKcal).toBe(
+      3200,
+    );
+  });
+});

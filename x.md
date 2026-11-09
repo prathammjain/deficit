@@ -416,3 +416,83 @@ The library has 104 exercises and reads gym shorthand (rdl, ohp, db bench,
 bss), ignores plurals and spacing, and forgives typos. Anything missing is a
 custom exercise in two taps. 79 new tests cover the reader, the set math,
 records, storage and the progress numbers; 270 pass in total.
+
+### Missed days count as nothing, not as a deficit
+
+History used to add up the deficit over every day with anything logged. Two
+things made that number lie. A day where only breakfast was logged read as a
+2,000 kcal deficit. And days nobody logged simply vanished from the total, so
+a fortnight off looked like a fortnight of discipline. A person can't lie to
+themselves, so a flattering number that isn't true is worse than no number.
+
+Now only full days count. A day with nothing logged is unknown: it adds
+nothing as deficit or as surplus, and nothing is ever guessed to fill it. A
+day logged at under half the calorie target reads as unfinished and stays out
+until it's finished, or until the user confirms it really was everything
+(a fast, a sick day) from the calendar. Today is still open, so it never
+counts against a streak in the morning. The History hero says what it covers:
+"across the 18 full days you logged", "18 of 30 full days logged".
+
+Three days in a row without a full day is a break. While one is running,
+History says so plainly: last full day, how many days since, and that the
+numbers start again from the next full day. Coming back, History leads for
+two weeks with a fresh start: the break is named with its dates, and the
+numbers count from the return, with 30 days, 90 days and Year still a tap
+away. No cheering and no guilt, just what happened.
+
+The same rule now runs everywhere food is summed: the weekly share card
+("Full days logged"), the weekly prediction on Home, food averages in Train
+progress, and the summary a coach sees. The adaptive maintenance estimate
+also waits when fewer than 70% of the days between weigh ins were logged: the
+scale keeps counting through a holiday, the intake average doesn't, and the
+gap would pass for a slow metabolism and push the target down.
+
+The weekly share card hides when the last seven days have no full day; the
+away card now says why instead of leaving a blank.
+
+### Consent, an 18 and over check, and owning your data
+
+Before anything else, a new account confirms three things, each its own tap
+with nothing pre ticked: 18 or older, the terms and privacy policy, and
+health data being used for targets. Each agreement is a row that can't be
+edited, with a version, so a material change to the terms asks everyone
+again. Onboarding also refuses ages under 18. Profile gains Download my data
+(every stored row as one JSON file) and Delete my account, which removes the
+account and everything tied to it in one step. The landing site gains a
+privacy policy and terms.
+
+### Bring your training history
+
+Import reads a Strong export, a Hevy export, any training spreadsheet saved
+as CSV, or pasted notes ("Mon 3 Nov: bench 80x8, 85x6"). Exercise names are
+matched to the library (Strong's "Incline Bench Press (Dumbbell)" becomes
+Incline dumbbell press); anything unknown is listed first with a muscle
+guessed, to keep, rename or leave out. Rest timers and timed or distance rows
+are left out and counted. Importing the same file twice updates instead of
+doubling. No model involved: it runs on the phone.
+
+### Programs, meal plans and coaches
+
+Anyone can write a program: named days with sets and rep ranges, how many
+weeks it runs, and optionally a meal plan with daily calories, protein and
+meals. Publishing gives a six character code and a link. Following one puts
+today's day on top of Train with one tap to start it; the logger shows each
+exercise's rep target. The next day is always the one after the last one
+done, so a missed session shifts the plan instead of being skipped. Plan
+meals sit on Today and log in one tap. One program at a time: following a
+new one replaces the old.
+
+A follower can choose to share a summary with the author: program workouts
+done against the plan over the last four weeks, days with full food logs,
+average calories and protein, weight change. Never meals, sets or notes.
+Sharing is off until ticked, can be turned off any time, and turning it off
+deletes the summary the coach could see. The database enforces all of it:
+follows can only be changed through functions that check who is asking, and
+a coach can only read followers who share.
+
+### Nothing typed gets lost
+
+A meal that fails to save (no signal) now stays on screen with Try again
+instead of vanishing. Onboarding and weigh ins show an error and keep what
+was typed. A crashing screen shows a way back instead of a blank page.
+327 tests pass.

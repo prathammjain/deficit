@@ -119,6 +119,23 @@ export function deviceKey(name: string): string {
   return `grain.${scope}.${name}`;
 }
 
+/** Removes this account's device only keys, after the account is deleted. */
+export function clearDeviceKeys(): void {
+  try {
+    const ls = (globalThis as { localStorage?: Storage }).localStorage;
+    if (!ls) return;
+    const prefix = `grain.${scope}.`;
+    const keys: string[] = [];
+    for (let i = 0; i < ls.length; i++) {
+      const k = ls.key(i);
+      if (k?.startsWith(prefix)) keys.push(k);
+    }
+    keys.forEach((k) => ls.removeItem(k));
+  } catch {
+    // Nothing stored, or storage blocked: nothing to clear.
+  }
+}
+
 /** Small helpers so call sites don't repeat JSON.parse/stringify + try/catch. */
 export async function getJSON<T>(
   store: KVStore,

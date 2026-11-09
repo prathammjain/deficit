@@ -8,6 +8,8 @@ import { palette } from '@/constants/palette';
 import { gatherMonthRecords } from '@/lib/history';
 import {
   dayDeficit,
+  dayStatus,
+  UNFINISHED_SHARE,
   type DayRecord,
   type HistoryTargets,
 } from '@/lib/history-stats';
@@ -24,7 +26,16 @@ const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
  * ring. The card below shows the selected day's calories, macros, and deficit —
  * the overall day stats, not the individual meals.
  */
-export function MonthCalendar({ targets }: { targets: HistoryTargets }) {
+export function MonthCalendar({
+  targets,
+  complete,
+  onToggleComplete,
+}: {
+  targets: HistoryTargets;
+  /** Low days the user confirmed as full. */
+  complete: ReadonlySet<string>;
+  onToggleComplete: (date: string, complete: boolean) => Promise<void>;
+}) {
   const [anchor, setAnchor] = useState(() => startOfMonth(new Date()));
   const [records, setRecords] = useState<DayRecord[]>([]);
   const [selected, setSelected] = useState<string | null>(todayKey());
@@ -109,6 +120,8 @@ export function MonthCalendar({ targets }: { targets: HistoryTargets }) {
           const dayNum = new Date(`${rec.date}T00:00:00`).getDate();
           const isSel = rec.date === selected;
           const isToday = rec.date === today;
+          const unfinished =
+            dayStatus(rec, targets.targetKcal, complete) === 'unfinished';
           return (
             <Pressable
               key={rec.date}
@@ -132,7 +145,14 @@ export function MonthCalendar({ targets }: { targets: HistoryTargets }) {
                   {dayNum}
                 </Text>
               </View>
-              <View style={[st.calDot, rec.logged && !isSel && st.calDotOn]} />
+              <View
+                style={[
+                  st.calDot,
+                  rec.logged &&
+                    !isSel &&
+                    (unfinished ? st.calDotHalf : st.calDotOn),
+                ]}
+              />
             </Pressable>
           );
         })}
@@ -141,7 +161,13 @@ export function MonthCalendar({ targets }: { targets: HistoryTargets }) {
       <Hairline style={st.calDivider} />
 
       {selectedRec ? (
-        <DaySummary rec={selectedRec} targets={targets} />
+        <DaySummary
+          rec={selectedRec}
+          targets={targets}
+          today={today}
+          confirmed={complete.has(selectedRec.date)}
+          onToggleComplete={onToggleComplete}
+        />
       ) : (
         <Text style={st.calEmpty}>Tap a day to see its totals.</Text>
       )}
@@ -152,10 +178,17 @@ export function MonthCalendar({ targets }: { targets: HistoryTargets }) {
 function DaySummary({
   rec,
   targets,
+  today,
+  confirmed,
+  onToggleComplete,
 }: {
   rec: DayRecord;
   targets: HistoryTargets;
+  today: string;
+  confirmed: boolean;
+  onToggleComplete: (date: string, complete: boolean) => Promise<void>;
 }) {
+  const [busy, setBusy] = useState(false);
   const label = new Date(`${rec.date}T00:00:00`).toLocaleDateString('en-GB', {
     weekday: 'long',
     day: 'numeric',
@@ -173,22 +206,37 @@ function DaySummary({
 
   const def = dayDeficit(rec, targets); // maintenance minus intake
   const over = rec.kcal > targets.targetKcal;
+  const low = rec.kcal < targets.targetKcal * UNFINISHED_SHARE;
+  const counts = !low || confirmed;
+  const toggle = async (on: boolean) => {
+    setBusy(true);
+    try {
+      await onToggleComplete(rec.date, on);
+    } catch {
+      // Offline: the day stays as it was; tapping again retries.
+    }
+    setBusy(false);
+  };
 
   return (
     <View>
       <View style={st.calSumTop}>
         <Text style={st.calSumDate}>{label}</Text>
-        <Text
-          style={[
-            st.calSumDeficit,
-            { color: def >= 0 ? palette.good : palette.danger },
-          ]}
-        >
-          {Math.abs(def).toLocaleString()}
-          <Text style={st.calSumDeficitUnit}>
-            {def >= 0 ? ' deficit' : ' surplus'}
+        {counts ? (
+          <Text
+            style={[
+              st.calSumDeficit,
+              { color: def >= 0 ? palette.good : palette.danger },
+            ]}
+          >
+            {Math.abs(def).toLocaleString()}
+            <Text style={st.calSumDeficitUnit}>
+              {def >= 0 ? ' deficit' : ' surplus'}
+            </Text>
           </Text>
-        </Text>
+        ) : (
+          <Text style={st.calSumDeficitUnit}>Not counted</Text>
+        )}
       </View>
 
       <View style={st.calSumKcalRow}>
@@ -210,6 +258,33 @@ function DaySummary({
         <Macro label="Carbs" value={rec.carbsG} color={palette.carb} />
         <Macro label="Fat" value={rec.fatG} color={palette.fat} />
       </View>
+
+      {low && rec.date === today && !confirmed ? (
+        <View style={st.calNote}>
+          <Text style={st.calNoteText}>
+            Today so far. It counts once it’s a full day: at least half your
+            target, or confirmed by you.
+          </Text>
+        </View>
+      ) : low ? (
+        <View style={st.calNote}>
+          <Text style={st.calNoteText}>
+            {confirmed
+              ? 'You confirmed this was a full day, so it counts even though it’s under half your target.'
+              : 'This looks unfinished: under half your target, so it isn’t counted. If it really was everything you ate, confirm it.'}
+          </Text>
+          <Pressable
+            onPress={() => void toggle(!confirmed)}
+            disabled={busy}
+            hitSlop={6}
+            style={[st.calNoteBtn, busy && { opacity: 0.5 }]}
+          >
+            <Text style={st.calNoteBtnText}>
+              {confirmed ? 'Undo' : 'It was a full day'}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }

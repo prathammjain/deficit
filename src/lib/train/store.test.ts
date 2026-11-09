@@ -2,6 +2,8 @@ import { createMemoryStore, getJSON, type KVStore } from '../kv';
 import { customExercise } from './exercises';
 import {
   addCustomExercise,
+  addCustomExercises,
+  importWorkouts,
   clearSession,
   deleteRoutine,
   deleteWorkout,
@@ -251,5 +253,48 @@ describe('routines and settings', () => {
     expect(await loadTrainSettings(store)).toEqual({
       rest: { squat: 180, bench_press: 120 },
     });
+  });
+});
+
+describe('imports', () => {
+  it('saves many workouts by month and updates on a second run', async () => {
+    const cloud = flaky();
+    const device = createMemoryStore();
+    await saveWorkout(
+      workout('live', '2026-10-02'),
+      undefined,
+      cloud.store,
+      device,
+    );
+    const list = [
+      workout('imp_a', '2025-01-03'),
+      workout('imp_b', '2025-01-20'),
+      workout('imp_c', '2026-10-01'),
+    ];
+    const progress: number[] = [];
+    await importWorkouts(list, (done) => progress.push(done), cloud.store);
+    expect(progress).toEqual([2, 3]);
+    expect(await getJSON(cloud.store, 'deficit.workouts.months.v1')).toEqual([
+      '2025-01',
+      '2026-10',
+    ]);
+    await importWorkouts(
+      [{ ...list[0], name: 'Renamed' }],
+      undefined,
+      cloud.store,
+    );
+    const all = await loadWorkouts(cloud.store, device);
+    expect(all.map((w) => w.id)).toEqual(['imp_a', 'imp_b', 'imp_c', 'live']);
+    expect(all[0].name).toBe('Renamed');
+  });
+
+  it('adds several custom exercises once each', async () => {
+    const cloud = flaky();
+    const device = createMemoryStore();
+    const a = customExercise('sled push', 'quads', 'weighted');
+    const b = customExercise('sled pull', 'back', 'weighted');
+    await addCustomExercises([a, b], cloud.store, device);
+    const all = await addCustomExercises([a], cloud.store, device);
+    expect(all.map((e) => e.id)).toEqual([a.id, b.id]);
   });
 });

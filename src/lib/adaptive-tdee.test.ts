@@ -89,6 +89,38 @@ describe('estimateAdaptiveTdee', () => {
   });
 });
 
+describe('coverage', () => {
+  it('waits when too many days in the span went unlogged', () => {
+    // Gaining on paper while eating 2000: but ten days in the middle were
+    // never logged, which is where the gain really came from.
+    const data = synth({
+      days: 21,
+      intakeKcal: 2000,
+      startKg: 80,
+      kgPerDay: 0.05,
+    });
+    for (let i = 6; i < 16; i++) data[i].intakeKcal = null;
+    const r = estimateAdaptiveTdee(data);
+    expect(r.coverage).toBeCloseTo(11 / 21, 2);
+    expect(r.confidence).toBe('none');
+    expect(r.estimatedTdeeKcal).toBeNull();
+  });
+
+  it('still estimates with the odd missed day', () => {
+    const data = synth({
+      days: 21,
+      intakeKcal: 2000,
+      startKg: 80,
+      kgPerDay: -0.05,
+    });
+    data[5].intakeKcal = null;
+    data[12].intakeKcal = null;
+    const r = estimateAdaptiveTdee(data);
+    expect(r.coverage).toBeCloseTo(19 / 21, 2);
+    expect(r.estimatedTdeeKcal).not.toBeNull();
+  });
+});
+
 describe('recommendedTarget', () => {
   it('subtracts the deficit and respects the floor', () => {
     expect(recommendedTarget(2550, 550, 1500)).toBe(2000);

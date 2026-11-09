@@ -1,12 +1,14 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { MacroStat } from '@/components/log/meal-bits';
 import { MealComposer } from '@/components/log/meal-composer';
 import { MealRow } from '@/components/log/meal-row';
+import { PlanMeals, planEntry } from '@/components/log/plan';
 import { st } from '@/components/log/styles';
 import { ArcGauge } from '@/components/charts';
+import { useFollowing } from '@/components/train/follow';
 import {
   Card,
   DotMatrix,
@@ -36,6 +38,12 @@ export default function LogScreen() {
   const [targetKcal, setTargetKcal] = useState<number | null>(null);
   const [proteinTarget, setProteinTarget] = useState<number | null>(null);
   const [meals, setMeals] = useState<LogEntry[]>([]);
+  // Meals that failed to save (offline, say), kept so nothing typed is lost.
+  const [unsaved, setUnsaved] = useState<
+    { date: string; entry: Omit<LogEntry, 'id' | 'at'> }[]
+  >([]);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const { following } = useFollowing();
   const date = todayKey();
 
   useFocusEffect(
@@ -65,26 +73,60 @@ export default function LogScreen() {
     }, [date]),
   );
 
-  const onAddMeal = useCallback(
-    async (entry: Omit<LogEntry, 'id' | 'at'>) =>
-      setMeals(await addEntry(date, entry)),
+  /** Saves entries one by one; any that fail wait in `unsaved` for a retry. */
+  const save = useCallback(
+    async (list: { date: string; entry: Omit<LogEntry, 'id' | 'at'> }[]) => {
+      const failed: typeof list = [];
+      for (const item of list) {
+        try {
+          const day = await addEntry(item.date, item.entry);
+          if (item.date === date) setMeals(day);
+        } catch {
+          failed.push(item);
+        }
+      }
+      if (failed.length) setUnsaved((u) => [...u, ...failed]);
+    },
     [date],
   );
-  const onAddMeals = useCallback(
-    async (entries: Omit<LogEntry, 'id' | 'at'>[]) => {
-      let latest = meals;
-      for (const e of entries) latest = await addEntry(date, e);
-      setMeals(latest);
-    },
-    [date, meals],
+  const onAddMeal = useCallback(
+    (entry: Omit<LogEntry, 'id' | 'at'>) => save([{ date, entry }]),
+    [date, save],
   );
+  const onAddMeals = useCallback(
+    (entries: Omit<LogEntry, 'id' | 'at'>[]) =>
+      save(entries.map((entry) => ({ date, entry }))),
+    [date, save],
+  );
+  const retryUnsaved = useCallback(() => {
+    const list = unsaved;
+    setUnsaved([]);
+    return save(list);
+  }, [unsaved, save]);
   const onMealQty = useCallback(
-    async (id: string, qty: number) =>
-      setMeals(await updateEntryQuantity(date, id, qty)),
+    async (id: string, qty: number) => {
+      try {
+        setMeals(await updateEntryQuantity(date, id, qty));
+        setSaveError(null);
+      } catch {
+        setSaveError(
+          'That change didn’t save. Check your connection and try again.',
+        );
+      }
+    },
     [date],
   );
   const onRemoveMeal = useCallback(
-    async (id: string) => setMeals(await removeEntry(date, id)),
+    async (id: string) => {
+      try {
+        setMeals(await removeEntry(date, id));
+        setSaveError(null);
+      } catch {
+        setSaveError(
+          'That meal wasn’t removed. Check your connection and try again.',
+        );
+      }
+    },
     [date],
   );
 
@@ -170,6 +212,40 @@ export default function LogScreen() {
           proteinTargetG: proteinTarget ?? 0,
         }}
       />
+
+      {unsaved.length ? (
+        <Card style={st.unsavedCard}>
+          <Text style={st.unsavedText}>
+            {unsaved.length === 1
+              ? `${unsaved[0].entry.label} didn’t save.`
+              : `${unsaved.length} meals didn’t save.`}{' '}
+            Check your connection, then try again.
+          </Text>
+          <View style={st.unsavedRow}>
+            <Pressable
+              onPress={() => void retryUnsaved()}
+              style={({ pressed }) => [st.unsavedBtn, pressed && st.pressed]}
+            >
+              <Text style={st.unsavedBtnText}>Try again</Text>
+            </Pressable>
+            <Pressable onPress={() => setUnsaved([])} hitSlop={8}>
+              <Text style={st.unsavedDiscard}>Discard</Text>
+            </Pressable>
+          </View>
+        </Card>
+      ) : null}
+      {saveError ? <Text style={st.saveError}>{saveError}</Text> : null}
+
+      {following?.program.nutrition?.meals.length ? (
+        <>
+          <SectionLabel>From your plan</SectionLabel>
+          <PlanMeals
+            meals={following.program.nutrition.meals}
+            eaten={meals}
+            onLog={(m) => onAddMeal(planEntry(m))}
+          />
+        </>
+      ) : null}
 
       <SectionLabel>Eaten</SectionLabel>
       <View>

@@ -8,7 +8,7 @@
  * kilograms moved; warmups never count.
  */
 
-import type { DayRecord } from '../history-stats';
+import { dayStatus, type DayRecord } from '../history-stats';
 import type { WeightEntry } from '../weight-store';
 import { MUSCLE_LABEL, type Exercise, type Muscle } from './exercises';
 import {
@@ -410,16 +410,27 @@ export interface FoodSummary {
   proteinTarget: number | null;
 }
 
+/**
+ * Food over a period. With targets known, only full days count (see
+ * dayStatus): an unfinished day would drag the average down and pass for
+ * discipline.
+ */
 export function foodSummary(
   records: DayRecord[],
   p: Period,
   today: string,
   targets: { targetKcal: number; proteinG: number } | null,
+  complete?: ReadonlySet<string>,
 ): FoodSummary {
   const end = p.end < today ? p.end : today;
   const days = end < p.start ? 0 : periodDays({ ...p, end }).length;
   const logged = records.filter(
-    (r) => r.logged && r.date >= p.start && r.date <= end,
+    (r) =>
+      r.date >= p.start &&
+      r.date <= end &&
+      (targets
+        ? dayStatus(r, targets.targetKcal, complete) === 'counted'
+        : r.logged),
   );
   const avg = (f: (r: DayRecord) => number) =>
     logged.length

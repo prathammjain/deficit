@@ -19,6 +19,7 @@ import {
   MUSCLE_LABEL,
   type Exercise,
 } from '@/lib/train/exercises';
+import { repsText } from '@/lib/train/program';
 import {
   REST_CHOICES,
   RPE_CHOICES,
@@ -211,6 +212,11 @@ function ExerciseCard({
         >
           <Text style={tr.exName}>{ex?.name ?? 'Unknown exercise'}</Text>
           <Text style={tr.exMeta}>{meta}</Text>
+          {block.target ? (
+            <Text style={[tr.exMeta, tr.accentText]}>
+              Aim for {repsText(block.target)}
+            </Text>
+          ) : null}
         </Pressable>
         {editable ? (
           <Pressable

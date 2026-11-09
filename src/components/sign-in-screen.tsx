@@ -3,18 +3,25 @@
  * Premium, minimal: one button.
  */
 
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { Screen } from '@/components/ui/primitives';
 import { palette, radius, space, type as typo } from '@/constants/palette';
 import { useAuth } from '@/lib/supabase/auth';
+import { rememberProgramLink } from '@/lib/supabase/programs';
 
 export function SignInScreen() {
   const { signInWithGoogle } = useAuth();
   const [googleBusy, setGoogleBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // A program link opened while signed out opens again after signing in.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    rememberProgramLink(window.location.pathname, window.location.search);
+  }, []);
 
   // On success the browser navigates away to Google, so the busy state only
   // ever clears on an immediate failure.

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
@@ -25,7 +25,9 @@ import {
   type DailyDatum,
 } from '@/lib/adaptive-tdee';
 import { formatToday } from '@/lib/date';
+import { loadCompleteDays } from '@/lib/fulldays';
 import { gatherHistory } from '@/lib/history';
+import { fullDaysOnly } from '@/lib/history-stats';
 import { todayKey } from '@/lib/log-store';
 import {
   loadProfile,
@@ -33,9 +35,29 @@ import {
   type StoredProfile,
 } from '@/lib/profile-store';
 import { useAuth } from '@/lib/supabase/auth';
+import { takeProgramLink } from '@/lib/supabase/programs';
 import { computeTargets, type ProfileInput } from '@/lib/targets';
 import { predictWeeklyLoss } from '@/lib/weekly-prediction';
 import { latestWeight, setWeight } from '@/lib/weight-store';
+
+/**
+ * The last three weeks with unfinished days (under half the target, not
+ * confirmed) blanked out, so a forgotten dinner never reads as a deficit in
+ * the weekly prediction or the adaptive maintenance.
+ */
+async function honestHistory(targetKcal: number): Promise<DailyDatum[]> {
+  const [hist, complete] = await Promise.all([
+    gatherHistory(21),
+    loadCompleteDays().catch(() => new Set<string>()),
+  ]);
+  return fullDaysOnly(hist, targetKcal, complete);
+}
+
+/** Today isn't over, so its intake so far stays out of the maintenance math. */
+const closedDays = (hist: DailyDatum[]) => {
+  const today = todayKey();
+  return hist.map((d) => (d.date === today ? { ...d, intakeKcal: null } : d));
+};
 
 export default function HomeScreen() {
   const { session } = useAuth();
@@ -45,12 +67,21 @@ export default function HomeScreen() {
   const [history, setHistory] = useState<DailyDatum[]>([]);
   const [lastWeight, setLastWeight] = useState<number | null>(null);
 
+  // Arrived from a program link that needed signing in first: open it.
+  useEffect(() => {
+    const code = takeProgramLink();
+    if (code) router.navigate({ pathname: '/program', params: { code } });
+  }, []);
+
   const refresh = useCallback(async () => {
     const p = await loadProfile();
     setProfile(p);
     if (p) {
-      const [hist, lw] = await Promise.all([gatherHistory(21), latestWeight()]);
-      setAdaptive(estimateAdaptiveTdee(hist));
+      const [hist, lw] = await Promise.all([
+        honestHistory(computeTargets(p).targetKcal),
+        latestWeight(),
+      ]);
+      setAdaptive(estimateAdaptiveTdee(closedDays(hist)));
       setHistory(hist);
       setLastWeight(lw?.kg ?? null);
     }
@@ -87,9 +118,13 @@ export default function HomeScreen() {
         setProfile(updated);
       }
       setLastWeight(kg);
-      const hist = await gatherHistory(21);
-      setAdaptive(estimateAdaptiveTdee(hist));
-      setHistory(hist);
+      if (profile) {
+        const hist = await honestHistory(
+          computeTargets({ ...profile, weightKg: kg }).targetKcal,
+        );
+        setAdaptive(estimateAdaptiveTdee(closedDays(hist)));
+        setHistory(hist);
+      }
     },
     [profile],
   );

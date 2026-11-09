@@ -2,26 +2,40 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { ActivityIndicator, Text, View } from 'react-native';
 
+import {
+  AwayCard,
+  RestartCard,
+  shortDay,
+} from '@/components/history/continuity';
 import { Journey } from '@/components/history/journey';
-import { RangePills } from '@/components/history/range-pills';
+import { RangePills, type Range } from '@/components/history/range-pills';
 import { st } from '@/components/history/styles';
 import { WeekShare } from '@/components/history/week-share';
 import { Card, Screen, Title } from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
+import { loadCompleteDays, setDayComplete } from '@/lib/fulldays';
 import { gatherDailyRecords } from '@/lib/history';
 import {
+  continuity,
   summarizeHistory,
   type DayRecord,
   type HistoryTargets,
 } from '@/lib/history-stats';
+import { todayKey } from '@/lib/log-store';
 import { loadProfile } from '@/lib/profile-store';
 import { computeTargets } from '@/lib/targets';
 
+/** Days always loaded, so a break and the return after it can be seen. */
+const LOOKBACK = 45;
+
 export default function HistoryScreen() {
   const [loading, setLoading] = useState(true);
-  const [rangeDays, setRangeDays] = useState(30);
+  // null until the user picks: then the fresh start range leads after a break.
+  const [picked, setPicked] = useState<Range | null>(null);
   const [records, setRecords] = useState<DayRecord[]>([]);
   const [targets, setTargets] = useState<HistoryTargets | null>(null);
+  const [complete, setComplete] = useState<Set<string>>(() => new Set());
+  const loadDays = Math.max(typeof picked === 'number' ? picked : 30, LOOKBACK);
 
   const refresh = useCallback(async () => {
     const profile = await loadProfile();
@@ -37,9 +51,14 @@ export default function HistoryScreen() {
       maintenanceKcal: t.maintenanceKcal,
       proteinG: t.proteinG,
     });
-    setRecords(await gatherDailyRecords(rangeDays));
+    const [recs, marks] = await Promise.all([
+      gatherDailyRecords(loadDays),
+      loadCompleteDays().catch(() => new Set<string>()),
+    ]);
+    setRecords(recs);
+    setComplete(marks);
     setLoading(false);
-  }, [rangeDays]);
+  }, [loadDays]);
 
   useFocusEffect(
     useCallback(() => {
@@ -54,6 +73,10 @@ export default function HistoryScreen() {
     }, [refresh]),
   );
 
+  const toggleComplete = useCallback(async (date: string, on: boolean) => {
+    setComplete(await setDayComplete(date, on));
+  }, []);
+
   if (loading) {
     return (
       <View style={st.loadingRoot}>
@@ -62,15 +85,42 @@ export default function HistoryScreen() {
     );
   }
 
-  const summary = targets ? summarizeHistory(records, targets) : null;
+  const today = todayKey();
+  const flow = targets
+    ? continuity(records, targets.targetKcal, complete, today)
+    : null;
+  const restart = flow?.restart ?? null;
+  const range: Range =
+    picked === 'since' && !restart ? 30 : (picked ?? (restart ? 'since' : 30));
+  const shown =
+    range === 'since' && restart
+      ? records.filter((r) => r.date >= restart.since)
+      : records.slice(-(range as number));
+  const summary = targets ? summarizeHistory(shown, targets, complete) : null;
+  const everLogged = records.some((r) => r.logged);
 
   return (
     <Screen>
       <Title>History</Title>
 
-      {targets ? <WeekShare records={records} targets={targets} /> : null}
+      {flow?.away ? <AwayCard away={flow.away} /> : null}
+      {restart ? (
+        <RestartCard
+          restart={restart}
+          showing={range === 'since'}
+          onShow={() => setPicked('since')}
+        />
+      ) : null}
 
-      <RangePills value={rangeDays} onChange={setRangeDays} />
+      {targets && !flow?.away ? (
+        <WeekShare records={records} targets={targets} complete={complete} />
+      ) : null}
+
+      <RangePills
+        value={range}
+        onChange={setPicked}
+        since={restart ? `Since ${shortDay(restart.since)}` : null}
+      />
 
       {!targets ? (
         <Card style={st.emptyCard}>
@@ -80,14 +130,23 @@ export default function HistoryScreen() {
         </Card>
       ) : !summary || summary.daysLogged === 0 ? (
         <Card style={st.emptyCard}>
-          <Text style={st.emptyTitle}>No history yet</Text>
+          <Text style={st.emptyTitle}>
+            {everLogged ? 'Nothing logged in this range' : 'No history yet'}
+          </Text>
           <Text style={st.emptyText}>
-            Log your meals on the Log tab. Your trends, deficit and a day by day
-            calendar will build up here.
+            {everLogged
+              ? 'Pick a longer range to see earlier days, or log today to start this one.'
+              : 'Log your meals on the Log tab. Your trends, deficit and a day by day calendar will build up here.'}
           </Text>
         </Card>
       ) : (
-        <Journey records={records} targets={targets} summary={summary} />
+        <Journey
+          records={shown}
+          targets={targets}
+          summary={summary}
+          complete={complete}
+          onToggleComplete={toggleComplete}
+        />
       )}
     </Screen>
   );

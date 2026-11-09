@@ -12,6 +12,8 @@ export const st = StyleSheet.create({
   },
   // Same text tabs as the Log screen's Describe / Search / Custom.
   rangeRow: { flexDirection: 'row', gap: space.xl, marginTop: space.lg },
+  // Five ranges (with "Since 5 Nov") need a closer fit on small phones.
+  rangeRowTight: { gap: space.md, flexWrap: 'wrap' },
   rangePill: { paddingVertical: space.xs },
   rangeText: { color: palette.textFaint, fontSize: 15, fontWeight: '600' },
   rangeTextActive: { color: palette.text },
@@ -226,4 +228,33 @@ export const st = StyleSheet.create({
     fontSize: 14,
     marginTop: space.sm,
   },
+
+  // Away and fresh start cards.
+  flowCard: { gap: space.sm, marginBottom: space.lg },
+  flowEyebrow: { ...typo.eyebrow, color: palette.accent },
+  flowTitle: { ...typo.heading, color: palette.text },
+  flowBody: { color: palette.textMuted, fontSize: 14, lineHeight: 21 },
+  flowLink: { alignSelf: 'flex-start', paddingVertical: space.xs },
+  flowLinkText: { color: palette.accent, fontSize: 14, fontWeight: '600' },
+
+  // A note under the hero numbers about what they leave out.
+  heroNote: {
+    color: palette.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: space.md,
+  },
+
+  // Calendar: an unfinished day gets a hollow dot, and the day card explains.
+  calDotHalf: { borderWidth: 1, borderColor: palette.accent },
+  calNote: {
+    marginTop: space.md,
+    padding: space.md,
+    borderRadius: radius.sm,
+    backgroundColor: palette.surface2,
+    gap: space.sm,
+  },
+  calNoteText: { color: palette.textMuted, fontSize: 13, lineHeight: 19 },
+  calNoteBtn: { alignSelf: 'flex-start', paddingVertical: space.xs },
+  calNoteBtnText: { color: palette.accent, fontSize: 13, fontWeight: '700' },
 });

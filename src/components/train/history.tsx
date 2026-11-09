@@ -53,6 +53,14 @@ export function WorkoutHistory({
             Finished workouts land here. Each one keeps every set, so next time
             the logger already knows your numbers.
           </Text>
+          <Pressable
+            onPress={() => router.navigate('/import')}
+            style={{ marginTop: 12 }}
+          >
+            <Text style={[tr.linkText, tr.accentText]}>
+              Import your history from Strong, Hevy or a spreadsheet
+            </Text>
+          </Pressable>
         </Card>
       </>
     );

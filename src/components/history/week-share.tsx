@@ -16,11 +16,14 @@ import { st } from './styles';
 export function WeekShare({
   records,
   targets,
+  complete,
 }: {
   records: DayRecord[];
   targets: HistoryTargets;
+  /** Low days the user confirmed as full. */
+  complete?: ReadonlySet<string>;
 }) {
-  const report = weekReport(records, targets);
+  const report = weekReport(records, targets, complete);
   const key = JSON.stringify(report);
   const [card, setCard] = useState<{ blob: Blob; url: string } | null>(null);
 

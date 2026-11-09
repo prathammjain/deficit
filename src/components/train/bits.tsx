@@ -185,6 +185,7 @@ export function NumField({
   decimal = false,
   label,
   style,
+  maxLength,
   onChange,
 }: {
   value: number | null;
@@ -192,6 +193,8 @@ export function NumField({
   decimal?: boolean;
   label: string;
   style?: StyleProp<TextStyle>;
+  /** Characters allowed; 6 for decimals and 3 otherwise unless set. */
+  maxLength?: number;
   onChange: (n: number | null) => void;
 }) {
   const [text, setText] = useState<string | null>(null);
@@ -204,7 +207,7 @@ export function NumField({
       inputMode={decimal ? 'decimal' : 'numeric'}
       keyboardType={decimal ? 'decimal-pad' : 'number-pad'}
       selectTextOnFocus
-      maxLength={decimal ? 6 : 3}
+      maxLength={maxLength ?? (decimal ? 6 : 3)}
       accessibilityLabel={label}
       onFocus={() => setText(shown)}
       onBlur={() => setText(null)}

@@ -808,6 +808,9 @@ function SavedWorkout({ id }: { id: string }) {
           {formatToday(new Date(w.startedAt))}
           {minutes > 0 ? ` · ${durationText(minutes * 60000)}` : ''}
           {w.source === 'described' ? ' · written up' : ''}
+          {w.source === 'imported'
+            ? ` · imported${w.importedFrom === 'strong' ? ' from Strong' : w.importedFrom === 'hevy' ? ' from Hevy' : ''}`
+            : ''}
         </Text>
 
         <Card style={{ marginTop: 20 }}>

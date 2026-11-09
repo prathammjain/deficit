@@ -40,9 +40,18 @@ export interface WorkoutExercise {
   note?: string;
   /** Rest after each ticked set, in seconds. 0 turns the timer off. */
   restSec?: number;
+  /** The rep range a program asks for. */
+  target?: { repsMin: number; repsMax: number };
 }
 
-export interface Workout {
+/** Which program day a workout was, when it was one. */
+export interface ProgramLink {
+  programId?: string;
+  /** Index of the program day. */
+  programDay?: number;
+}
+
+export interface Workout extends ProgramLink {
   id: string;
   name: string;
   /** Local day it started, as a day key (see todayKey). */
@@ -51,13 +60,15 @@ export interface Workout {
   endedAt: string;
   exercises: WorkoutExercise[];
   note?: string;
-  /** Logged set by set in the gym, or written up afterwards. */
-  source: 'live' | 'described';
+  /** Logged set by set in the gym, written up afterwards, or imported. */
+  source: 'live' | 'described' | 'imported';
+  /** Where an imported workout came from. */
+  importedFrom?: 'strong' | 'hevy' | 'csv' | 'notes';
   routineId?: string;
 }
 
 /** A workout still being logged. */
-export interface Session {
+export interface Session extends ProgramLink {
   id: string;
   name: string;
   /** True once the user names it, so finishing keeps their name. */
@@ -555,6 +566,9 @@ export function finishSession(
     exercises,
     source: 'live',
     ...(s.routineId ? { routineId: s.routineId } : {}),
+    ...(s.programId
+      ? { programId: s.programId, programDay: s.programDay }
+      : {}),
   };
 }
 

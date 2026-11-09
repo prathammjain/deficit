@@ -3,6 +3,7 @@
  * workout, run a routine, or get back to the one in progress.
  */
 
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -113,6 +114,7 @@ export function StartCard({
   onRoutine,
   onDeleteRoutine,
   onDescribe,
+  following,
 }: {
   data: Training;
   today: string;
@@ -121,6 +123,8 @@ export function StartCard({
   onRoutine: (r: Routine) => void;
   onDeleteRoutine: (r: Routine) => void;
   onDescribe: () => void;
+  /** Title of the program being followed, if any. */
+  following?: string | null;
 }) {
   const [menu, setMenu] = useState<string | null>(null);
   const last = data.workouts[data.workouts.length - 1];
@@ -135,7 +139,17 @@ export function StartCard({
 
   return (
     <GlassSurface padded style={tr.startCard}>
-      <PrimaryButton label="Start a workout" onPress={onStart} />
+      {following ? (
+        // The program card above holds the one orange button.
+        <Pressable
+          onPress={onStart}
+          style={({ pressed }) => [tr.ghostBtn, pressed && tr.pressed]}
+        >
+          <Text style={tr.ghostText}>Start an empty workout</Text>
+        </Pressable>
+      ) : (
+        <PrimaryButton label="Start a workout" onPress={onStart} />
+      )}
       <View>
         {last ? (
           <QuickRow
@@ -168,6 +182,20 @@ export function StartCard({
           title="Describe a workout"
           meta="Type it or say it, for today or any day before"
           onPress={onDescribe}
+        />
+        <QuickRow
+          title="Programs"
+          meta={
+            following
+              ? `Following ${following}`
+              : 'Follow a coach’s plan with a code, or write your own'
+          }
+          onPress={() => router.navigate('/programs')}
+        />
+        <QuickRow
+          title="Import history"
+          meta="From Strong, Hevy, a spreadsheet or your notes"
+          onPress={() => router.navigate('/import')}
         />
       </View>
     </GlassSurface>

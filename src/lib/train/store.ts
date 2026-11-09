@@ -240,6 +240,45 @@ export async function deleteWorkout(
   await flushOutbox(cloud, device);
 }
 
+/**
+ * Saves many workouts at once, for an import: one read and one write per
+ * month, the month index first so nothing written goes missing. Needs the
+ * account to be reachable and throws if it isn't; an import can simply be
+ * run again, since workout ids make it update rather than double.
+ */
+export async function importWorkouts(
+  list: Workout[],
+  onProgress?: (done: number, total: number) => void,
+  cloud: KVStore = kv,
+): Promise<void> {
+  const byMonth = new Map<string, Workout[]>();
+  for (const w of list) {
+    const m = monthOf(w.date);
+    byMonth.set(m, [...(byMonth.get(m) ?? []), w]);
+  }
+  const months = (await getJSON<string[]>(cloud, MONTHS)) ?? [];
+  await setJSON(
+    cloud,
+    MONTHS,
+    [...new Set([...months, ...byMonth.keys()])].sort(),
+  );
+  let done = 0;
+  for (const [month, items] of byMonth) {
+    const existing = (await getJSON<Workout[]>(cloud, monthKey(month))) ?? [];
+    const merged = new Map(existing.map((w) => [w.id, w]));
+    for (const w of items) merged.set(w.id, w);
+    await setJSON(
+      cloud,
+      monthKey(month),
+      [...merged.values()].sort((a, b) =>
+        a.startedAt.localeCompare(b.startedAt),
+      ),
+    );
+    done += items.length;
+    onProgress?.(done, list.length);
+  }
+}
+
 // Custom exercises
 export async function loadCustomExercises(
   cloud: KVStore = kv,
@@ -267,7 +306,18 @@ export async function addCustomExercise(
   cloud: KVStore = kv,
   device: KVStore = localStore,
 ): Promise<Exercise[]> {
-  const all = [...(await loadCustomExercises(cloud, device)), ex];
+  return addCustomExercises([ex], cloud, device);
+}
+
+/** Adds several at once; ones already there (same id) are kept as they are. */
+export async function addCustomExercises(
+  list: Exercise[],
+  cloud: KVStore = kv,
+  device: KVStore = localStore,
+): Promise<Exercise[]> {
+  const current = await loadCustomExercises(cloud, device);
+  const known = new Set(current.map((e) => e.id));
+  const all = [...current, ...list.filter((e) => !known.has(e.id))];
   await setJSON(device, EXERCISES_DEVICE(), all);
   try {
     await setJSON(cloud, EXERCISES, all);

@@ -105,7 +105,7 @@ export async function drawWeekCard(r: WeekReport): Promise<Blob> {
         }
       : { value: `${r.avgProteinG ?? 0} g`, label: 'Average protein' };
   const stats = [
-    { value: `${r.daysLogged} of 7`, label: 'Days logged' },
+    { value: `${r.daysLogged} of 7`, label: 'Full days logged' },
     { value: `${r.proteinDays} of ${r.daysLogged}`, label: 'Days protein hit' },
     {
       value: (r.avgKcal ?? 0).toLocaleString(),
