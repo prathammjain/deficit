@@ -18,7 +18,7 @@ import {
 import { Platform } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 
-import { resetActiveStore, setActiveStore } from '../kv';
+import { resetActiveStore, setActiveStore, setDeviceScope } from '../kv';
 import { supabase } from './client';
 import { isSupabaseConfigured } from './config';
 import { createSupabaseStore, migrateLocalToCloud } from './supabase-kv';
@@ -42,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applySession = useCallback(async (next: Session | null) => {
     setSession(next);
+    setDeviceScope(next?.user.id ?? null);
     if (next && supabase) {
       const cloud = createSupabaseStore(supabase, next.user.id);
       setActiveStore(cloud);

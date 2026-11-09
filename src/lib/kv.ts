@@ -100,6 +100,25 @@ export function resetActiveStore(): void {
   active = localStore;
 }
 
+/** True when `kv` is the device itself (no account), so nothing needs caching. */
+export function usingDeviceStore(): boolean {
+  return active === localStore;
+}
+
+let scope = 'local';
+
+/**
+ * Device only keys (offline copies, outboxes) are named per account, so two
+ * people signing in on one phone never see or sync each other's data.
+ */
+export function setDeviceScope(accountId: string | null): void {
+  scope = accountId ?? 'local';
+}
+
+export function deviceKey(name: string): string {
+  return `grain.${scope}.${name}`;
+}
+
 /** Small helpers so call sites don't repeat JSON.parse/stringify + try/catch. */
 export async function getJSON<T>(
   store: KVStore,

@@ -75,6 +75,41 @@ export async function gatherDailyRecords(
 }
 
 /**
+ * Every day from `start` to `end` (day keys, both included) with macros and
+ * weigh ins. The training Progress view joins these with workouts.
+ */
+export async function gatherRange(
+  start: string,
+  end: string,
+  store: KVStore = kv,
+): Promise<DayRecord[]> {
+  const [y, m, d] = start.split('-').map(Number);
+  const dates: string[] = [];
+  for (let day = new Date(y, m - 1, d); todayKey(day) <= end; ) {
+    dates.push(todayKey(day));
+    day.setDate(day.getDate() + 1);
+  }
+
+  const weights = await loadWeights(store);
+  const weightByDate = new Map(weights.map((w) => [w.date, w.kg]));
+
+  return Promise.all(
+    dates.map(async (date): Promise<DayRecord> => {
+      const s = summarize(await loadDay(date, store));
+      return {
+        date,
+        logged: s.count > 0,
+        kcal: s.kcal,
+        proteinG: s.proteinG,
+        carbsG: s.carbsG,
+        fatG: s.fatG,
+        weightKg: weightByDate.get(date) ?? null,
+      };
+    }),
+  );
+}
+
+/**
  * Every calendar day of the month containing `anchor` (day 1 → month end), in
  * order, with full macro breakdown + weigh-in. Powers the History calendar,
  * which lets the user pick any day and see that day's totals and deficit.

@@ -418,9 +418,16 @@ function DescribeMeal({
 /**
  * Tap to talk, tap again to stop. The note is transcribed by the engine and
  * handed back as text. Hidden where the browser can't record or there is no
- * engine to transcribe (local mode).
+ * engine to transcribe (local mode). The training screen uses it too.
  */
-function VoiceButton({ onHeard }: { onHeard: (text: string) => void }) {
+export function VoiceButton({
+  onHeard,
+  what = 'meal',
+}: {
+  onHeard: (text: string) => void;
+  /** What is being spoken, for the labels: "meal", "workout". */
+  what?: string;
+}) {
   const [state, setState] = useState<'idle' | 'recording' | 'working'>('idle');
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -470,7 +477,7 @@ function VoiceButton({ onHeard }: { onHeard: (text: string) => void }) {
       setSeconds(0);
       setState('recording');
     } catch {
-      setError('Allow the microphone to speak your meal.');
+      setError(`Allow the microphone to speak your ${what}.`);
     }
   };
 
@@ -481,7 +488,9 @@ function VoiceButton({ onHeard }: { onHeard: (text: string) => void }) {
         onPress={recordingNow ? finish : start}
         disabled={state === 'working'}
         hitSlop={6}
-        accessibilityLabel={recordingNow ? 'Stop recording' : 'Speak your meal'}
+        accessibilityLabel={
+          recordingNow ? 'Stop recording' : `Speak your ${what}`
+        }
         style={({ pressed }) => [
           st.micBtn,
           recordingNow && st.micBtnLive,

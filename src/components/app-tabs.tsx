@@ -27,6 +27,15 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="train">
+        <NativeTabs.Trigger.Label>Train</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          sf="dumbbell"
+          src={require('@/assets/images/tabIcons/explore.png')}
+          renderingMode="template"
+        />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="history">
         <NativeTabs.Trigger.Label>History</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon

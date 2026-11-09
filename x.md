@@ -366,3 +366,53 @@ the stage, T and W to follow up tomorrow or in a week, N for someone new, X
 to select, slash to search. Every view shares one copy of the data, so
 switching is instant, and changes show at once and save behind the scenes.
 On a phone the stacked screens stay as they were.
+
+### Training joins the food log
+
+Grain now logs training as precisely as it logs food, the first piece of the
+wider ecosystem. A Train tab sits between Log and History. The calorie engine
+stays the core; training is the service around it.
+
+The logger is built for one tap sets. Start empty, repeat the last workout,
+or run a saved routine. Each exercise is a card of sets: set, previous, kg,
+reps, tick. Last time's numbers already sit in the empty boxes, so a set done
+the same as last time is one tap on the tick, and only what changed gets
+typed. Tapping a previous set copies it in. A set's number opens its type
+(warmup, drop, failure) and an optional RPE. Records show the moment a set is
+ticked, judged on estimated one rep max. Bodyweight lifts count bodyweight
+plus added load, so 10 pull ups compare fairly with 6 carrying 10 kg. Every
+tick starts a rest timer whose length is remembered per exercise; the screen
+stays on while it counts down and the phone buzzes when it ends. Finishing
+names the session from what was trained (Push, Pull, Legs, Upper body, Full
+body) unless it was named, offers to tick sets that have numbers but no tick,
+lists the records, and can save the layout as a routine.
+
+Gyms are basements, so no set depends on the network. Every change lands on
+the phone first and reaches the account a moment later. A workout finished
+offline waits on the phone and syncs when the signal is back. History is
+cached on the phone after each load, so last time's numbers are there with
+no signal at all. These phone copies are kept per account, so two people
+signing in on one phone never see or sync each other's training.
+
+Describe a workout takes it typed or spoken, for today or any day before:
+"bench 80x8, 80x8, 85x6", "squat 100kg 5x5", "ohp 50 for 8 8 7", "lat
+pulldown 3 sets of 12 at 60", "pull ups bw x 10, +10 x 6". Pounds become
+kilograms and spoken numbers like "a hundred kilos" work. It is plain code on
+the phone, not a model: instant, free, and the same words always read the
+same way. Whatever it can't place, it asks about instead of guessing. It is
+also how old training notes get in.
+
+Progress shows a week or a month against the one before. A week still running
+is compared with the same days last week, so a Monday isn't judged against a
+whole week. It shows volume and hard sets, food averages against targets,
+bodyweight change, hard sets per muscle against a 10 sets a week mark, and
+each lift's best estimated max with its change. One line on top joins the
+three, for example "Lifts up 3.0% while bodyweight fell 0.6 kg." Only an app
+holding food, training and the scale together can write that line. Each
+exercise has its own page: estimated max over time, records, the heaviest
+weight for each rep count, and every session.
+
+The library has 104 exercises and reads gym shorthand (rdl, ohp, db bench,
+bss), ignores plurals and spacing, and forgives typos. Anything missing is a
+custom exercise in two taps. 79 new tests cover the reader, the set math,
+records, storage and the progress numbers; 270 pass in total.
