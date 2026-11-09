@@ -1,0 +1,1024 @@
+/* The laptop CRM. Grain's skin (bone canvas, warm ink, one orange accent),
+   at desktop density: 13px tables, 40px rows, hairlines, and orange only for
+   what needs attention. */
+
+.app {
+  --bg: #edeae4;
+  --surface: #f7f5f1;
+  --well: #e7e4dd;
+  --ink: #191715;
+  --muted: rgba(25, 23, 21, 0.6);
+  --faint: rgba(25, 23, 21, 0.4);
+  --hair: rgba(25, 23, 21, 0.12);
+  --soft: rgba(25, 23, 21, 0.06);
+  --accent: #f4511e;
+  --accent-soft: rgba(244, 81, 30, 0.09);
+
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 13px;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.app button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.app input,
+.app select,
+.app textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* ---- Sidebar ---------------------------------------------------------- */
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 20px 12px 16px;
+  border-right: 1px solid var(--hair);
+  min-height: 0;
+}
+
+.brand {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  padding: 0 10px 18px;
+}
+
+.brand span {
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.app .navItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: left;
+}
+
+.app .navItem:hover {
+  background: var(--soft);
+}
+
+.app .navOn,
+.app .navOn:hover {
+  background: var(--surface);
+  border-color: var(--hair);
+  color: var(--ink);
+}
+
+.navCount {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.navHot {
+  color: var(--accent);
+}
+
+.sideFoot {
+  margin-top: auto;
+  padding: 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.app .linkBtn {
+  align-self: flex-start;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.app .linkBtn:hover {
+  color: var(--ink);
+}
+
+/* ---- Workspace -------------------------------------------------------- */
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.errorBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 28px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.work {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.workMain {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 24px 28px 40px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.head h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+}
+
+.headActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search {
+  width: 260px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--hair);
+  background: var(--surface);
+  outline: none;
+}
+
+.search:focus {
+  border-color: rgba(25, 23, 21, 0.45);
+}
+
+.app .btn {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--hair);
+  background: var(--surface);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.app .btn:hover {
+  background: #fff;
+}
+
+.app .btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.app .primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.app .primary:hover {
+  background: #e8481a;
+}
+
+.app .small {
+  height: 28px;
+  padding: 0 11px;
+  font-size: 12.5px;
+}
+
+.app .danger {
+  color: var(--accent);
+  border-color: rgba(244, 81, 30, 0.45);
+}
+
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 8px;
+  padding: 0 5px;
+  border-radius: 5px;
+  border: 1px solid currentColor;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.55;
+}
+
+/* ---- Decision strip ----------------------------------------------------- */
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.app .kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--hair);
+  background: var(--surface);
+  text-align: left;
+}
+
+.app .kpi:hover {
+  border-color: rgba(25, 23, 21, 0.3);
+}
+
+.kpiLabel {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.kpiValue {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpiHot .kpiValue {
+  color: var(--accent);
+}
+
+.kpiSub {
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+/* With a creator open beside the table, the strip stays one short row. */
+.kpisCompact {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.kpisCompact .kpi {
+  padding: 10px 12px;
+}
+
+.kpisCompact .kpiValue {
+  font-size: 20px;
+}
+
+.kpisCompact .kpiSub {
+  display: none;
+}
+
+/* ---- Toolbar and views -------------------------------------------------- */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  margin-bottom: 10px;
+}
+
+.app .viewTab {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.app .viewTab:hover {
+  background: var(--soft);
+}
+
+.app .viewOn,
+.app .viewOn:hover {
+  background: var(--ink);
+  color: var(--surface);
+}
+
+.viewCount {
+  margin-left: 6px;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+
+.bulk {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 4px 14px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--surface);
+  font-weight: 600;
+}
+
+.bulk select {
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(247, 245, 241, 0.25);
+  background: transparent;
+  color: var(--surface);
+  padding: 0 8px;
+  outline: none;
+}
+
+.bulk option {
+  color: var(--ink);
+}
+
+.app .bulkBtn {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--surface);
+}
+
+.app .bulkBtn:hover {
+  background: rgba(247, 245, 241, 0.12);
+}
+
+.hint {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+/* ---- Table ---------------------------------------------------------------- */
+
+.tableWrap {
+  /* Grows with its table, so a narrow window scrolls the workspace sideways
+     instead of cutting columns off. */
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
+  border-radius: 14px;
+  border: 1px solid var(--hair);
+  background: var(--surface);
+  overflow: clip;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table th {
+  position: sticky;
+  top: -24px;
+  z-index: 1;
+  background: var(--surface);
+  padding: 10px 10px;
+  border-bottom: 1px solid var(--hair);
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--faint);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.sortable {
+  cursor: pointer;
+}
+
+.sortable:hover,
+.sortOn {
+  color: var(--ink) !important;
+}
+
+.table td {
+  padding: 8px 10px;
+  height: 40px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--soft);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.table tbody tr {
+  cursor: pointer;
+}
+
+.table tbody tr:hover td {
+  background: rgba(25, 23, 21, 0.025);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table .rowChecked td {
+  background: var(--soft);
+}
+
+.table .rowOpen td {
+  background: var(--accent-soft);
+}
+
+.table .rowCursor td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.check {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--ink);
+  cursor: pointer;
+}
+
+.num {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.name {
+  font-weight: 700;
+}
+
+.handle {
+  margin-left: 6px;
+  color: var(--faint);
+  font-weight: 500;
+}
+
+/* Long names and handles end in an ellipsis instead of widening the table. */
+.creatorCell,
+.clip {
+  display: inline-block;
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.clip {
+  max-width: 120px;
+}
+
+/* Smaller laptops drop the least needed columns first. */
+@media (max-width: 1360px) {
+  .fit1 {
+    display: none;
+  }
+
+  .creatorCell {
+    max-width: 220px;
+  }
+
+  .table td,
+  .table th {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
+
+/* With a creator open beside it, the table drops to its essential columns. */
+.compact .creatorCell {
+  max-width: 200px;
+}
+
+/* Below 1400px there isn't room for both side by side, so the creator opens
+   over the right of the table instead of squeezing it. */
+@media (max-width: 1399px) {
+  .panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    width: min(440px, 46vw);
+    box-shadow: -16px 0 40px rgba(61, 56, 49, 0.14);
+  }
+}
+
+@media (max-width: 1180px) {
+  .fit2 {
+    display: none;
+  }
+}
+
+.ptag {
+  margin-left: 6px;
+  padding: 0 4px;
+  border-radius: 4px;
+  border: 1px solid var(--hair);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: var(--faint);
+  text-transform: uppercase;
+}
+
+.faint {
+  color: var(--faint);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.hot {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.down {
+  color: var(--accent);
+}
+
+.badge {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.empty {
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* Stage pill: a native select, so it is fast and keyboard friendly. */
+.stage {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--hair);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+
+.stage[data-stage='prospect'] {
+  color: var(--faint);
+}
+
+.stage[data-stage='contacted'] {
+  color: var(--muted);
+}
+
+.stage[data-stage='replied'] {
+  color: var(--accent);
+  border-color: rgba(244, 81, 30, 0.45);
+}
+
+.stage[data-stage='onboarded'],
+.stage[data-stage='active'],
+.stage[data-stage='partner'] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface);
+}
+
+.stage[data-stage='declined'] {
+  color: var(--faint);
+  text-decoration: line-through;
+}
+
+.follow {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 2px 0;
+  cursor: pointer;
+  outline: none;
+  color: var(--muted);
+}
+
+.follow:hover {
+  color: var(--ink);
+}
+
+.followHot {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.followNone {
+  color: var(--faint);
+}
+
+/* ---- Side panel ----------------------------------------------------------- */
+
+.panel {
+  width: clamp(380px, 30vw, 460px);
+  flex: none;
+  overflow: auto;
+  border-left: 1px solid var(--hair);
+  background: var(--surface);
+  padding: 22px 24px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.panelHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panelHead h2 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+}
+
+.panelSub {
+  margin-top: 4px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.panelSub a {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.panelSub a:hover {
+  text-decoration: underline;
+}
+
+.app .close {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 30px;
+}
+
+.app .close:hover {
+  background: var(--soft);
+  color: var(--ink);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--hair);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.segs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.app .seg {
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--hair);
+  background: var(--surface);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.app .seg:hover {
+  color: var(--ink);
+  border-color: rgba(25, 23, 21, 0.3);
+}
+
+.app .segOn,
+.app .segOn:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface);
+}
+
+.label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: var(--well);
+  outline: none;
+}
+
+textarea.input {
+  height: auto;
+  min-height: 64px;
+  padding: 8px 10px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.input:focus {
+  border-color: rgba(25, 23, 21, 0.4);
+  background: #fbfaf8;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.metric {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--hair);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metricTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.metricBig {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.metricLine {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.tItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--soft);
+}
+
+.tItem:last-child {
+  border-bottom: 0;
+}
+
+.tMeta {
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+.tText {
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.note {
+  font-size: 12px;
+  color: var(--faint);
+  line-height: 1.5;
+}
+
+/* ---- Pipeline board ---------------------------------------------------- */
+
+.board {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+}
+
+.col {
+  /* Equal columns that share the width; long lines end in an ellipsis
+     instead of widening their column. */
+  flex: 1 1 0;
+  min-width: 170px;
+  max-width: 320px;
+  box-sizing: border-box;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(25, 23, 21, 0.035);
+  min-height: 120px;
+}
+
+.colOver {
+  box-shadow: inset 0 0 0 2px rgba(244, 81, 30, 0.55);
+}
+
+.colHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 2px 4px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.colSub {
+  padding: 0 4px 4px;
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+.app .card {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--hair);
+  background: var(--surface);
+  text-align: left;
+  cursor: grab;
+}
+
+.app .card:hover {
+  border-color: rgba(25, 23, 21, 0.3);
+}
+
+.cardDragging {
+  opacity: 0.4;
+}
+
+.cardName {
+  font-weight: 700;
+  font-size: 13.5px;
+}
+
+.cardMeta {
+  margin-top: 2px;
+  color: var(--faint);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.colEmpty {
+  margin-top: 8px;
+  padding: 18px 8px;
+  border-radius: 12px;
+  border: 1px dashed var(--hair);
+  text-align: center;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.cardFoot {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.cardFoot > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- Overlays --------------------------------------------------------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(25, 23, 21, 0.25);
+}
+
+.sheet {
+  width: 440px;
+  padding: 22px 24px;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  box-shadow: 0 20px 60px rgba(61, 56, 49, 0.25);
+}
+
+.sheet h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.keyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--soft);
+}
+
+.keyRow:last-child {
+  border-bottom: 0;
+}
+
+.statsWrap {
+  max-width: 760px;
+}

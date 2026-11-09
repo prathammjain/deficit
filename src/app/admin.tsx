@@ -1,14 +1,16 @@
 /**
  * admin.tsx: Grain's back office. The creator CRM, users with premium gifts
  * and the paywall switch, and the business numbers. Only admins see any of
- * it; the database enforces that, this screen only says so.
+ * it; the database enforces that, this screen only says so. A laptop gets
+ * the full width CRM; a phone gets the stacked screens.
  */
 
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
-import { Pressable, Text } from 'react-native';
+import { Platform, Pressable, Text, useWindowDimensions } from 'react-native';
 
 import { CreatorsView } from '@/components/admin/creators';
+import { AdminDesk } from '@/components/admin/desk';
 import { StatsView } from '@/components/admin/stats';
 import { Loading, TextTabs, ui } from '@/components/admin/ui';
 import { UsersView } from '@/components/admin/users';
@@ -38,6 +40,17 @@ export default function AdminScreen() {
   }, []);
 
   const adminId = session?.user?.id;
+  const { width } = useWindowDimensions();
+
+  if (access?.admin && adminId && Platform.OS === 'web' && width >= 1024) {
+    return (
+      <AdminDesk
+        adminId={adminId}
+        email={session?.user?.email ?? null}
+        paywall={access.paywall}
+      />
+    );
+  }
 
   return (
     <Screen>

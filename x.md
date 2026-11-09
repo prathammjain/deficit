@@ -338,3 +338,31 @@ The database decides who sees what. Admin functions refuse anyone who isn't
 an admin, the CRM and premium tables only open to admins, and nobody can
 gift themselves premium. The screens show counts, never anyone's meals. 31
 checks on those rules passed in a local Postgres before this shipped.
+
+## 2026-11-09
+
+### A real CRM for the laptop
+
+The first back office worked on a phone and felt like one on a laptop, which
+is where the admin work actually happens. On a screen 1024 pixels or wider,
+the admin is now a full workspace with a sidebar, built for deciding fast.
+
+A strip on top answers what needs you today: follow ups due, overdue, people
+who replied with nothing planned, reply rate, the roster and its total reach.
+Each one filters the table when clicked. Saved views sort everyone into needs
+action, all, roster, prospects and declined.
+
+The table is dense and sorted by who needs you first: the most overdue at
+the top, then due today, then replies waiting on you. Stage and follow up
+change right in the row. Select several rows to move them or schedule them
+at once, or export them to a spreadsheet for a pitch. Clicking a creator
+opens them beside the table with their timeline, numbers with a growth line,
+Grain account and details, and logging a touch is one Enter away. The
+pipeline board shows each stage as a column, and dragging a card moves the
+person along.
+
+The keyboard drives all of it: J and K to move, Enter to open, 1 to 7 to set
+the stage, T and W to follow up tomorrow or in a week, N for someone new, X
+to select, slash to search. Every view shares one copy of the data, so
+switching is instant, and changes show at once and save behind the scenes.
+On a phone the stacked screens stay as they were.

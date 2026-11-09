@@ -172,6 +172,18 @@ export async function deleteCreator(id: string): Promise<void> {
   if (error) throw error;
 }
 
+/** The same change to several creators at once: stage, follow up, and so on. */
+export async function updateCreators(
+  ids: string[],
+  patch: Partial<CreatorFields>,
+): Promise<void> {
+  const { error } = await db()
+    .from('crm_creators')
+    .update({ ...patch, updated_at: now() })
+    .in('id', ids);
+  if (error) throw error;
+}
+
 export async function addMetrics(
   row: Omit<MetricRow, 'id' | 'created_at'>,
 ): Promise<MetricRow> {
@@ -195,9 +207,25 @@ export async function listTouches(creatorId: string): Promise<Touch[]> {
   return (data ?? []) as Touch[];
 }
 
+/** Every touch for every creator, newest first. Small: a few per creator. */
+export async function listAllTouches(): Promise<Touch[]> {
+  const { data, error } = await db()
+    .from('crm_touches')
+    .select('*')
+    .order('happened_on', { ascending: false })
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as Touch[];
+}
+
 export async function addTouch(
   row: Omit<Touch, 'id' | 'created_at'>,
-): Promise<void> {
-  const { error } = await db().from('crm_touches').insert(row);
+): Promise<Touch> {
+  const { data, error } = await db()
+    .from('crm_touches')
+    .insert(row)
+    .select()
+    .single();
   if (error) throw error;
+  return data as Touch;
 }

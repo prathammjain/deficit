@@ -6,7 +6,14 @@ import {
   TabTriggerSlotProps,
   TabListProps,
 } from 'expo-router/ui';
-import { Pressable, View, StyleSheet, Text } from 'react-native';
+import { usePathname } from 'expo-router';
+import {
+  Pressable,
+  View,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+} from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { GlassSurface } from '@/components/ui/primitives';
@@ -115,8 +122,16 @@ export function TabButton({
 }
 
 export function BottomTabList(props: TabListProps) {
+  // The laptop admin is a full screen workspace with its own sidebar, so
+  // the bar steps aside there. The triggers stay mounted for routing.
+  const pathname = usePathname();
+  const { width } = useWindowDimensions();
+  const hidden = pathname.startsWith('/admin') && width >= 1024;
   return (
-    <View style={styles.tabBarOuter} pointerEvents="box-none">
+    <View
+      style={[styles.tabBarOuter, hidden && styles.hiddenTrigger]}
+      pointerEvents="box-none"
+    >
       <GlassSurface style={styles.tabBar}>
         <View {...props} style={styles.tabRow}>
           {props.children}
