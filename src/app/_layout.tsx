@@ -20,6 +20,7 @@ import {
   checkConsent,
   consentCached,
   recordConsent,
+  sendPendingConsent,
 } from '@/lib/supabase/consent';
 import { StatusBar } from 'expo-status-bar';
 
@@ -149,6 +150,11 @@ function ConsentGate({ children }: { children: React.ReactNode }) {
       alive = false;
     };
   }, [state]);
+
+  // An agreement given while the account couldn't store it goes now.
+  useEffect(() => {
+    void sendPendingConsent();
+  }, []);
 
   if (state === 'ok') return <>{children}</>;
   if (state === 'needed') {

@@ -496,3 +496,15 @@ A meal that fails to save (no signal) now stays on screen with Try again
 instead of vanishing. Onboarding and weigh ins show an error and keep what
 was typed. A crashing screen shows a way back instead of a blank page.
 327 tests pass.
+
+## 2026-11-10
+
+### Agreeing never waits on the network
+
+The consent screen went live before its database table existed, so saving
+the agreement failed and every new sign in was stuck on a "check your
+connection" message. The fix on the server is running the new SQL. The fix
+in the app is that agreeing can't block anyone again: the person has agreed
+the moment they tick the boxes, so the app opens. If the account can't store
+the row right then (no signal, or the table not set up yet), the agreement
+waits on the phone and is sent on a later launch. 333 tests pass.
