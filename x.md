@@ -508,3 +508,33 @@ in the app is that agreeing can't block anyone again: the person has agreed
 the moment they tick the boxes, so the app opens. If the account can't store
 the row right then (no signal, or the table not set up yet), the agreement
 waits on the phone and is sent on a later launch. 333 tests pass.
+
+### The landing page phone works
+
+The phone on the landing page used to play a recording. Now it's a small
+working Grain. Type any meal and it matches each food, shows calories and
+protein, and logs it to a day that updates as you go. Open Train and tick
+sets with last time's numbers already in: the rest timer starts itself and
+beating last time shows a record. Open History and switch between a steady
+month and one with a break to see how missed days count as nothing. It
+runs entirely in the page with no account and nothing sent anywhere. Its
+food list is about 60 common foods: measured values from USDA FoodData
+Central, Indian dishes as the app's home recipe estimates (shown as
+estimates), and anything else is named as not in the demo instead of
+guessed. Before anyone touches it, it types a meal once by itself, so it's
+obvious the phone is live; any touch hands it over.
+
+The page also has three new sections: training (one tap sets, describe a
+workout, progress joined with food and the scale, history import),
+programs and coaches (follow with a code, meal plans that log in a tap, the
+coach's view, writing a program), and numbers that don't flatter you, with
+a card that switches between a steady month, a half logged day and a
+break. On phones the training and program cards sit side by side and move
+on by themselves, one at a time, pausing when touched; on wider screens
+they're a grid. Copy elsewhere now says full days, not days logged.
+
+### Training on Home
+
+Home has a Training card under This week: the week's workouts as dots,
+how many, hard sets and kilograms moved, and the next program day when
+following one. One tap opens Train.

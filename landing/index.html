@@ -11,7 +11,7 @@
     <title>Grain: calorie and macro tracker. Describe what you ate.</title>
     <meta
       name="description"
-      content="Track calories and macros by typing what you ate. Grain matches each food to measured nutrition data. Built for lifters and athletes, Indian food included."
+      content="Track calories and macros by typing what you ate, and log your training set by set. Grain matches each food to measured nutrition data. Built for lifters and athletes, Indian food included."
     />
     <meta name="theme-color" content="#FFFFFF" />
 
@@ -113,7 +113,8 @@
           <p class="lede">
             A photo can't see the oil in the pan or the chicken under the rice.
             You can. Type what you ate in plain English, and Grain works out the
-            calories and macros from real nutrition data.
+            calories and macros from real nutrition data. Your training logs
+            right beside it.
           </p>
           <a class="cta" href="https://app.getgrain.fit">
             <span class="cta-label">Open Grain</span>
@@ -124,13 +125,14 @@
         </div>
 
         <div class="phone-stage">
-          <div
-            class="phone"
-            role="img"
-            aria-label="Grain demo: typing 200 g chicken breast, 150 g rice and 1 tbsp ghee gives 642 calories and 66 grams of protein."
-          >
-            <div class="screen" aria-hidden="true">
-              <span class="glare"></span>
+          <div class="phone">
+            <div
+              class="screen proto"
+              data-proto
+              role="region"
+              aria-label="A working demo of Grain. Type a meal, log sets, see History."
+            >
+              <span class="glare" aria-hidden="true"></span>
               <div class="status">
                 <span>9:41</span><span class="island" aria-hidden="true"></span
                 ><span class="status-icons"
@@ -170,112 +172,286 @@
                 ></span>
               </div>
 
-              <div class="app-label">Today</div>
-              <div class="app-title">Daily log</div>
+              <div class="p-panel" data-p-log role="tabpanel" aria-label="Log">
+                <div class="app-label">Today</div>
+                <div class="app-title">Daily log</div>
 
-              <div class="app-card summary">
-                <div class="summary-top">
-                  <div>
-                    <div class="summary-label">Left to eat</div>
-                    <div class="readout" data-left>2,080</div>
+                <div class="app-card summary">
+                  <div class="summary-top">
+                    <div>
+                      <div class="summary-label">Left to eat</div>
+                      <div class="readout" data-p-left>2,080</div>
+                    </div>
+                    <div class="gauge" aria-hidden="true">
+                      <svg viewBox="0 0 100 100" width="84" height="84">
+                        <circle class="gauge-track" cx="50" cy="50" r="42" />
+                        <circle
+                          class="gauge-fill"
+                          cx="50"
+                          cy="50"
+                          r="42"
+                          data-p-gauge
+                        />
+                      </svg>
+                      <div class="gauge-text">
+                        <b data-p-consumed>520</b>
+                        <span>of 2,600</span>
+                      </div>
+                    </div>
                   </div>
-                  <div class="gauge">
-                    <svg viewBox="0 0 100 100" width="84" height="84">
-                      <circle class="gauge-track" cx="50" cy="50" r="42" />
-                      <circle
-                        class="gauge-fill"
-                        cx="50"
-                        cy="50"
-                        r="42"
-                        data-gauge
-                      />
-                    </svg>
-                    <div class="gauge-text">
-                      <b data-consumed>520</b>
-                      <span>of 2,600</span>
-                    </div>
-                  </div>
-                </div>
-                <div class="chips">
-                  <span class="chip"
-                    ><i></i
-                    ><span>P <span data-protein>38</span> / 170g</span></span
-                  >
-                  <span class="chip"
-                    ><span>C <span data-carbs>64</span>g</span></span
-                  >
-                  <span class="chip"
-                    ><span>F <span data-fat>14</span>g</span></span
-                  >
-                </div>
-              </div>
-
-              <div class="app-card describe" data-describe>
-                <div class="describe-input">
-                  <span data-typed></span><span class="caret"></span>
-                </div>
-                <div class="describe-foot">
-                  <span class="describe-hint"
-                    >We match each item, then you log.</span
-                  >
-                  <span class="app-btn" data-match>Match</span>
-                </div>
-
-                <div class="rows" data-rows>
-                  <div class="rows-inner">
-                    <div class="row">
-                      <div class="row-main">
-                        <div class="row-name">
-                          Chicken breast <em>✓ good match</em>
-                        </div>
-                        <div class="row-sub">200 g cooked</div>
-                      </div>
-                      <div class="row-kcal">330</div>
-                    </div>
-                    <div class="row">
-                      <div class="row-main">
-                        <div class="row-name">
-                          White rice <em>✓ good match</em>
-                        </div>
-                        <div class="row-sub">150 g cooked</div>
-                      </div>
-                      <div class="row-kcal">195</div>
-                    </div>
-                    <div class="row">
-                      <div class="row-main">
-                        <div class="row-name">Ghee <em>✓ good match</em></div>
-                        <div class="row-sub">1 tbsp (13 g)</div>
-                      </div>
-                      <div class="row-kcal">117</div>
-                    </div>
-                    <div class="row-total">
-                      <span>Total</span><b>642 kcal · 66 g protein</b>
-                    </div>
-                    <span class="app-btn app-btn-wide" data-log
-                      >Log 3 items</span
+                  <div class="chips">
+                    <span class="chip"
+                      ><i></i
+                      ><span>P <span data-p-p>38</span> / 170g</span></span
+                    >
+                    <span class="chip"
+                      ><span>C <span data-p-c>64</span>g</span></span
+                    >
+                    <span class="chip"
+                      ><span>F <span data-p-f>14</span>g</span></span
                     >
                   </div>
                 </div>
+
+                <div class="app-card p-describe">
+                  <textarea
+                    class="p-input"
+                    data-p-input
+                    rows="2"
+                    placeholder="Type what you ate"
+                    aria-label="What you ate"
+                    enterkeyhint="go"
+                    autocomplete="off"
+                    autocapitalize="none"
+                    spellcheck="false"
+                  ></textarea>
+                  <div class="describe-foot">
+                    <span class="describe-hint"
+                      >We match each item, then you log.</span
+                    >
+                    <button type="button" class="app-btn" data-p-match>
+                      Match
+                    </button>
+                  </div>
+                  <div
+                    class="p-results"
+                    data-p-results
+                    aria-live="polite"
+                  ></div>
+                </div>
+
+                <div class="p-try" data-p-suggest>
+                  <p class="p-label">Try one</p>
+                  <button
+                    type="button"
+                    class="p-chip"
+                    data-p-try="3 eggs, 2 toast, 1 tbsp butter"
+                  >
+                    3 eggs, toast</button
+                  ><button
+                    type="button"
+                    class="p-chip"
+                    data-p-try="200 g chicken breast, 150 g rice, 1 tbsp ghee"
+                  >
+                    Chicken and rice</button
+                  ><button
+                    type="button"
+                    class="p-chip"
+                    data-p-try="2 idli, 1 katori sambar, 1 cup chai"
+                  >
+                    Idli, sambar, chai
+                  </button>
+                </div>
+
+                <div class="p-eaten-wrap">
+                  <p class="p-label">Eaten</p>
+                  <ul class="p-eaten" data-p-eaten>
+                    <li><span>Oats with whey and banana</span><b>520</b></li>
+                  </ul>
+                </div>
               </div>
 
-              <div class="logged" data-logged>
-                <div class="logged-row">
-                  <span>Chicken breast</span><b>330</b>
+              <div
+                class="p-panel"
+                data-p-train
+                role="tabpanel"
+                aria-label="Train"
+                hidden
+              >
+                <div class="app-label">
+                  In progress · <span data-p-clock>14:00</span>
                 </div>
-                <div class="logged-row"><span>White rice</span><b>195</b></div>
-                <div class="logged-row"><span>Ghee</span><b>117</b></div>
+                <div class="app-title">Push</div>
+                <div class="p-workout">
+                  <div class="app-card p-ex">
+                    <div class="p-ex-head">
+                      <b>Bench press</b><span>Barbell · rest 1:30</span>
+                    </div>
+                    <div class="p-set p-set-head" aria-hidden="true">
+                      <span>Set</span><span>Last time</span><span>kg</span
+                      ><span>Reps</span><span></span>
+                    </div>
+                    <div data-p-sets></div>
+                    <div class="p-adjust" data-p-adjust>
+                      <span class="p-step"
+                        ><button
+                          type="button"
+                          data-p-step="kg-"
+                          aria-label="Lighter"
+                        >
+                          <svg viewBox="0 0 24 24">
+                            <path d="M15 6l-6 6l6 6" />
+                          </svg></button
+                        ><b data-p-adj-kg>80 kg</b
+                        ><button
+                          type="button"
+                          data-p-step="kg+"
+                          aria-label="Heavier"
+                        >
+                          <svg viewBox="0 0 24 24">
+                            <path d="M9 6l6 6l-6 6" />
+                          </svg></button
+                      ></span>
+                      <span class="p-step"
+                        ><button
+                          type="button"
+                          data-p-step="reps-"
+                          aria-label="Fewer reps"
+                        >
+                          <svg viewBox="0 0 24 24">
+                            <path d="M15 6l-6 6l6 6" />
+                          </svg></button
+                        ><b data-p-adj-reps>8 reps</b
+                        ><button
+                          type="button"
+                          data-p-step="reps+"
+                          aria-label="More reps"
+                        >
+                          <svg viewBox="0 0 24 24">
+                            <path d="M9 6l6 6l-6 6" />
+                          </svg></button
+                      ></span>
+                    </div>
+                    <p class="p-hint">
+                      Last time's numbers are already in. Beat them for a
+                      record.
+                    </p>
+                    <button
+                      type="button"
+                      class="app-btn app-btn-wide"
+                      data-p-finish
+                      hidden
+                    >
+                      Finish workout
+                    </button>
+                  </div>
+                </div>
+                <div class="app-card p-summary">
+                  <p class="p-eyebrow">Workout saved</p>
+                  <p class="p-summary-title">Push</p>
+                  <p class="p-summary-text" data-p-summary-text></p>
+                  <p class="p-summary-next">
+                    Next time, these become your numbers to beat.
+                  </p>
+                  <button
+                    type="button"
+                    class="app-btn app-btn-wide"
+                    data-p-again
+                  >
+                    Start it again
+                  </button>
+                </div>
+                <p class="p-toast" data-p-toast role="status"></p>
+                <div class="p-rest" data-p-rest hidden>
+                  <span class="p-rest-label">Rest</span
+                  ><b data-p-rest-time>1:30</b
+                  ><span class="p-rest-track"><i data-p-rest-fill></i></span
+                  ><button type="button" data-p-skip>Skip</button>
+                </div>
               </div>
+
+              <div
+                class="p-panel"
+                data-p-history
+                role="tabpanel"
+                aria-label="History"
+                hidden
+              >
+                <div class="app-label">History</div>
+                <div class="app-title">Last 30 days</div>
+                <div class="p-modes" role="group" aria-label="Show an example">
+                  <button
+                    type="button"
+                    data-p-mode="steady"
+                    aria-pressed="true"
+                  >
+                    Steady</button
+                  ><button
+                    type="button"
+                    data-p-mode="break"
+                    aria-pressed="false"
+                  >
+                    After a break
+                  </button>
+                </div>
+                <div class="app-card p-fresh">
+                  <p class="p-eyebrow" data-p-fresh-when>Fresh start</p>
+                  <p class="p-fresh-title">Back after 10 days away</p>
+                </div>
+                <div class="app-card p-hist">
+                  <div class="summary-label">Total deficit maintained</div>
+                  <p class="p-h-big">
+                    <span data-p-h-total>0</span><small>kcal</small>
+                  </p>
+                  <p class="p-h-sub" data-p-h-sub></p>
+                  <div class="p-h-stats">
+                    <span><b data-p-h-days></b>Full days</span
+                    ><span><b data-p-h-streak></b>In a row</span
+                    ><span><b data-p-h-avg></b>Daily deficit</span>
+                  </div>
+                  <div class="p-bars" data-p-h-bars aria-hidden="true"></div>
+                </div>
+                <p class="p-h-note" data-p-h-note></p>
+              </div>
+
+              <nav class="p-tabs" role="tablist" aria-label="Demo tabs">
+                <button
+                  type="button"
+                  role="tab"
+                  data-p-tab="log"
+                  aria-selected="true"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 7h14M5 12h14M5 17h9" /></svg
+                  >Log
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  data-p-tab="train"
+                  aria-selected="false"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 9v6M6 7v10M18 7v10M21 9v6M6 12h12" /></svg
+                  >Train
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  data-p-tab="history"
+                  aria-selected="false"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 17l5.5-5.5l3.5 3.5L20 8" /></svg
+                  >History
+                </button>
+              </nav>
             </div>
           </div>
-
-          <div class="float float-a glass" aria-hidden="true">
-            <span class="float-num">642</span
-            ><span class="float-unit">kcal</span>
-          </div>
-          <div class="float float-b glass" aria-hidden="true">
-            <span class="float-num">66 g</span
-            ><span class="float-unit">protein</span>
-          </div>
+          <p class="phone-note">
+            <span class="phone-note-dot" aria-hidden="true"></span>A working
+            Grain. Type a meal, or open Train.
+          </p>
         </div>
       </section>
 
@@ -701,7 +877,9 @@
               <p class="ui-big ui-good">
                 <span data-count-to="5910">5,910</span><small>kcal</small>
               </p>
-              <p class="ui-sub">≈ 0.8 kg of fat, if it all held</p>
+              <p class="ui-sub">
+                About 0.8 kg of fat, across the 12 full days you logged
+              </p>
               <div class="bars">
                 <i style="--i: 0; --h: 0.84"></i>
                 <i style="--i: 1; --h: 0.68"></i>
@@ -719,14 +897,15 @@
                 <i style="--i: 13; --h: 0.86"></i>
               </div>
               <div class="ui-stats">
-                <span><b>12</b> of 14 days logged</span>
-                <span><b>4</b> day streak</span>
+                <span><b>12</b> of 14 full days</span>
+                <span><b>4</b> days in a row</span>
               </div>
             </div>
             <h3>Your deficit, added up</h3>
             <p>
-              Every day's gap between what you ate and what you burned, kept as
-              a running total, with the fat it comes to.
+              Every full day's gap between what you ate and what you burned,
+              kept as a running total. A day you didn't log counts as nothing,
+              never as a deficit.
             </p>
           </article>
 
@@ -810,7 +989,7 @@
                   <span>7 of 7 days logged</span>
                 </div>
                 <div class="ticks ticks-weigh">
-                  <i></i><i></i><i></i><span>3 of 3 weigh-ins</span>
+                  <i></i><i></i><i></i><span>3 of 3 weigh ins</span>
                 </div>
               </div>
               <div class="target-learned">
@@ -825,7 +1004,7 @@
             </div>
             <h3>A target that learns</h3>
             <p>
-              After a week of logs and three weigh-ins, Grain works out what you
+              After a week of logs and three weigh ins, Grain works out what you
               really burn and suggests a new target.
             </p>
           </article>
@@ -854,10 +1033,316 @@
         </div>
       </section>
 
+      <section class="split honest wrap" aria-labelledby="honest-title">
+        <div class="split-copy" data-reveal>
+          <div class="hint hint-mid hint-honest" aria-hidden="true"></div>
+          <h2 id="honest-title">Numbers that don't flatter you.</h2>
+          <p class="section-lede">
+            Missed a week? It counts as nothing, never as a deficit. A half
+            logged day stays out until it's finished. After a break, History
+            starts clean from the day you come back. You can't lie to yourself,
+            so Grain won't either.
+          </p>
+        </div>
+        <div class="glass honest-card" data-honest data-reveal>
+          <div class="h-modes" role="group" aria-label="Show an example month">
+            <button type="button" data-h-mode="steady" aria-pressed="true">
+              Steady month</button
+            ><button type="button" data-h-mode="half" aria-pressed="false">
+              A half logged day</button
+            ><button type="button" data-h-mode="break" aria-pressed="false">
+              After a break
+            </button>
+          </div>
+          <div class="h-fresh" data-h-fresh>
+            <p class="p-eyebrow">Fresh start</p>
+            <p>
+              Back after 10 days away. Those days aren't counted either way.
+            </p>
+          </div>
+          <p class="ui-caption">Total deficit maintained</p>
+          <p class="h-big">
+            <span data-h-total>11,970</span><small>kcal</small>
+          </p>
+          <p class="ui-sub" data-h-sub>
+            About 1.6 kg of fat, across the 27 full days you logged
+          </p>
+          <div class="h-bars" data-h-bars aria-hidden="true"></div>
+          <p class="h-note" data-h-note>
+            Three days weren't logged. They add nothing, so the total is what
+            you really did.
+          </p>
+        </div>
+      </section>
+
+      <section class="train wrap" aria-labelledby="train-title">
+        <div class="section-head" data-reveal>
+          <div class="hint hint-mid hint-train" aria-hidden="true"></div>
+          <p class="new-tag">New in Grain</p>
+          <h2 id="train-title">Now every set counts too.</h2>
+          <p class="section-lede">
+            Your training lives beside your food, so Grain can show what neither
+            shows alone: strength held through a cut, or the week protein dipped
+            and your lifts stalled.
+          </p>
+        </div>
+
+        <div class="rail" data-rail>
+          <div class="rail-track" data-rail-track>
+            <article class="glass feat rcard rcard-sets">
+              <div class="ui rui" aria-hidden="true">
+                <div class="rui-head">
+                  <b>Squat</b><span>Last time 100 × 5</span>
+                </div>
+                <div class="rui-cols">
+                  <span>Set</span><span>Previous</span><span>kg</span
+                  ><span>Reps</span><span></span>
+                </div>
+                <div class="rui-set" style="--i: 0">
+                  <span>1</span><span>100 × 5</span><b>100</b><b>5</b><i></i>
+                </div>
+                <div class="rui-set" style="--i: 1">
+                  <span>2</span><span>100 × 5</span><b>100</b><b>5</b><i></i>
+                </div>
+                <div class="rui-set rui-set-pr" style="--i: 2">
+                  <span><em>PR</em><span>3</span></span
+                  ><span>100 × 5</span><b>102.5</b><b>5</b><i></i>
+                </div>
+                <div class="rui-rest">
+                  <span>Rest</span><b>3:00</b><i><i></i></i>
+                </div>
+              </div>
+              <h3>One tap per set</h3>
+              <p>
+                Last time's numbers are already in the boxes. Tick, and the rest
+                timer starts itself. A record shows the moment you set it.
+              </p>
+            </article>
+
+            <article class="glass feat rcard rcard-say">
+              <div class="ui rui" aria-hidden="true">
+                <div class="rui-input">
+                  <span class="rui-type">bench 80x8, 80x8, 85x6</span>
+                </div>
+                <div class="rui-read" style="--i: 0">
+                  <b>Bench press</b><span>80 × 8</span><span>80 × 8</span
+                  ><span>85 × 6</span>
+                </div>
+                <div class="rui-input rui-input-2">
+                  <span class="rui-type">squat a hundred kilos 5 by 5</span>
+                </div>
+                <div class="rui-read" style="--i: 1">
+                  <b>Squat</b><span>100 × 5</span><span>× 5 sets</span>
+                </div>
+                <p class="rui-foot">
+                  Read on your phone. Instant, even offline.
+                </p>
+              </div>
+              <h3>Say the workout</h3>
+              <p>
+                Type it or say it, for today or any day before. Grain reads it
+                into sets, and asks about anything it can't place.
+              </p>
+            </article>
+
+            <article class="glass feat rcard rcard-progress">
+              <div class="ui rui" aria-hidden="true">
+                <p class="rui-line">
+                  Lifts up <b>3.0%</b> while bodyweight fell <b>0.6 kg</b>.
+                </p>
+                <svg
+                  class="rui-chart"
+                  viewBox="0 0 280 110"
+                  preserveAspectRatio="none"
+                >
+                  <path class="rui-grid" d="M0 27H280M0 55H280M0 83H280" />
+                  <path
+                    class="rui-lift"
+                    d="M4 80 L44 76 L84 70 L124 66 L164 58 L204 50 L244 44 L276 34"
+                  />
+                  <path
+                    class="rui-weight"
+                    d="M4 30 L44 33 L84 36 L124 41 L164 45 L204 50 L244 56 L276 60"
+                  />
+                </svg>
+                <div class="rui-legend">
+                  <span><i class="lift"></i>Bench, estimated max</span
+                  ><span><i class="weight"></i>Bodyweight</span>
+                </div>
+                <div class="rui-stats">
+                  <span><b>102.5 kg</b>best estimated max</span
+                  ><span><b>14</b>hard sets this week</span>
+                </div>
+              </div>
+              <h3>Food, training and the scale in one line</h3>
+              <p>
+                Week against week, month against month, with what you ate and
+                what the scale said. One app holding all three can write it.
+              </p>
+            </article>
+
+            <article class="glass feat rcard rcard-import">
+              <div class="ui rui" aria-hidden="true">
+                <div class="rui-file">
+                  <span class="rui-file-icon">CSV</span>
+                  <div><b>strong_export.csv</b><span>Strong export</span></div>
+                </div>
+                <div class="rui-progress"><i></i></div>
+                <div class="rui-done">
+                  <p><b>312 workouts</b> · 4,180 sets</p>
+                  <span
+                    >March 2024 to today. Records and last time's numbers now
+                    include them.</span
+                  >
+                </div>
+                <div class="rui-tags">
+                  <span>Strong</span><span>Hevy</span><span>Spreadsheets</span
+                  ><span>Your notes</span>
+                </div>
+              </div>
+              <h3>Bring your history</h3>
+              <p>
+                From Strong, Hevy, any spreadsheet or your own notes. Progress
+                starts from where you really are, not from zero.
+              </p>
+            </article>
+          </div>
+          <div class="rail-dots" data-rail-dots></div>
+        </div>
+      </section>
+
+      <section class="coach wrap" aria-labelledby="coach-title">
+        <div class="section-head" data-reveal>
+          <div
+            class="hint hint-mid hint-amber hint-coach"
+            aria-hidden="true"
+          ></div>
+          <h2 id="coach-title">Programs from the people you train with.</h2>
+          <p class="section-lede">
+            A coach or athlete writes a program once and shares a code.
+            Followers get today's session on top of Train, and their meal plan
+            one tap from logged.
+          </p>
+        </div>
+
+        <div class="rail" data-rail>
+          <div class="rail-track" data-rail-track>
+            <article class="glass feat rcard rcard-code">
+              <div class="ui rui" aria-hidden="true">
+                <div class="rui-code">
+                  <span>6</span><span>Z</span><span>F</span><span>P</span
+                  ><span>X</span><span>T</span>
+                </div>
+                <div class="rui-prog">
+                  <p class="rui-eyebrow">Week 2 of 8 · Push Pull Legs</p>
+                  <p class="rui-day">Pull</p>
+                  <p class="rui-sub">Deadlift, Pull up, Barbell row</p>
+                  <span class="rui-btn">Start Pull</span>
+                </div>
+              </div>
+              <h3>Follow with a code</h3>
+              <p>
+                Open the link or type the code. Today's day sits on top of
+                Train, every exercise with its target reps.
+              </p>
+            </article>
+
+            <article class="glass feat rcard rcard-plan">
+              <div class="ui rui" aria-hidden="true">
+                <p class="rui-eyebrow rui-eyebrow-quiet">From your plan</p>
+                <div class="rui-meal" style="--i: 0">
+                  <div>
+                    <b>Oats with whey and banana</b
+                    ><span>650 kcal · 45 g protein</span>
+                  </div>
+                  <span class="rui-log">Log</span>
+                </div>
+                <div class="rui-meal" style="--i: 1">
+                  <div>
+                    <b>Chicken, rice and dal</b
+                    ><span>720 kcal · 58 g protein</span>
+                  </div>
+                  <span class="rui-log">Log</span>
+                </div>
+                <div class="rui-meal" style="--i: 2">
+                  <div>
+                    <b>Paneer bhurji, 2 roti</b
+                    ><span>610 kcal · 36 g protein</span>
+                  </div>
+                  <span class="rui-log">Log</span>
+                </div>
+                <div class="rui-target">
+                  <span>Plan</span><b>2,600 kcal</b><b>180 g protein</b>
+                </div>
+              </div>
+              <h3>Meal plans that log in a tap</h3>
+              <p>
+                Your coach's meals sit on Today. One tap logs one, with its
+                calories and protein already worked out.
+              </p>
+            </article>
+
+            <article class="glass feat rcard rcard-coach">
+              <div class="ui rui" aria-hidden="true">
+                <p class="rui-eyebrow rui-eyebrow-quiet">
+                  Followers who share · last 4 weeks
+                </p>
+                <div class="rui-person" style="--i: 0; --w: 0.92">
+                  <b>Riya</b><span>11 of 12 workouts</span><i><i></i></i
+                  ><em>Food logged 26 of 28 days</em>
+                </div>
+                <div class="rui-person" style="--i: 1; --w: 1">
+                  <b>Aditi</b><span>12 of 12 workouts</span><i><i></i></i
+                  ><em>Weight down 1.4 kg</em>
+                </div>
+                <div class="rui-person is-behind" style="--i: 2; --w: 0.5">
+                  <b>Kabir</b><span>6 of 12 workouts</span><i><i></i></i
+                  ><em>Trained 5 days ago</em>
+                </div>
+              </div>
+              <h3>See who's on plan</h3>
+              <p>
+                Followers can share a summary: sessions done, full food days,
+                calories, protein and weight. Only if they choose to, and never
+                their meals.
+              </p>
+            </article>
+
+            <article class="glass feat rcard rcard-write">
+              <div class="ui rui" aria-hidden="true">
+                <p class="rui-title">Push Pull Legs <span>8 weeks</span></p>
+                <div class="rui-dayname">Day 1 · Push</div>
+                <div class="rui-rx">
+                  <span>Bench press</span><b>4 × 6 to 8</b>
+                </div>
+                <div class="rui-rx">
+                  <span>Overhead press</span><b>3 × 8 to 12</b>
+                </div>
+                <div class="rui-rx">
+                  <span>Lateral raise</span><b>3 × 12 to 15</b>
+                </div>
+                <div class="rui-publish">
+                  <span class="rui-btn">Publish</span
+                  ><span class="rui-share">Code <b>6ZFPXT</b></span>
+                </div>
+              </div>
+              <h3>Write it once</h3>
+              <p>
+                Days, sets and rep ranges, plus a meal plan if you like.
+                Publish, share the code, and see who follows.
+              </p>
+            </article>
+          </div>
+          <div class="rail-dots" data-rail-dots></div>
+        </div>
+      </section>
+
       <section class="end wrap">
         <div class="glass end-card" data-reveal>
           <div class="end-copy">
-            <p class="end-who">Built for lifters, athletes and models.</p>
+            <p class="end-who">
+              Built for lifters, athletes, coaches and models.
+            </p>
             <p class="end-line">
               Log your next meal
               <span class="tone">the way you'd describe it.</span>
@@ -883,9 +1368,10 @@
       >
     </footer>
 
-    <script src="demo.js" defer></script>
+    <script src="proto.js" defer></script>
     <script src="tiles.js" defer></script>
     <script src="custom.js" defer></script>
     <script src="motion.js" defer></script>
+    <script src="rail.js" defer></script>
   </body>
 </html>

@@ -3,11 +3,13 @@ import { router, useFocusEffect } from 'expo-router';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { AdaptiveCard } from '@/components/dashboard/adaptive-card';
+import { TrainCard } from '@/components/dashboard/training';
 import { MacroTile } from '@/components/dashboard/macro-tile';
 import { st } from '@/components/dashboard/styles';
 import { WeekCard } from '@/components/dashboard/week-card';
 import { WeighInCard } from '@/components/dashboard/weigh-in-card';
 import { OnboardingFlow } from '@/components/onboarding-flow';
+import { useFollowing } from '@/components/train/follow';
 import { Monogram } from '@/components/ui/monogram';
 import {
   Card,
@@ -38,6 +40,8 @@ import { useAuth } from '@/lib/supabase/auth';
 import { takeProgramLink } from '@/lib/supabase/programs';
 import { computeTargets, type ProfileInput } from '@/lib/targets';
 import { predictWeeklyLoss } from '@/lib/weekly-prediction';
+import { loadWorkouts } from '@/lib/train/store';
+import type { Workout } from '@/lib/train/workout';
 import { latestWeight, setWeight } from '@/lib/weight-store';
 
 /**
@@ -66,6 +70,8 @@ export default function HomeScreen() {
   const [adaptive, setAdaptive] = useState<AdaptiveTdee | null>(null);
   const [history, setHistory] = useState<DailyDatum[]>([]);
   const [lastWeight, setLastWeight] = useState<number | null>(null);
+  const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const { following } = useFollowing();
 
   // Arrived from a program link that needed signing in first: open it.
   useEffect(() => {
@@ -77,13 +83,15 @@ export default function HomeScreen() {
     const p = await loadProfile();
     setProfile(p);
     if (p) {
-      const [hist, lw] = await Promise.all([
+      const [hist, lw, ws] = await Promise.all([
         honestHistory(computeTargets(p).targetKcal),
         latestWeight(),
+        loadWorkouts().catch(() => [] as Workout[]),
       ]);
       setAdaptive(estimateAdaptiveTdee(closedDays(hist)));
       setHistory(hist);
       setLastWeight(lw?.kg ?? null);
+      setWorkouts(ws);
     }
     setLoading(false);
   }, []);
@@ -195,6 +203,9 @@ export default function HomeScreen() {
         )}
         goalRateKgWeek={t.appliedRateKgWeek}
       />
+
+      <SectionLabel>Training</SectionLabel>
+      <TrainCard workouts={workouts} following={following} today={todayKey()} />
 
       {/* Macros */}
       <SectionLabel>Macros</SectionLabel>
