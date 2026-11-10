@@ -132,7 +132,7 @@
               class="screen proto"
               data-proto
               role="region"
-              aria-label="A working demo of Grain. Type a meal, log sets, see History."
+              aria-label="A working demo of Grain. It tours itself; tap to use it."
             >
               <span class="glare" aria-hidden="true"></span>
               <div class="status">
@@ -450,10 +450,38 @@
               </nav>
             </div>
           </div>
-          <p class="phone-note">
-            <span class="phone-note-dot" aria-hidden="true"></span>A working
-            Grain. Type a meal, or open Train.
-          </p>
+          <div class="tour" data-tour aria-label="A guided tour of Grain">
+            <div class="tour-top">
+              <span class="tour-count" data-tour-count>1 of 9</span>
+              <span class="tour-chapter" data-tour-chapter>Log</span>
+              <button type="button" class="tour-play" data-tour-play>
+                <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M9 6v12M15 6v12" /></svg
+                ><svg class="i-play" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 5.5v13l10.5-6.5z" /></svg
+                ><span>Pause</span>
+              </button>
+            </div>
+            <div class="tour-segs" data-tour-segs></div>
+            <div aria-live="polite">
+              <p class="tour-title" data-tour-title>Your day in one ring</p>
+              <p class="tour-text" data-tour-text></p>
+            </div>
+            <div class="tour-nav">
+              <button type="button" class="tour-prev" data-tour-prev>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M15 6l-6 6l6 6" /></svg
+                ><span>Back</span>
+              </button>
+              <p class="tour-hint">Tap the phone to take over</p>
+              <button type="button" class="tour-next" data-tour-next>
+                <span>Next</span
+                ><svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M9 6l6 6l-6 6" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 

@@ -970,47 +970,354 @@
   show('log');
   root.classList.add('is-live');
 
-  // Once, when the phone first comes into view: type a meal and match it,
-  // so it's clear the phone works. Any touch takes over at once.
-  let touched = false;
-  const takeOver = () => {
-    if (touched) return;
-    touched = true;
-    root.classList.remove('is-demo');
-  };
-  ['pointerdown', 'keydown', 'focusin', 'wheel'].forEach((ev) =>
-    root.addEventListener(ev, takeOver, { passive: true }),
-  );
+  // ---------------------------------------------------------------- Reset
 
-  async function attract() {
-    const text = '2 roti, 1 katori dal, 150 g paneer';
-    await sleep(900);
-    if (touched) return;
-    root.classList.add('is-demo');
-    for (const ch of text) {
-      if (touched) return;
-      input.value += ch;
-      await sleep(ch === ' ' ? 28 : 34 + Math.random() * 30);
+  // The tour starts every step from a known state, whatever a visitor did.
+  const DAY0 = { ...day };
+  function resetLog() {
+    Object.assign(day, DAY0);
+    eaten.length = 1;
+    input.value = '';
+    clearLog();
+    paintEaten();
+    paintDay();
+  }
+  function resetTrain() {
+    const prev = [
+      [80, 8],
+      [80, 8],
+      [80, 7],
+    ];
+    sets.forEach((s, i) => {
+      s.prev = prev[i];
+      [s.kg, s.reps] = prev[i];
+      s.done = false;
+      s.record = false;
+    });
+    best = Math.max(...sets.map((s) => e1rm(...s.prev)));
+    stopRest();
+    $('[data-p-toast]', train).classList.remove('is-on');
+    train.classList.remove('is-finished');
+    paintSets();
+  }
+
+  // ---------------------------------------------------------------- Tour
+
+  // A guided walk through the app: each step brings the phone to where it
+  // starts, highlights one part, and plays it with a touch dot. It runs by
+  // itself; a tap or a key inside the phone hands control to the visitor.
+  const card = document.querySelector('[data-tour]');
+  const dot = document.createElement('span');
+  dot.className = 'p-touch';
+  dot.setAttribute('aria-hidden', 'true');
+  root.appendChild(dot);
+
+  let token = 0; // bumps on every jump, so old steps stop
+  const wait = async (ms, t) => {
+    await sleep(reduced ? 0 : ms);
+    if (t !== token) throw new Error('stale');
+  };
+
+  function spot(el) {
+    $$('.is-spot').forEach((x) => x.classList.remove('is-spot'));
+    if (el) el.classList.add('is-spot');
+  }
+
+  function pointAt(el) {
+    const a = root.getBoundingClientRect();
+    const b = el.getBoundingClientRect();
+    const scale = a.width / root.offsetWidth || 1;
+    dot.style.transform = `translate(${(b.left - a.left + b.width / 2) / scale}px, ${(b.top - a.top + b.height / 2) / scale}px)`;
+    dot.classList.add('is-on');
+  }
+  async function tap(el, t) {
+    pointAt(el);
+    await wait(520, t);
+    dot.classList.remove('is-tap');
+    void dot.offsetWidth;
+    dot.classList.add('is-tap');
+    el.classList.add('is-pressed');
+    await wait(160, t);
+    el.classList.remove('is-pressed');
+  }
+  const hideDot = () => dot.classList.remove('is-on');
+
+  async function type(text, t, fast) {
+    if (fast) {
+      input.value = text;
+      return;
     }
-    await sleep(350);
-    if (touched) return;
-    matchBtn.classList.add('is-pressed');
-    await sleep(140);
-    matchBtn.classList.remove('is-pressed');
-    if (touched) return;
-    await match();
+    pointAt(input);
+    root.classList.add('is-demo');
+    input.value = '';
+    for (const ch of text) {
+      input.value += ch;
+      await wait(ch === ' ' ? 26 : 32 + Math.random() * 26, t);
+    }
     root.classList.remove('is-demo');
   }
 
-  if (!reduced) {
-    const seen = new IntersectionObserver(
-      ([e]) => {
-        if (!e.isIntersecting) return;
-        seen.disconnect();
-        attract();
+  const MEAL = '2 roti, 1 katori dal, 150 g paneer';
+  const tick = (i) => $(`[data-p-tick="${i}"]`, train);
+
+  // Each step: where it happens, what it shows, and what it does. `act`
+  // with fast set only lands the end state, used to rebuild earlier steps.
+  const STEPS = [
+    {
+      chapter: 'Log',
+      title: 'Your day in one ring',
+      text: 'Calories left to eat, and protein, carbs and fat against your targets. It fills as you log.',
+      tab: 'log',
+      spot: () => $('.summary', log),
+    },
+    {
+      chapter: 'Log',
+      title: 'Type what you ate',
+      text: 'Plain words, like a text to a friend. Pieces, katoris, spoons, cups and grams all work.',
+      tab: 'log',
+      spot: () => $('.p-describe', log),
+      act: (t, fast) => type(MEAL, t, fast),
+    },
+    {
+      chapter: 'Log',
+      title: 'Every food, matched',
+      text: 'Each item is matched to measured nutrition data and tagged honestly: a good match, an estimate, or an amount to check.',
+      tab: 'log',
+      spot: () => $('.p-describe', log),
+      act: async (t, fast) => {
+        if (!fast) await tap(matchBtn, t);
+        if (fast) showResults(readMeal(input.value));
+        else await match();
       },
-      { threshold: 0.6 },
-    );
-    seen.observe(root);
+    },
+    {
+      chapter: 'Log',
+      title: 'One tap to log',
+      text: 'Your ring, macros and today’s list update at once. Every meal is saved to your day.',
+      tab: 'log',
+      spot: () => $('.summary', log),
+      act: async (t, fast) => {
+        const add = $('[data-p-add]', log);
+        if (!fast && add) await tap(add, t);
+        addCurrent();
+      },
+    },
+    {
+      chapter: 'Train',
+      title: 'Last time, already filled in',
+      text: 'Every set shows what you lifted last session. Beat it or match it, then tick the set.',
+      tab: 'train',
+      spot: () => $('.p-ex', train),
+    },
+    {
+      chapter: 'Train',
+      title: 'Records and rest, automatic',
+      text: 'Add 2.5 kg and tick: Grain spots a new record on estimated max and starts your rest timer.',
+      tab: 'train',
+      spot: () => $('.p-ex', train),
+      act: async (t, fast) => {
+        const plus = $('[data-p-step="kg+"]', train);
+        if (!fast) await tap(plus, t);
+        plus.click();
+        if (!fast) await tap(tick(0), t);
+        tick(0).click();
+      },
+    },
+    {
+      chapter: 'History',
+      title: 'A deficit you can trust',
+      text: 'Only full days count. Missed days add nothing, and a half logged day waits until you finish it.',
+      tab: 'history',
+      spot: () => $('.p-hist', hist),
+    },
+    {
+      chapter: 'History',
+      title: 'Breaks start clean',
+      text: 'Ten days away count as nothing, not as a deficit. Your numbers start again from the day you return.',
+      tab: 'history',
+      spot: () => $('.p-hist', hist),
+      act: async (t, fast) => {
+        const b = $('[data-p-mode="break"]', hist);
+        if (!fast) await tap(b, t);
+        paintHistory('break');
+      },
+    },
+    {
+      chapter: 'Your turn',
+      title: 'Now try it yourself',
+      text: 'Type any meal, tick sets in Train, or flip History. Programs, coaches and imports are further down the page.',
+      tab: 'log',
+      spot: () => $('.p-describe', log),
+      end: true,
+    },
+  ];
+
+  let at = 0;
+  let playing = false;
+  let userPaused = false;
+  let visible = false;
+  let begun = false;
+  let raf = 0;
+
+  const segs = STEPS.map((s, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tour-seg';
+    b.setAttribute('aria-label', `Step ${i + 1}: ${s.title}`);
+    b.innerHTML = '<i></i>';
+    b.addEventListener('click', () => go(i, true));
+    $('[data-tour-segs]', card).appendChild(b);
+    return b;
+  });
+  const fill = (i, v) =>
+    segs[i].firstChild.style.setProperty('--f', v.toFixed(3));
+
+  function paintCard() {
+    const s = STEPS[at];
+    $('[data-tour-count]', card).textContent = `${at + 1} of ${STEPS.length}`;
+    $('[data-tour-chapter]', card).textContent = s.chapter;
+    $('[data-tour-title]', card).textContent = s.title;
+    $('[data-tour-text]', card).textContent = s.text;
+    segs.forEach((b, i) => {
+      b.classList.toggle('is-done', i < at);
+      b.classList.toggle('is-now', i === at);
+      b.setAttribute('aria-current', i === at ? 'step' : 'false');
+      fill(i, i < at ? 1 : 0);
+    });
+    $('[data-tour-prev]', card).disabled = at === 0;
+    $('[data-tour-next] span', card).textContent = s.end
+      ? 'Replay tour'
+      : 'Next';
+    paintPlay();
+  }
+
+  function paintPlay() {
+    const btn = $('[data-tour-play]', card);
+    const on = playing && !STEPS[at].end;
+    btn.setAttribute('aria-label', on ? 'Pause tour' : 'Play tour');
+    btn.classList.toggle('is-playing', on);
+    $('span', btn).textContent = on ? 'Pause' : 'Play';
+    card.classList.toggle('is-paused', !on);
+  }
+
+  // Bring the phone to the start of step i: reset, then land each earlier
+  // step's result instantly.
+  function rebuild(i) {
+    resetLog();
+    resetTrain();
+    paintHistory('steady');
+    if (STEPS[i].end) return; // the visitor gets a clean phone
+    for (let j = 0; j < i; j++) {
+      const s = STEPS[j];
+      if (s.act) s.act(token, true).catch(() => {});
+    }
+  }
+
+  async function go(i, manual) {
+    cancelAnimationFrame(raf);
+    const t = ++token;
+    at = Math.max(0, Math.min(STEPS.length - 1, i));
+    const s = STEPS[at];
+    if (manual && !s.end) {
+      userPaused = false;
+      playing = true;
+    }
+    rebuild(at);
+    show(s.tab);
+    spot(s.spot());
+    paintCard();
+    if (s.end) {
+      playing = false;
+      paintPlay();
+      hideDot();
+      return;
+    }
+    try {
+      await wait(450, t);
+      if (s.act) await s.act(t, false);
+      hideDot();
+      spot(s.spot());
+      await dwell(s, t);
+      if (playing) go(at + 1);
+    } catch {
+      /* a newer step took over */
+    }
+  }
+
+  // Time to read the step, shown filling its segment. Pausing holds it.
+  function dwell(s, t) {
+    const total = Math.max(3200, s.text.split(' ').length * 240);
+    let spent = 0;
+    let last = performance.now();
+    return new Promise((resolve, reject) => {
+      const frame = (now) => {
+        if (t !== token) return reject(new Error('stale'));
+        if (playing && visible) spent += now - last;
+        last = now;
+        fill(at, Math.min(1, spent / total));
+        if (spent >= total) return resolve();
+        raf = requestAnimationFrame(frame);
+      };
+      raf = requestAnimationFrame(frame);
+    });
+  }
+
+  function pause(byUser) {
+    if (!playing) return;
+    playing = false;
+    if (byUser) userPaused = true;
+    hideDot();
+    paintPlay();
+  }
+
+  // A real tap or key in the phone: the visitor drives from here.
+  const takeOver = (e) => {
+    if (!e.isTrusted || !begun) return;
+    if (playing) {
+      ++token;
+      cancelAnimationFrame(raf);
+      root.classList.remove('is-demo');
+      pause(true);
+    }
+    spot(null);
+  };
+  ['click', 'keydown', 'input'].forEach((ev) =>
+    root.addEventListener(ev, takeOver),
+  );
+
+  card.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.matches('[data-tour-prev]')) go(at - 1, true);
+    if (b.matches('[data-tour-next]')) go(STEPS[at].end ? 0 : at + 1, true);
+    if (b.matches('[data-tour-play]')) {
+      if (playing) pause(true);
+      else {
+        // Resume: replay the current step from its start.
+        go(STEPS[at].end ? 0 : at, true);
+      }
+    }
+  });
+
+  paintCard();
+
+  if (reduced) {
+    // No autoplay: the card still walks through, each step landing at once.
+    playing = false;
+    begun = true;
+    visible = true;
+    paintPlay();
+  } else {
+    new IntersectionObserver(
+      ([e]) => {
+        visible = e.isIntersecting;
+        if (visible && !begun) {
+          begun = true;
+          playing = true;
+          go(0);
+        }
+      },
+      { threshold: 0.5 },
+    ).observe(root);
   }
 })();

@@ -538,3 +538,23 @@ they're a grid. Copy elsewhere now says full days, not days logged.
 Home has a Training card under This week: the week's workouts as dots,
 how many, hard sets and kilograms moved, and the next program day when
 following one. One tap opens Train.
+
+### Landing page: canonical addresses for search
+
+The home, privacy and terms pages name their canonical address, and the
+sitemap date moved, ahead of adding getgrain.fit to Google Search Console.
+
+## 2026-11-11
+
+### The hero phone gives a guided tour
+
+The working phone now tours itself in nine steps: the day's ring, typing a
+meal, the matches with their tags, logging it, last session's numbers in
+Train, a record and the rest timer, the deficit that counts full days only,
+and a break that starts clean. A touch dot taps through each step and the
+part it's about is outlined. A card under the phone has the step's title
+and one line on it, a progress bar you can jump along, Back, Next and
+Pause. A tap or a key inside the phone hands control to the visitor; the
+last step resets the phone for them. It pauses while off screen, and with
+reduced motion it doesn't play by itself. On laptops the phone shrinks a
+little on shorter screens so the phone and the card fit in the first view.
