@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native';
 
-import { BarChart, LineChart } from '@/components/charts';
+import { BarChart, ChartDates, LineChart } from '@/components/charts';
 import {
   Card,
   DotMatrix,
@@ -16,7 +16,6 @@ import {
   type HistoryTargets,
 } from '@/lib/history-stats';
 
-import { MonthCalendar } from './month-calendar';
 import { st } from './styles';
 
 export function Journey({
@@ -24,14 +23,12 @@ export function Journey({
   targets,
   summary,
   complete,
-  onToggleComplete,
 }: {
   records: DayRecord[];
   targets: HistoryTargets;
   summary: HistorySummary;
   /** Low days the user confirmed as full. */
   complete: ReadonlySet<string>;
-  onToggleComplete: (date: string, complete: boolean) => Promise<void>;
 }) {
   // Only full days are drawn: a missing or unfinished day is a gap, not a 0.
   const counted = records.map(
@@ -46,6 +43,9 @@ export function Journey({
   const surplus = summary.totalDeficitKcal < 0;
   const fullDays = `${summary.daysCounted} full ${summary.daysCounted === 1 ? 'day' : 'days'}`;
   const unfinished = summary.unfinishedDates.length;
+  const dates = records.length ? (
+    <ChartDates from={records[0].date} to={records[records.length - 1].date} />
+  ) : null;
 
   return (
     <>
@@ -68,10 +68,10 @@ export function Journey({
         <View style={st.heroStatsRow}>
           <HeroStat
             value={`${summary.daysCounted} of ${summary.daysInRange}`}
-            label="Full days logged"
+            label="Full days"
           />
           <View style={st.heroStatDivider} />
-          <HeroStat value={`${summary.currentStreak}`} label="Days in a row" />
+          <HeroStat value={`${summary.currentStreak}`} label="In a row" />
           <View style={st.heroStatDivider} />
           <HeroStat
             value={
@@ -89,8 +89,8 @@ export function Journey({
         {unfinished ? (
           <Text style={st.heroNote}>
             {unfinished === 1
-              ? '1 day looks unfinished (under half your target), so it isn’t counted. Open it in the calendar to finish or confirm it.'
-              : `${unfinished} days look unfinished (under half your target), so they aren’t counted. Open them in the calendar to finish or confirm them.`}
+              ? '1 day is under half your target, so it isn’t counted yet. Finish or confirm it in the calendar above.'
+              : `${unfinished} days are under half your target, so they aren’t counted yet. Finish or confirm them in the calendar above.`}
           </Text>
         ) : null}
       </GlassSurface>
@@ -117,7 +117,9 @@ export function Journey({
           values={kcalSeries}
           target={targets.targetKcal}
           color={palette.accent}
+          scale
         />
+        {dates}
       </Card>
 
       {/* Deficit maintained: daily signed bars */}
@@ -139,7 +141,8 @@ export function Journey({
             ]}
           />
         </View>
-        <BarChart values={deficitSeries} />
+        <BarChart values={deficitSeries} scale />
+        {dates}
       </Card>
 
       {/* Macros: average split */}
@@ -173,7 +176,13 @@ export function Journey({
                 />
               ) : null}
             </View>
-            <LineChart values={weightSeries} color={palette.protein} showDots />
+            <LineChart
+              values={weightSeries}
+              color={palette.protein}
+              showDots
+              scale
+            />
+            {dates}
           </>
         ) : (
           <Text style={st.emptyText}>
@@ -182,19 +191,10 @@ export function Journey({
         )}
       </Card>
 
-      {/* Calendar: pick any day to see its totals, macros, and deficit */}
-      <SectionLabel>Calendar</SectionLabel>
-      <MonthCalendar
-        targets={targets}
-        complete={complete}
-        onToggleComplete={onToggleComplete}
-      />
-
       <Text style={st.footnote}>
-        Deficit is measured against your current maintenance of{' '}
-        {targets.maintenanceKcal.toLocaleString()} kcal. Only full days count: a
-        day you didn’t log adds nothing either way, and nothing is ever guessed
-        to fill a gap.
+        Measured against your maintenance of{' '}
+        {targets.maintenanceKcal.toLocaleString()} kcal. Only full days count; a
+        day you didn’t log adds nothing, and nothing is guessed.
       </Text>
     </>
   );

@@ -8,10 +8,11 @@ import {
   shortDay,
 } from '@/components/history/continuity';
 import { Journey } from '@/components/history/journey';
+import { MonthCalendar } from '@/components/history/month-calendar';
 import { RangePills, type Range } from '@/components/history/range-pills';
 import { st } from '@/components/history/styles';
-import { WeekShare } from '@/components/history/week-share';
-import { Card, Screen, Title } from '@/components/ui/primitives';
+import { TrainingCalendar } from '@/components/history/training-calendar';
+import { Card, Screen, SectionLabel, Title } from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
 import { loadCompleteDays, setDayComplete } from '@/lib/fulldays';
 import { gatherDailyRecords } from '@/lib/history';
@@ -103,6 +104,21 @@ export default function HistoryScreen() {
     <Screen>
       <Title>History</Title>
 
+      {/* Calendars first: any day's food, any day's training */}
+      {targets ? (
+        <>
+          <SectionLabel>Food</SectionLabel>
+          <MonthCalendar
+            targets={targets}
+            complete={complete}
+            onToggleComplete={toggleComplete}
+          />
+        </>
+      ) : null}
+      <SectionLabel>Training</SectionLabel>
+      <TrainingCalendar />
+
+      <SectionLabel>Trends</SectionLabel>
       {flow?.away ? <AwayCard away={flow.away} /> : null}
       {restart ? (
         <RestartCard
@@ -110,10 +126,6 @@ export default function HistoryScreen() {
           showing={range === 'since'}
           onShow={() => setPicked('since')}
         />
-      ) : null}
-
-      {targets && !flow?.away ? (
-        <WeekShare records={records} targets={targets} complete={complete} />
       ) : null}
 
       <RangePills
@@ -136,7 +148,7 @@ export default function HistoryScreen() {
           <Text style={st.emptyText}>
             {everLogged
               ? 'Pick a longer range to see earlier days, or log today to start this one.'
-              : 'Log your meals on the Log tab. Your trends, deficit and a day by day calendar will build up here.'}
+              : 'Log your meals on the Log tab and your trends and deficit build up here.'}
           </Text>
         </Card>
       ) : (
@@ -145,7 +157,6 @@ export default function HistoryScreen() {
           targets={targets}
           summary={summary}
           complete={complete}
-          onToggleComplete={toggleComplete}
         />
       )}
     </Screen>

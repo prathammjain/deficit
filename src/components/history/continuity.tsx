@@ -38,10 +38,8 @@ export function AwayCard({ away }: { away: NonNullable<Continuity['away']> }) {
       </Text>
       <Text style={st.flowTitle}>{away.days} days without logging</Text>
       <Text style={st.flowBody}>
-        Nothing is counted for those days, as deficit or as surplus, because
-        there’s nothing to go on. Log a full day and your numbers start again
-        from there; your week card comes back with it. Everything before stays
-        exactly as it was.
+        Nothing is counted for those days, either way. Log a full day and your
+        numbers start again from there; everything before stays as it was.
       </Text>
       <PrimaryButton
         label="Log today"
@@ -69,12 +67,10 @@ export function RestartCard({
       </Text>
       <Text style={st.flowTitle}>Back after {brk.days} days away</Text>
       <Text style={st.flowBody}>
-        No full day was logged from {formatWeekRange(brk.from, brk.to)}. Those
-        days aren’t counted either way, so nothing here is borrowed from before
-        or guessed.{' '}
+        {formatWeekRange(brk.from, brk.to)} counts as nothing either way.{' '}
         {showing
-          ? 'The numbers below start from your return. 30 days, 90 days and Year still show everything.'
-          : 'You can see your numbers from your return on their own.'}
+          ? 'These numbers start from your return; the longer ranges show everything.'
+          : 'See your numbers from your return on their own.'}
       </Text>
       {showing ? null : (
         <Pressable onPress={onShow} hitSlop={8} style={st.flowLink}>

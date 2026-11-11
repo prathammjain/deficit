@@ -3,6 +3,12 @@ import { router, useFocusEffect } from 'expo-router';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { AdaptiveCard } from '@/components/dashboard/adaptive-card';
+import {
+  ComebackCard,
+  DeficitSummary,
+  useWeekShare,
+  WeekSummary,
+} from '@/components/dashboard/highlights';
 import { TrainCard } from '@/components/dashboard/training';
 import { MacroTile } from '@/components/dashboard/macro-tile';
 import { st } from '@/components/dashboard/styles';
@@ -28,8 +34,14 @@ import {
 } from '@/lib/adaptive-tdee';
 import { formatToday } from '@/lib/date';
 import { loadCompleteDays } from '@/lib/fulldays';
-import { gatherHistory } from '@/lib/history';
-import { fullDaysOnly } from '@/lib/history-stats';
+import { gatherDailyRecords, gatherHistory } from '@/lib/history';
+import {
+  continuity,
+  fullDaysOnly,
+  summarizeHistory,
+  type DayRecord,
+  type HistoryTargets,
+} from '@/lib/history-stats';
 import { todayKey } from '@/lib/log-store';
 import {
   loadProfile,
@@ -42,7 +54,11 @@ import { computeTargets, type ProfileInput } from '@/lib/targets';
 import { predictWeeklyLoss } from '@/lib/weekly-prediction';
 import { loadWorkouts } from '@/lib/train/store';
 import type { Workout } from '@/lib/train/workout';
+import { weekReport } from '@/lib/week-report';
 import { latestWeight, setWeight } from '@/lib/weight-store';
+
+/** Days read for the top cards: enough to see a break and the return. */
+const LOOKBACK = 45;
 
 /**
  * The last three weeks with unfinished days (under half the target, not
@@ -71,6 +87,8 @@ export default function HomeScreen() {
   const [history, setHistory] = useState<DailyDatum[]>([]);
   const [lastWeight, setLastWeight] = useState<number | null>(null);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [records, setRecords] = useState<DayRecord[]>([]);
+  const [complete, setComplete] = useState<Set<string>>(() => new Set());
   const { following } = useFollowing();
 
   // Arrived from a program link that needed signing in first: open it.
@@ -83,15 +101,19 @@ export default function HomeScreen() {
     const p = await loadProfile();
     setProfile(p);
     if (p) {
-      const [hist, lw, ws] = await Promise.all([
+      const [hist, lw, ws, recs, marks] = await Promise.all([
         honestHistory(computeTargets(p).targetKcal),
         latestWeight(),
         loadWorkouts().catch(() => [] as Workout[]),
+        gatherDailyRecords(LOOKBACK).catch(() => [] as DayRecord[]),
+        loadCompleteDays().catch(() => new Set<string>()),
       ]);
       setAdaptive(estimateAdaptiveTdee(closedDays(hist)));
       setHistory(hist);
       setLastWeight(lw?.kg ?? null);
       setWorkouts(ws);
+      setRecords(recs);
+      setComplete(marks);
     }
     setLoading(false);
   }, []);
@@ -137,6 +159,30 @@ export default function HomeScreen() {
     [profile],
   );
 
+  // The top cards use the same numbers as History.
+  const targets: HistoryTargets | null = profile
+    ? (({ targetKcal, maintenanceKcal, proteinG }) => ({
+        targetKcal,
+        maintenanceKcal,
+        proteinG,
+      }))(computeTargets(profile))
+    : null;
+  const report = targets ? weekReport(records, targets, complete) : null;
+  const share = useWeekShare(
+    report ?? {
+      from: todayKey(),
+      to: todayKey(),
+      daysLogged: 0,
+      totalDeficitKcal: 0,
+      estFatLossKg: 0,
+      avgKcal: null,
+      targetKcal: 0,
+      proteinDays: 0,
+      avgProteinG: null,
+      weightChangeKg: null,
+    },
+  );
+
   if (loading) {
     return (
       <View style={st.loadingRoot}>
@@ -151,13 +197,23 @@ export default function HomeScreen() {
   }
 
   const t = computeTargets(profile);
+  const today = todayKey();
+  const flow = targets
+    ? continuity(records, targets.targetKcal, complete, today)
+    : null;
+  const since = flow?.restart?.since ?? null;
+  const shown = since
+    ? records.filter((r) => r.date >= since)
+    : records.slice(-30);
+  const summary = targets ? summarizeHistory(shown, targets, complete) : null;
+  const everLogged = records.some((r) => r.logged);
 
   return (
     <Screen>
       <View style={st.headerRow}>
         <View>
           <Text style={st.dateLine}>{formatToday()}</Text>
-          <Title>Your plan</Title>
+          <Title>Overview</Title>
         </View>
         <Pressable
           onPress={() => router.push('/profile')}
@@ -167,8 +223,38 @@ export default function HomeScreen() {
           <Monogram letter={session?.user?.email} size={34} />
         </Pressable>
       </View>
-      {/* Hero: the one number the day is built around */}
-      <GlassSurface padded style={st.heroCard}>
+
+      {/* The three hooks: where you stand, this week, the total so far */}
+      {flow ? <ComebackCard flow={flow} /> : null}
+
+      {report && everLogged && !flow?.away ? (
+        <>
+          <SectionLabel
+            action={share ? { label: 'Share', onPress: share } : undefined}
+          >
+            Your week
+          </SectionLabel>
+          <WeekSummary report={report} />
+        </>
+      ) : null}
+
+      {summary && everLogged ? (
+        <>
+          <SectionLabel
+            action={{
+              label: 'History',
+              onPress: () => router.navigate('/history'),
+            }}
+          >
+            Total deficit maintained
+          </SectionLabel>
+          <DeficitSummary summary={summary} since={since} />
+        </>
+      ) : null}
+
+      {/* The plan: the one number the day is built around */}
+      <SectionLabel>Your plan</SectionLabel>
+      <GlassSurface padded>
         <Text style={st.heroLabel}>Your daily target</Text>
         <View style={st.heroNumberRow}>
           <DotMatrix style={st.heroNumber}>
@@ -194,8 +280,7 @@ export default function HomeScreen() {
         </View>
       </GlassSurface>
 
-      {/* This week: on pace to lose */}
-      <SectionLabel>This week</SectionLabel>
+      <SectionLabel>Forecast</SectionLabel>
       <WeekCard
         prediction={predictWeeklyLoss(
           history,
@@ -204,8 +289,12 @@ export default function HomeScreen() {
         goalRateKgWeek={t.appliedRateKgWeek}
       />
 
-      <SectionLabel>Training</SectionLabel>
-      <TrainCard workouts={workouts} following={following} today={todayKey()} />
+      <SectionLabel
+        action={{ label: 'Train', onPress: () => router.navigate('/train') }}
+      >
+        Training
+      </SectionLabel>
+      <TrainCard workouts={workouts} following={following} today={today} />
 
       {/* Macros */}
       <SectionLabel>Macros</SectionLabel>

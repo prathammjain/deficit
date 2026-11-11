@@ -65,16 +65,33 @@ export function Title({ children }: { children: ReactNode }) {
   return <Text style={s.title}>{children}</Text>;
 }
 
+/**
+ * A section heading: sentence case, one clear step below the screen title,
+ * with an optional action on the right ("See all", "Share").
+ */
 export function SectionLabel({
   children,
   style,
+  action,
 }: {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
+  action?: { label: string; onPress: () => void };
 }) {
   return (
     <View style={[s.sectionLabelWrap, style]}>
-      <Text style={s.sectionLabel}>{String(children).toUpperCase()}</Text>
+      <Text style={s.sectionLabel} accessibilityRole="header">
+        {children}
+      </Text>
+      {action ? (
+        <Pressable
+          onPress={action.onPress}
+          hitSlop={10}
+          style={({ pressed }) => pressed && s.pressed}
+        >
+          <Text style={s.sectionAction}>{action.label}</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -207,15 +224,24 @@ const s = StyleSheet.create({
   },
   eyebrow: { ...type.eyebrow, color: palette.textFaint },
   title: { ...type.title, color: palette.text, marginTop: space.sm },
-  sectionLabelWrap: { marginTop: space.xxl, marginBottom: space.md },
-  sectionLabel: { ...type.eyebrow, color: palette.textFaint },
+  sectionLabelWrap: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginTop: space.xxl,
+    marginBottom: space.md,
+  },
+  sectionLabel: { ...type.section, color: palette.text },
+  sectionAction: { fontSize: 14, fontWeight: '600', color: palette.accent },
   dotMatrix: { ...type.hero, color: palette.text },
-  // Flat: a hairline is enough to lift a card off the bone canvas.
+  // A hairline lifts a card off the bone canvas; a shadow too soft to
+  // notice gives it weight.
   card: {
     backgroundColor: palette.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: palette.hairline,
+    boxShadow: '0 1px 2px rgba(61, 56, 49, 0.05)',
   },
   cardPadded: { padding: space.xl },
   raised: {
@@ -223,6 +249,8 @@ const s = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: palette.hairline,
+    boxShadow:
+      '0 1px 2px rgba(61, 56, 49, 0.05), 0 8px 24px -12px rgba(61, 56, 49, 0.14)',
   },
   hairline: { height: 1, backgroundColor: palette.hairline },
   primaryBtn: {

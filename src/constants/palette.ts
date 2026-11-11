@@ -110,6 +110,8 @@ export const type = {
   value: { fontSize: 17, fontWeight: '700' as const, letterSpacing: -0.2 },
   title: { fontSize: 30, fontWeight: '700' as const, letterSpacing: -0.6 },
   heading: { fontSize: 20, fontWeight: '700' as const, letterSpacing: -0.2 },
+  /** Section heading above a group of cards. */
+  section: { fontSize: 17, fontWeight: '700' as const, letterSpacing: -0.25 },
   body: { fontSize: 15, fontWeight: '400' as const },
   /** The dot-matrix hero numeral (pair with the DotMatrix primitive). */
   hero: { fontSize: 64, fontWeight: '900' as const, letterSpacing: 1 },

@@ -39,10 +39,9 @@ export function AdaptiveCard({
       <Card>
         <Text style={st.adaptiveLead}>Waiting for steadier logging</Text>
         <Text style={st.adaptiveBody}>
-          Between your weigh ins, {Math.round(adaptive.coverage * span)} of{' '}
-          {span} days were logged in full. The scale counts every day, logged or
-          not, so the gaps would make your maintenance look lower than it is. So
-          there’s no new estimate until most days are logged again.
+          {Math.round(adaptive.coverage * span)} of {span} days between weigh
+          ins were logged in full. The estimate waits for most days, so gaps
+          can’t pass for a slower metabolism.
         </Text>
       </Card>
     );
@@ -55,9 +54,8 @@ export function AdaptiveCard({
       <Card>
         <Text style={st.adaptiveLead}>Learning your real maintenance</Text>
         <Text style={st.adaptiveBody}>
-          The formula is a starting estimate. Keep logging meals and weighing
-          in. After about a week I’ll back out your true expenditure from the
-          data and adjust this target.
+          Your target starts from a formula. After about a week of meals and
+          weigh ins, Grain works out what you really burn and adjusts it.
         </Text>
         <View style={st.adaptiveProgressRow}>
           <Text style={st.adaptiveProgressText}>{days} of 7 days logged</Text>

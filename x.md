@@ -558,3 +558,26 @@ Pause. A tap or a key inside the phone hands control to the visitor; the
 last step resets the phone for them. It pauses while off screen, and with
 reduced motion it doesn't play by itself. On laptops the phone shrinks a
 little on shorter screens so the phone and the card fit in the first view.
+
+### Home leads with the hooks, History with the calendars, and a professional pass
+
+Feedback from a senior product manager, all four points taken.
+
+* The landing page button is one dark pill with its arrow set inside,
+  instead of a pill and a separate circle. On hover the arrow turns orange.
+* Home is now Overview and opens on the three cards that bring people
+  back: the fresh start (or the away card while a break runs), Your week as
+  a native card with Share in its header, and Total deficit maintained over
+  the same range History uses. The plan, forecast, training, macros, weigh
+  in and adaptive target follow.
+* History opens on two calendars: Food, as before, and a new Training
+  calendar. Days with a workout are filled, a dot marks a record, the month
+  shows workouts, hard sets and volume, and the chosen day lists its
+  workouts, each opening in full. Trends, the range and the charts follow.
+  The share image left History, since Your week on Home shares it.
+* Professional pass, same palette and layout: section headings are sentence
+  case with an action on the right instead of small uppercase labels over
+  every card; long explanations cut to a line or two; app copy no longer
+  says "I"; charts carry a light scale and their first and last dates;
+  stat labels no longer wrap; figures are tabular so columns line up;
+  cards have a shadow too soft to notice.

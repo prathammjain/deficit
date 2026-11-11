@@ -68,3 +68,8 @@ textarea:focus-visible {
     opacity: 0.88;
   }
 }
+
+/* Figures line up in columns and don't shift as numbers count up. */
+* {
+  font-variant-numeric: tabular-nums;
+}

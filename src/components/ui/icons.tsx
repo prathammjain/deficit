@@ -104,3 +104,15 @@ export function DotsIcon({ size = 18, color = palette.textMuted }: Props) {
     </Svg>
   );
 }
+
+export function ShareIcon({ size = 16, color = palette.text }: Props) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path d="M12 15V4M8 7.5L12 4l4 3.5" {...line(color)} />
+      <Path
+        d="M8 11H6.5A1.5 1.5 0 0 0 5 12.5v6A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5v-6a1.5 1.5 0 0 0-1.5-1.5H16"
+        {...line(color)}
+      />
+    </Svg>
+  );
+}
