@@ -632,3 +632,12 @@ Tried and left out: splitting the app per screen would save another 67 KB,
 but on Expo SDK 56 it leaves every screen blank (Expo calls it stable from
 SDK 58). Expo's experimental tree shaking saved only 10 KB, not worth an
 experimental flag on a live app.
+
+### One address: the Vercel address now sends people to app.getgrain.fit
+
+A friend signing in landed on deficit-cyan.vercel.app instead of the
+domain. vercel.json now answers every request to that exact host with a
+permanent redirect to the same path on app.getgrain.fit (query kept, so a
+sign in that lands there still finishes). Preview links are untouched.
+Supabase's Site URL and Redirect URLs must name app.getgrain.fit, or sign in
+keeps sending people back to the Vercel address first.

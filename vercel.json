@@ -3,6 +3,19 @@
   "buildCommand": "npx expo export --platform web",
   "outputDirectory": "dist",
   "cleanUrls": true,
+  "redirects": [
+    {
+      "source": "/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "deficit-cyan.vercel.app"
+        }
+      ],
+      "destination": "https://app.getgrain.fit/:path",
+      "permanent": true
+    }
+  ],
   "headers": [
     {
       "source": "/_expo/static/(.*)",
