@@ -866,6 +866,10 @@ Deno.serve(async (req: Request) => {
           proteinGBefore: n(day?.proteinG),
           proteinTargetG: n(day?.proteinTargetG),
           localHour: n(day?.hour),
+          goal:
+            day?.goal === 'gain' || day?.goal === 'maintain'
+              ? day.goal
+              : 'lose',
         },
       };
       return json({ line: await roastLine(cfg, input) }, 200, origin);

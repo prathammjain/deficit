@@ -86,3 +86,43 @@ describe('weekReport with unfinished days', () => {
     );
   });
 });
+
+describe('weekReport follows the goal', () => {
+  const week = [
+    day('2026-11-01', 3100, 150),
+    day('2026-11-02', 2900, 150),
+    day('2026-11-03', 0),
+    day('2026-11-04', 3300, 150),
+    day('2026-11-05', 2600, 150),
+    day('2026-11-06', 3000, 150),
+    day('2026-11-07', 3200, 150),
+  ];
+  const gain: HistoryTargets = {
+    targetKcal: 3080,
+    maintenanceKcal: 2800,
+    proteinG: 140,
+    goal: 'gain',
+  };
+
+  it('a plan without a goal reports as a loss', () => {
+    expect(weekReport(week, t).goal).toBe('lose');
+  });
+
+  it('gaining: carries the goal and counts days at or over the target', () => {
+    const r = weekReport(week, gain);
+    expect(r.goal).toBe('gain');
+    expect(r.daysLogged).toBe(6);
+    expect(r.daysOnTarget).toBe(3); // 3100, 3300, 3200
+    expect(r.totalDeficitKcal).toBe(-1300);
+  });
+
+  it('maintaining: counts days within 10% of maintenance', () => {
+    const r = weekReport(week, {
+      ...gain,
+      targetKcal: 2800,
+      goal: 'maintain',
+    });
+    expect(r.goal).toBe('maintain');
+    expect(r.daysOnTarget).toBe(3); // 3100, 3300 and 3200 are past 3080
+  });
+});

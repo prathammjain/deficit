@@ -19,6 +19,9 @@ export type ActivityLevel =
 
 export type ProteinMode = 'auto' | 'manual';
 
+/** What the plan is for. Profiles saved before goals existed are 'lose'. */
+export type Goal = 'lose' | 'maintain' | 'gain';
+
 /** Activity multipliers applied to BMR to get TDEE (§8.2). */
 export const ACTIVITY_FACTORS: Record<ActivityLevel, number> = {
   sedentary: 1.2,
@@ -34,6 +37,19 @@ export const KCAL_PER_KG_FAT = 7700;
 /** Safety clamps on the requested loss rate (§8.3). Faster isn't better. */
 export const MIN_RATE_KG_WEEK = 0.25;
 export const MAX_RATE_KG_WEEK = 1.0;
+
+/**
+ * Surplus for a gain, as a share of maintenance. Iraki et al. 2019 (off season
+ * bodybuilding): about 10 to 20% above maintenance, which gains about 0.25 to
+ * 0.5% of bodyweight a week; bigger surpluses mostly add fat. Lean is 10%,
+ * standard 15%, and nothing above 20%.
+ */
+export const LEAN_SURPLUS = 0.1;
+export const STANDARD_SURPLUS = 0.15;
+export const MIN_SURPLUS = 0.05;
+export const MAX_SURPLUS = 0.2;
+/** Weekly gain, as a share of bodyweight, per unit of surplus share. */
+const GAIN_PER_SURPLUS = 0.025;
 
 /**
  * Absolute calorie floor. The target is never allowed below the user's BMR,
@@ -55,8 +71,12 @@ export interface ProfileInput {
   heightCm: number;
   weightKg: number;
   activityLevel: ActivityLevel;
+  /** Lose, maintain or gain. Missing means lose. */
+  goal?: Goal;
   /** Desired loss rate in kg/week (will be clamped to a safe range). */
   goalRateKgWeek: number;
+  /** For a gain: surplus as a share of maintenance (0.1 lean, 0.15 standard). */
+  surplusShare?: number;
   proteinMode?: ProteinMode;
   /** Used only when proteinMode === 'manual'. */
   manualProteinG?: number;
@@ -70,8 +90,10 @@ export interface Targets {
   proteinG: number;
   carbsG: number;
   fatG: number;
+  /** Maintenance minus target: negative for a surplus, 0 at maintenance. */
   dailyDeficitKcal: number;
-  /** The loss rate actually applied after safety clamping. */
+  goal: Goal;
+  /** kg a week toward the goal: lost when losing, gained when gaining. */
   appliedRateKgWeek: number;
   /** True if we reduced the requested deficit/rate for safety. */
   clamped: boolean;
@@ -143,6 +165,31 @@ export function computeTargets(profile: ProfileInput): Targets {
 
   const bmr = bmrMifflinStJeor({ sex, weightKg, heightCm, age });
   const maintenanceKcal = tdee(bmr, activityLevel);
+  const goal = profile.goal ?? 'lose';
+
+  if (goal !== 'lose') {
+    const share =
+      goal === 'gain' ? clampSurplus(profile.surplusShare ?? LEAN_SURPLUS) : 0;
+    const targetKcal = round(maintenanceKcal * (1 + share));
+    return {
+      bmr,
+      maintenanceKcal,
+      targetKcal,
+      ...macroSplit({
+        targetKcal,
+        weightKg,
+        proteinMode: profile.proteinMode,
+        manualProteinG: profile.manualProteinG,
+      }),
+      dailyDeficitKcal: maintenanceKcal - targetKcal,
+      goal,
+      appliedRateKgWeek: weightKg * share * GAIN_PER_SURPLUS,
+      clamped:
+        goal === 'gain' &&
+        profile.surplusShare != null &&
+        share !== profile.surplusShare,
+    };
+  }
 
   // 1. Clamp the requested rate to a sane range.
   const requestedRate = profile.goalRateKgWeek;
@@ -187,8 +234,15 @@ export function computeTargets(profile: ProfileInput): Targets {
     carbsG,
     fatG,
     dailyDeficitKcal,
+    goal,
     appliedRateKgWeek,
     clamped,
     safetyNote,
   };
+}
+
+/** Keep a gain's surplus inside 5 to 20% of maintenance. */
+export function clampSurplus(share: number): number {
+  if (Number.isNaN(share)) return LEAN_SURPLUS;
+  return Math.min(MAX_SURPLUS, Math.max(MIN_SURPLUS, share));
 }

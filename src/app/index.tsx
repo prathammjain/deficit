@@ -14,7 +14,7 @@ import { MacroTile } from '@/components/dashboard/macro-tile';
 import { st } from '@/components/dashboard/styles';
 import { WeekCard } from '@/components/dashboard/week-card';
 import { WeighInCard } from '@/components/dashboard/weigh-in-card';
-import { OnboardingFlow } from '@/components/onboarding-flow';
+import { goalLine, OnboardingFlow } from '@/components/onboarding-flow';
 import { useFollowing } from '@/components/train/follow';
 import { Monogram } from '@/components/ui/monogram';
 import {
@@ -179,10 +179,11 @@ export default function HomeScreen() {
 
   // The top cards use the same numbers as History.
   const targets: HistoryTargets | null = profile
-    ? (({ targetKcal, maintenanceKcal, proteinG }) => ({
+    ? (({ targetKcal, maintenanceKcal, proteinG, goal }) => ({
         targetKcal,
         maintenanceKcal,
         proteinG,
+        goal,
       }))(computeTargets(profile))
     : null;
   const report = targets ? weekReport(records, targets, complete) : null;
@@ -198,6 +199,8 @@ export default function HomeScreen() {
       proteinDays: 0,
       avgProteinG: null,
       weightChangeKg: null,
+      goal: 'lose',
+      daysOnTarget: 0,
     },
   );
 
@@ -264,9 +267,13 @@ export default function HomeScreen() {
               onPress: () => router.navigate('/history'),
             }}
           >
-            Total deficit maintained
+            {t.goal === 'gain'
+              ? 'Total surplus'
+              : t.goal === 'maintain'
+                ? 'Energy balance'
+                : 'Total deficit maintained'}
           </SectionLabel>
-          <DeficitSummary summary={summary} since={since} />
+          <DeficitSummary summary={summary} since={since} goal={t.goal} />
         </>
       ) : null}
 
@@ -291,9 +298,15 @@ export default function HomeScreen() {
           <View style={st.heroStatDivider} />
           <View style={st.heroStat}>
             <Text style={st.heroStatValue}>
-              {t.dailyDeficitKcal.toLocaleString()}
+              {Math.abs(t.dailyDeficitKcal).toLocaleString()}
             </Text>
-            <Text style={st.heroStatLabel}>Daily deficit</Text>
+            <Text style={st.heroStatLabel}>
+              {t.goal === 'gain'
+                ? 'Daily surplus'
+                : t.goal === 'maintain'
+                  ? 'Daily balance'
+                  : 'Daily deficit'}
+            </Text>
           </View>
         </View>
       </GlassSurface>
@@ -305,6 +318,7 @@ export default function HomeScreen() {
           adaptive?.estimatedTdeeKcal ?? t.maintenanceKcal,
         )}
         goalRateKgWeek={t.appliedRateKgWeek}
+        goal={t.goal}
       />
 
       <SectionLabel
@@ -332,6 +346,7 @@ export default function HomeScreen() {
         formulaTdee={t.maintenanceKcal}
         dailyDeficit={t.dailyDeficitKcal}
         bmr={t.bmr}
+        goal={t.goal}
       />
 
       {/* Meta */}
@@ -343,7 +358,7 @@ export default function HomeScreen() {
         <Hairline style={st.metaDivider} />
         <MetaRow
           label="Pace"
-          value={`${t.appliedRateKgWeek.toFixed(2)} kg a week`}
+          value={goalLine(t).replace(/^./, (c) => c.toUpperCase())}
         />
       </Card>
 

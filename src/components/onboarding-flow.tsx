@@ -36,7 +36,10 @@ import {
 } from '@/constants/palette';
 import {
   computeTargets,
+  LEAN_SURPLUS,
+  STANDARD_SURPLUS,
   type ActivityLevel,
+  type Goal,
   type ProfileInput,
 } from '@/lib/targets';
 
@@ -62,6 +65,30 @@ const ACTIVITY_OPTIONS: {
   },
 ];
 
+const GOAL_OPTIONS: { value: Goal; title: string; hint: string }[] = [
+  { value: 'lose', title: 'Lose fat', hint: 'Eat under maintenance' },
+  {
+    value: 'maintain',
+    title: 'Maintain',
+    hint: 'Hold your weight while you train',
+  },
+  { value: 'gain', title: 'Build muscle', hint: 'Eat a small surplus' },
+];
+
+// Iraki et al. 2019: 10 to 20% over maintenance; bigger mostly adds fat.
+const SURPLUS_OPTIONS: { value: number; title: string; hint: string }[] = [
+  {
+    value: LEAN_SURPLUS,
+    title: 'Lean',
+    hint: '10% over maintenance, about 0.25% of your weight a week',
+  },
+  {
+    value: STANDARD_SURPLUS,
+    title: 'Standard',
+    hint: '15% over maintenance, about 0.4% of your weight a week',
+  },
+];
+
 const RATE_OPTIONS: { value: number; title: string; hint: string }[] = [
   { value: 0.25, title: 'Gentle', hint: '0.25 kg a week' },
   { value: 0.5, title: 'Steady', hint: '0.5 kg a week' },
@@ -76,6 +103,7 @@ type StepId =
   | 'height'
   | 'weight'
   | 'activity'
+  | 'goal'
   | 'rate'
   | 'review';
 const QUESTION_STEPS: StepId[] = [
@@ -84,6 +112,7 @@ const QUESTION_STEPS: StepId[] = [
   'height',
   'weight',
   'activity',
+  'goal',
   'rate',
   'review',
 ];
@@ -98,19 +127,30 @@ export function OnboardingFlow({
   onComplete: (profile: ProfileInput) => void | Promise<void>;
   onCancel?: () => void;
 }) {
-  const [draft, setDraft] = useState<Draft>(initial ?? {});
+  // A profile saved before goals existed was a loss plan.
+  const [draft, setDraft] = useState<Draft>(
+    initial ? { goal: 'lose', ...initial } : {},
+  );
   const [index, setIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   // Fresh users get a branded welcome first; editing jumps straight in.
+  // Maintaining has no pace to choose.
+  const questions = useMemo(
+    () =>
+      draft.goal === 'maintain'
+        ? QUESTION_STEPS.filter((s) => s !== 'rate')
+        : QUESTION_STEPS,
+    [draft.goal],
+  );
   const steps = useMemo<StepId[]>(
-    () => (initial ? QUESTION_STEPS : ['welcome', ...QUESTION_STEPS]),
-    [initial],
+    () => (initial ? questions : ['welcome', ...questions]),
+    [initial, questions],
   );
   const step = steps[index];
   const isLast = index === steps.length - 1;
   // Question numbering excludes the welcome step.
-  const stepLabel = `Step ${initial ? index + 1 : index} of ${QUESTION_STEPS.length}`;
+  const stepLabel = `Step ${initial ? index + 1 : index} of ${questions.length}`;
   const nextLabel =
     step === 'welcome'
       ? 'Get started'
@@ -267,7 +307,53 @@ export function OnboardingFlow({
             </Question>
           )}
 
-          {step === 'rate' && (
+          {step === 'goal' && (
+            <Question
+              eyebrow={stepLabel}
+              title="What's your goal right now?"
+              hint="You can switch any time, say from a cut to a bulk."
+            >
+              <View style={styles.stack}>
+                {GOAL_OPTIONS.map((o) => (
+                  <ListOption
+                    key={o.value}
+                    title={o.title}
+                    hint={o.hint}
+                    selected={draft.goal === o.value}
+                    onPress={() =>
+                      set({
+                        goal: o.value,
+                        // The plan type needs a loss pace even when unused.
+                        goalRateKgWeek: draft.goalRateKgWeek ?? 0.5,
+                      })
+                    }
+                  />
+                ))}
+              </View>
+            </Question>
+          )}
+
+          {step === 'rate' && draft.goal === 'gain' && (
+            <Question
+              eyebrow={stepLabel}
+              title="How fast do you want to gain?"
+              hint="Slow gains are mostly muscle. A bigger surplus mostly adds fat."
+            >
+              <View style={styles.stack}>
+                {SURPLUS_OPTIONS.map((o) => (
+                  <ListOption
+                    key={o.value}
+                    title={o.title}
+                    hint={o.hint}
+                    selected={draft.surplusShare === o.value}
+                    onPress={() => set({ surplusShare: o.value })}
+                  />
+                ))}
+              </View>
+            </Question>
+          )}
+
+          {step === 'rate' && draft.goal !== 'gain' && (
             <Question
               eyebrow={stepLabel}
               title="How fast do you want to lose?"
@@ -334,7 +420,7 @@ function ReviewStep({ draft }: { draft: Draft }) {
           <DotMatrix style={styles.previewNumber}>
             {t.targetKcal.toLocaleString()}
           </DotMatrix>
-          <Text style={styles.previewUnit}>kcal a day</Text>
+          <Text style={styles.previewUnit}>kcal a day · {goalLine(t)}</Text>
           <View style={styles.previewMacros}>
             <Text style={styles.previewMacro}>
               {t.proteinG} g{' '}
@@ -374,8 +460,12 @@ function stepIsValid(step: StepId, d: Draft): boolean {
       return isNum(d.weightKg) && d.weightKg >= 30 && d.weightKg <= 300;
     case 'activity':
       return d.activityLevel != null;
+    case 'goal':
+      return d.goal === 'lose' || d.goal === 'maintain' || d.goal === 'gain';
     case 'rate':
-      return isNum(d.goalRateKgWeek);
+      return d.goal === 'gain'
+        ? isNum(d.surplusShare)
+        : isNum(d.goalRateKgWeek);
     case 'review':
       return (
         (d.sex === 'male' || d.sex === 'female') &&
@@ -383,9 +473,20 @@ function stepIsValid(step: StepId, d: Draft): boolean {
         isNum(d.heightCm) &&
         isNum(d.weightKg) &&
         d.activityLevel != null &&
-        isNum(d.goalRateKgWeek)
+        stepIsValid('goal', d) &&
+        isNum(d.goalRateKgWeek) &&
+        (d.goal !== 'gain' || isNum(d.surplusShare))
       );
   }
+}
+
+/** "Losing about 0.5 kg a week", in a few words. */
+export function goalLine(t: { goal: Goal; appliedRateKgWeek: number }): string {
+  if (t.goal === 'maintain') return 'at maintenance';
+  const kg = t.appliedRateKgWeek.toFixed(2);
+  return t.goal === 'gain'
+    ? `gaining about ${kg} kg a week`
+    : `losing about ${kg} kg a week`;
 }
 
 const isNum = (n: unknown): n is number =>

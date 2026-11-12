@@ -18,7 +18,12 @@ import {
   PrimaryButton,
 } from '@/components/ui/primitives';
 import { palette, space, type as typo } from '@/constants/palette';
-import type { Continuity, HistorySummary } from '@/lib/history-stats';
+import {
+  balanceNote,
+  type Continuity,
+  type HistorySummary,
+} from '@/lib/history-stats';
+import type { Goal } from '@/lib/targets';
 import { drawWeekCard, shareWeekCard } from '@/lib/week-card';
 import { formatWeekRange, type WeekReport } from '@/lib/week-report';
 
@@ -115,10 +120,21 @@ export function WeekSummary({ report }: { report: WeekReport }) {
   }
   const surplus = report.totalDeficitKcal < 0;
   const w = report.weightChangeKg;
+  const note = balanceNote(
+    report.goal,
+    report.totalDeficitKcal,
+    report.daysOnTarget,
+    report.daysLogged,
+  );
   return (
     <Card>
       <Text style={hs.label}>
-        {range} · {surplus ? 'Surplus' : 'Deficit'}
+        {range} ·{' '}
+        {report.goal === 'maintain'
+          ? 'Balance'
+          : surplus
+            ? 'Surplus'
+            : 'Deficit'}
       </Text>
       <View style={hs.bigRow}>
         <Text style={hs.big}>
@@ -127,9 +143,8 @@ export function WeekSummary({ report }: { report: WeekReport }) {
         <Text style={hs.unit}>kcal</Text>
       </View>
       <Text style={hs.sub}>
-        {surplus ? 'About' : 'Worth about'}{' '}
-        {Math.abs(report.estFatLossKg).toFixed(1)} kg{' '}
-        {surplus ? 'gained' : 'of fat'}
+        {note ??
+          `${surplus ? 'About' : 'Worth about'} ${Math.abs(report.estFatLossKg).toFixed(1)} kg ${surplus ? 'gained' : 'of fat'}`}
       </Text>
       <Hairline style={hs.divider} />
       <View style={hs.grid}>
@@ -161,25 +176,36 @@ export function WeekSummary({ report }: { report: WeekReport }) {
 export function DeficitSummary({
   summary,
   since,
+  goal = 'lose',
 }: {
   summary: HistorySummary;
   /** The day of the return, when the range starts there. */
   since: string | null;
+  goal?: Goal;
 }) {
   const surplus = summary.totalDeficitKcal < 0;
+  const note = balanceNote(
+    goal,
+    summary.totalDeficitKcal,
+    summary.daysOnTarget,
+    summary.daysCounted,
+  );
+  const days = `${summary.daysCounted} of ${summary.daysInRange} full days`;
   return (
     <Pressable
       onPress={() => router.navigate('/history')}
       style={({ pressed }) => pressed && hs.pressed}
       accessibilityRole="button"
-      accessibilityLabel="Total deficit. Open History."
+      accessibilityLabel={`Total ${goal === 'maintain' ? 'energy balance' : surplus ? 'surplus' : 'deficit'}. Open History.`}
     >
       <GlassSurface padded>
         <View style={hs.row}>
           <Text style={hs.label}>
             {since ? `Since ${dayName(since)}` : 'Last 30 days'}
           </Text>
-          <Text style={hs.label}>{surplus ? 'Surplus' : 'Full days only'}</Text>
+          <Text style={hs.label}>
+            {surplus && goal !== 'maintain' ? 'Surplus' : 'Full days only'}
+          </Text>
         </View>
         <View style={hs.bigRow}>
           <DotMatrix style={hs.hero}>
@@ -190,7 +216,9 @@ export function DeficitSummary({
         <Text style={hs.sub}>
           {summary.daysCounted === 0
             ? 'No full days in this range yet'
-            : `About ${Math.abs(summary.estFatLossKg).toFixed(1)} kg ${surplus ? 'gained' : 'of fat'} · ${summary.daysCounted} of ${summary.daysInRange} full days`}
+            : goal === 'maintain' && note
+              ? note
+              : `${note ?? `About ${Math.abs(summary.estFatLossKg).toFixed(1)} kg ${surplus ? 'gained' : 'of fat'}`} · ${days}`}
         </Text>
       </GlassSurface>
     </Pressable>

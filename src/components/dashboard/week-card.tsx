@@ -10,6 +10,7 @@ import { Text, View } from 'react-native';
 
 import { Card } from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
+import type { Goal } from '@/lib/targets';
 import type { WeeklyPrediction } from '@/lib/weekly-prediction';
 
 import { st } from './styles';
@@ -17,12 +18,16 @@ import { st } from './styles';
 export function WeekCard({
   prediction,
   goalRateKgWeek,
+  goal = 'lose',
 }: {
   prediction: WeeklyPrediction;
   goalRateKgWeek: number;
+  goal?: Goal;
 }) {
   const { state, loggedDays, predictedKgPerWeek } = prediction;
   const gaining = state === 'ready' && (predictedKgPerWeek as number) < 0;
+  // Orange marks going the wrong way for the goal.
+  const offCourse = goal === 'lose' ? gaining : goal === 'gain' && !gaining;
 
   return (
     <Card padded>
@@ -46,11 +51,13 @@ export function WeekCard({
 
       {state === 'ready' ? (
         <>
-          <Text style={[st.weekValue, gaining && { color: palette.accent }]}>
+          <Text style={[st.weekValue, offCourse && { color: palette.accent }]}>
             {formatKg(predictedKgPerWeek as number)}
           </Text>
           <Text style={st.weekGoal}>
-            Goal {goalRateKgWeek.toFixed(2)} kg a week
+            {goal === 'maintain'
+              ? 'Goal: hold your weight'
+              : `Goal ${goalRateKgWeek.toFixed(2)} kg a week ${goal === 'gain' ? 'gained' : 'lost'}`}
           </Text>
         </>
       ) : state === 'building' ? (

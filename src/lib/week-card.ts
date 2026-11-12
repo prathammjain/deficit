@@ -9,6 +9,7 @@
 
 import { palette } from '@/constants/palette';
 
+import { balanceNote } from './history-stats';
 import { formatWeekRange, type WeekReport } from './week-report';
 
 const W = 1080;
@@ -54,8 +55,15 @@ export async function drawWeekCard(r: WeekReport): Promise<Blob> {
 
   // Hero: the week's deficit (or surplus), sized down to fit if it's long.
   const surplus = r.totalDeficitKcal < 0;
+  // Orange marks the wrong way for the goal; a hold has no wrong way here.
+  const offPlan =
+    r.goal === 'gain' ? !surplus : r.goal === 'maintain' ? false : surplus;
   text(
-    surplus ? 'Surplus this week' : 'Deficit this week',
+    r.goal === 'maintain'
+      ? 'Balance this week'
+      : surplus
+        ? 'Surplus this week'
+        : 'Deficit this week',
     PAD,
     330,
     `500 40px ${SANS}`,
@@ -77,11 +85,14 @@ export async function drawWeekCard(r: WeekReport): Promise<Blob> {
     PAD,
     540,
     `800 ${size}px ${DOTS}`,
-    surplus ? palette.accent : palette.text,
+    offPlan ? palette.accent : palette.text,
   );
   text('kcal', PAD + heroW + 24, 540, unitFont, palette.textFaint);
   text(
-    `Worth about ${Math.abs(r.estFatLossKg).toFixed(1)} kg of fat`,
+    balanceNote(r.goal, r.totalDeficitKcal, r.daysOnTarget, r.daysLogged) ??
+      (surplus
+        ? `About ${Math.abs(r.estFatLossKg).toFixed(1)} kg gained`
+        : `Worth about ${Math.abs(r.estFatLossKg).toFixed(1)} kg of fat`),
     PAD,
     640,
     `600 38px ${SANS}`,

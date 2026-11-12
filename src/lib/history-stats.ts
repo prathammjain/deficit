@@ -17,7 +17,7 @@
  * to fill a gap.
  */
 
-import { KCAL_PER_KG_FAT } from './targets';
+import { KCAL_PER_KG_FAT, type Goal } from './targets';
 
 export interface DayRecord {
   /** YYYY-MM-DD (local calendar day). */
@@ -37,6 +37,44 @@ export interface HistoryTargets {
   targetKcal: number;
   maintenanceKcal: number;
   proteinG: number;
+  /** Missing means lose. */
+  goal?: Goal;
+}
+
+/**
+ * Whether a full day hit the plan: under the target when losing, at or over
+ * it when gaining, within 10% of it when maintaining.
+ */
+export function onTarget(kcal: number, t: HistoryTargets): boolean {
+  if (t.goal === 'gain') return kcal >= t.targetKcal;
+  if (t.goal === 'maintain')
+    return Math.abs(kcal - t.targetKcal) <= t.targetKcal * 0.1;
+  return kcal <= t.targetKcal;
+}
+
+/**
+ * What a total means when gaining or maintaining, in a few words. A surplus is
+ * never turned into kilograms: gained weight is part muscle and part fat, so no
+ * single kcal per kg is honest (the scale shows what was gained). Null when
+ * losing, where the kilograms of fat stay.
+ */
+export function balanceNote(
+  goal: Goal | undefined,
+  totalDeficitKcal: number,
+  daysOnTarget: number,
+  fullDays: number,
+): string | null {
+  const side =
+    totalDeficitKcal > 0 ? 'Under' : totalDeficitKcal < 0 ? 'Over' : 'At';
+  if (goal === 'gain') {
+    return totalDeficitKcal < 0
+      ? 'Over maintenance, as planned'
+      : `${side} maintenance, short of the plan`;
+  }
+  if (goal === 'maintain') {
+    return `${side} maintenance overall, ${daysOnTarget} of ${fullDays} full ${fullDays === 1 ? 'day' : 'days'} within 10%`;
+  }
+  return null;
 }
 
 /** Under this share of the calorie target, a logged day reads as unfinished. */
@@ -108,8 +146,10 @@ export interface HistorySummary {
   totalDeficitKcal: number;
   /** totalDeficit / 7700 kcal-per-kg — rough fat-loss estimate. */
   estFatLossKg: number;
-  /** Fraction of full days at or under the calorie target (0..1). */
+  /** Fraction of full days on target for the goal (see onTarget), 0..1. */
   onTargetRate: number | null;
+  /** Full days on target for the goal (see onTarget). */
+  daysOnTarget: number;
   weightStartKg: number | null;
   weightEndKg: number | null;
   weightChangeKg: number | null;
@@ -152,7 +192,7 @@ export function summarizeHistory(
     .map((d) => d.weightKg as number);
 
   const totalDeficitKcal = counted.reduce((s, d) => s + dayDeficit(d, t), 0);
-  const atTarget = counted.filter((d) => d.kcal <= t.targetKcal).length;
+  const atTarget = counted.filter((d) => onTarget(d.kcal, t)).length;
 
   const weightStartKg = weights.length ? weights[0] : null;
   const weightEndKg = weights.length ? weights[weights.length - 1] : null;
@@ -174,6 +214,7 @@ export function summarizeHistory(
     totalDeficitKcal,
     estFatLossKg: Math.round((totalDeficitKcal / KCAL_PER_KG_FAT) * 10) / 10,
     onTargetRate: counted.length ? atTarget / counted.length : null,
+    daysOnTarget: atTarget,
     weightStartKg,
     weightEndKg,
     weightChangeKg:

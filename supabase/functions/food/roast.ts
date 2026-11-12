@@ -15,6 +15,8 @@ export interface RoastInput {
     proteinGBefore: number;
     proteinTargetG: number;
     localHour: number;
+    /** What the plan is for. Missing means lose. */
+    goal?: 'lose' | 'maintain' | 'gain';
   };
 }
 
@@ -59,12 +61,19 @@ export function verdict(r: RoastInput): string {
   const eaten = r.day.eatenKcalBefore + mealKcal;
   const late = r.day.localHour >= 20 || r.day.localHour < 4;
   const proteinShare = mealKcal ? (mealProtein * 4) / mealKcal : 0;
-  if (r.day.targetKcal && late && eaten < r.day.targetKcal * 0.5)
+  // Building muscle, a big plate is the plan: falling behind is the sin, and
+  // only going well past the surplus target counts as a blowout.
+  const gain = r.day.goal === 'gain';
+  if (
+    r.day.targetKcal &&
+    late &&
+    eaten < r.day.targetKcal * (gain ? 0.75 : 0.5)
+  )
     return 'under eating';
   if (!r.items.length) return 'sloppy';
   if (
-    mealKcal >= 900 ||
-    (r.day.targetKcal && eaten > r.day.targetKcal) ||
+    (!gain && mealKcal >= 900) ||
+    (r.day.targetKcal && eaten > r.day.targetKcal * (gain ? 1.1 : 1)) ||
     (mealKcal >= 400 && proteinShare < 0.12)
   )
     return 'disaster';
@@ -90,6 +99,10 @@ export function roastUserMessage(r: RoastInput): string {
     `time: ${hour12(r.day.localHour)}`,
     `verdict: ${verdict(r)}`,
   ];
+  if (r.day.goal === 'gain')
+    lines.push('goal: building muscle, eating over maintenance on purpose');
+  if (r.day.goal === 'maintain')
+    lines.push('goal: holding their weight at maintenance');
   if (r.day.targetKcal) {
     const left = r.day.targetKcal - r.day.eatenKcalBefore - mealKcal;
     lines.push(

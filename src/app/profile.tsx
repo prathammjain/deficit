@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import Constants from 'expo-constants';
 
-import { OnboardingFlow } from '@/components/onboarding-flow';
+import { goalLine, OnboardingFlow } from '@/components/onboarding-flow';
 import { AddToHomeScreenButton } from '@/components/add-to-home-screen';
 import { Monogram } from '@/components/ui/monogram';
 import { ChevronIcon } from '@/components/ui/icons';
@@ -197,8 +197,8 @@ export default function ProfileScreen() {
             value={ACTIVITY_LABEL[profile.activityLevel]}
           />
           <PlanRow
-            label="Goal pace"
-            value={`${profile.goalRateKgWeek.toFixed(2)} kg a week`}
+            label="Goal"
+            value={goalLine(t).replace(/^./, (c) => c.toUpperCase())}
           />
           <PlanRow
             label="Daily target"

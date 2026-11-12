@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import { Card, Hairline } from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
 import { recommendedTarget, type AdaptiveTdee } from '@/lib/adaptive-tdee';
-import { ABSOLUTE_KCAL_FLOOR } from '@/lib/targets';
+import { ABSOLUTE_KCAL_FLOOR, type Goal } from '@/lib/targets';
 
 import { st } from './styles';
 
@@ -19,11 +19,13 @@ export function AdaptiveCard({
   formulaTdee,
   dailyDeficit,
   bmr,
+  goal = 'lose',
 }: {
   adaptive: AdaptiveTdee | null;
   formulaTdee: number;
   dailyDeficit: number;
   bmr: number;
+  goal?: Goal;
 }) {
   // Enough data, but too many days in it went unlogged to trust the maths.
   if (
@@ -73,6 +75,9 @@ export function AdaptiveCard({
   );
   const delta = est - formulaTdee;
   const trend = adaptive.trendKgPerWeek ?? 0;
+  // Warning colour only for the scale moving against the goal.
+  const offGoal =
+    goal === 'gain' ? trend < 0 : goal === 'maintain' ? false : trend > 0;
 
   return (
     <Card>
@@ -100,7 +105,7 @@ export function AdaptiveCard({
                 : 'Weight steady'
           }
           value={`${Math.abs(trend).toFixed(2)} kg a week`}
-          tone={trend > 0 ? palette.danger : palette.text}
+          tone={offGoal ? palette.danger : palette.text}
         />
         <AdaptiveStat
           label={delta >= 0 ? 'Above formula' : 'Below formula'}

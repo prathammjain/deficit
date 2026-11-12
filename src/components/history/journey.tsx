@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
 import {
+  balanceNote,
   dayDeficit,
   dayStatus,
   type DayRecord,
@@ -41,7 +42,14 @@ export function Journey({
   const weightSeries = records.map((d) => d.weightKg);
   const hasWeight = summary.weightStartKg != null;
   const surplus = summary.totalDeficitKcal < 0;
+  const gain = targets.goal === 'gain';
   const fullDays = `${summary.daysCounted} full ${summary.daysCounted === 1 ? 'day' : 'days'}`;
+  const note = balanceNote(
+    targets.goal,
+    summary.totalDeficitKcal,
+    summary.daysOnTarget,
+    summary.daysCounted,
+  );
   const unfinished = summary.unfinishedDates.length;
   const dates = records.length ? (
     <ChartDates from={records[0].date} to={records[records.length - 1].date} />
@@ -52,7 +60,13 @@ export function Journey({
       {/* Hero: the headline of the whole journey */}
       <GlassSurface padded style={st.heroCard}>
         <Text style={st.heroLabel}>
-          {surplus ? 'Total surplus' : 'Total deficit maintained'}
+          {targets.goal === 'maintain'
+            ? 'Energy balance'
+            : surplus
+              ? 'Total surplus'
+              : gain
+                ? 'Total deficit'
+                : 'Total deficit maintained'}
         </Text>
         <View style={st.heroNumberRow}>
           <DotMatrix style={st.heroNumber}>
@@ -63,7 +77,9 @@ export function Journey({
         <Text style={st.heroSub}>
           {summary.daysCounted === 0
             ? 'No full days in this range yet'
-            : `${surplus ? 'Worth about' : 'About'} ${Math.abs(summary.estFatLossKg).toFixed(1)} kg ${surplus ? 'gained' : 'of fat'}, across the ${fullDays} you logged`}
+            : targets.goal === 'maintain' && note
+              ? note
+              : `${note ?? `${surplus ? 'Worth about' : 'About'} ${Math.abs(summary.estFatLossKg).toFixed(1)} kg ${surplus ? 'gained' : 'of fat'}`}, across the ${fullDays} you logged`}
         </Text>
         <View style={st.heroStatsRow}>
           <HeroStat
@@ -123,7 +139,9 @@ export function Journey({
       </Card>
 
       {/* Deficit maintained: daily signed bars */}
-      <SectionLabel>Deficit maintained</SectionLabel>
+      <SectionLabel>
+        {gain ? 'Surplus kept' : 'Deficit maintained'}
+      </SectionLabel>
       <Card>
         <View style={st.cardHead}>
           <Stat
@@ -136,12 +154,18 @@ export function Journey({
           />
           <Legend
             items={[
-              { color: palette.good, label: 'Deficit' },
-              { color: palette.danger, label: 'Surplus' },
+              { color: gain ? palette.danger : palette.good, label: 'Deficit' },
+              { color: gain ? palette.good : palette.danger, label: 'Surplus' },
             ]}
           />
         </View>
-        <BarChart values={deficitSeries} scale />
+        <BarChart
+          values={deficitSeries}
+          scale
+          // When gaining, the surplus is the goal: it gets the calm colour.
+          positiveColor={gain ? palette.danger : palette.good}
+          negativeColor={gain ? palette.good : palette.danger}
+        />
         {dates}
       </Card>
 

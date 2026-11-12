@@ -6,6 +6,8 @@
  * so swapping in the real backend changes nothing upstream.
  */
 
+import type { Goal } from '../targets';
+
 export interface FoodItem {
   id: string;
   name: string;
@@ -76,6 +78,8 @@ export interface RoastInput {
     proteinG: number;
     proteinTargetG: number;
     hour: number;
+    /** What the plan is for, so GrainAI doesn't roast a gainer for eating. */
+    goal?: Goal;
   };
 }
 

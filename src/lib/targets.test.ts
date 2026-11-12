@@ -152,3 +152,57 @@ describe('computeTargets', () => {
     expect(t.targetKcal).toBe(t.maintenanceKcal - t.dailyDeficitKcal);
   });
 });
+
+describe('goals', () => {
+  const p: ProfileInput = {
+    sex: 'male',
+    age: 30,
+    heightCm: 180,
+    weightKg: 85,
+    activityLevel: 'moderate',
+    goalRateKgWeek: 0.5,
+  };
+
+  it('a profile without a goal, or with lose, gives the same numbers as before', () => {
+    const before = computeTargets(p);
+    expect(computeTargets({ ...p, goal: 'lose' })).toEqual(before);
+    expect(before.goal).toBe('lose');
+    expect(before.targetKcal).toBe(2287);
+    // A loss pace or a surplus left over from another goal changes nothing.
+    expect(computeTargets({ ...p, goal: 'lose', surplusShare: 0.15 })).toEqual(
+      before,
+    );
+  });
+
+  it('maintain eats at maintenance, whatever the old loss pace', () => {
+    const t = computeTargets({ ...p, goal: 'maintain', goalRateKgWeek: 1 });
+    expect(t.targetKcal).toBe(2837);
+    expect(t.dailyDeficitKcal).toBe(0);
+    expect(t.appliedRateKgWeek).toBe(0);
+    expect(t.proteinG).toBe(153);
+    expect(t.fatG).toBe(68);
+    expect(t.clamped).toBe(false);
+  });
+
+  it('gain adds 10% (lean) or 15% (standard) and expects 0.25% or 0.375% a week', () => {
+    const lean = computeTargets({ ...p, goal: 'gain', surplusShare: 0.1 });
+    expect(lean.targetKcal).toBe(Math.round(2837 * 1.1));
+    expect(lean.dailyDeficitKcal).toBe(2837 - lean.targetKcal); // negative
+    expect(lean.dailyDeficitKcal).toBeLessThan(0);
+    expect(lean.appliedRateKgWeek).toBeCloseTo(85 * 0.0025, 5);
+    const standard = computeTargets({ ...p, goal: 'gain', surplusShare: 0.15 });
+    expect(standard.targetKcal).toBe(Math.round(2837 * 1.15));
+    expect(standard.appliedRateKgWeek).toBeCloseTo(85 * 0.00375, 5);
+    // Protein and fat stay bodyweight driven; the surplus goes to carbs.
+    expect(standard.proteinG).toBe(lean.proteinG);
+    expect(standard.carbsG).toBeGreaterThan(lean.carbsG);
+  });
+
+  it('gain never goes past a 20% surplus, and defaults to lean', () => {
+    const big = computeTargets({ ...p, goal: 'gain', surplusShare: 0.5 });
+    expect(big.targetKcal).toBe(Math.round(2837 * 1.2));
+    expect(big.clamped).toBe(true);
+    const plain = computeTargets({ ...p, goal: 'gain' });
+    expect(plain.targetKcal).toBe(Math.round(2837 * 1.1));
+  });
+});

@@ -641,3 +641,40 @@ permanent redirect to the same path on app.getgrain.fit (query kept, so a
 sign in that lands there still finishes). Preview links are untouched.
 Supabase's Site URL and Redirect URLs must name app.getgrain.fit, or sign in
 keeps sending people back to the Vercel address first.
+
+### Goals: lose, maintain or build muscle
+
+A user asked for it, and a fitness ecosystem needs it: the plan only knew
+how to lose (every pace was clamped to 0.25 to 1 kg a week).
+
+* Onboarding and Profile ask the goal: Lose fat, Maintain, Build muscle.
+  Losing keeps its paces and safety floor; maintaining has no pace; building
+  muscle offers Lean (10% over maintenance) or Standard (15%), never above
+  20%. Iraki et al. 2019 (off season bodybuilding review): a surplus of about
+  10 to 20% gains about 0.25 to 0.5% of bodyweight a week, and bigger
+  surpluses mostly add fat. Protein stays 1.8 g/kg and fat 0.8 g/kg, inside
+  that review's 1.6 to 2.2 and 0.5 to 1.5 g/kg; the surplus goes to carbs.
+* The surplus is a share of maintenance, not kilograms turned into calories:
+  gained weight is part muscle, part fat, so no single kcal per kg is honest.
+  The adaptive maintenance corrects it from the scale, as it does for loss.
+* One signed number does the work: daily deficit is maintenance minus
+  target, negative for a surplus. The adaptive target, History and the
+  totals needed no rewrite.
+* Goal aware words: Daily surplus or Daily balance on Home, Total surplus or
+  Energy balance on the hooks, Surplus kept in History with the surplus in
+  the calm colour, and "on target" means over the target when gaining and
+  within 10% when maintaining. The calendar no longer warns a gainer for
+  eating their target.
+* Profiles saved before goals are loss plans with identical numbers, proven
+  by tests.
+* A surplus is never turned into kilograms. Home, History and the weekly
+  share card say "Over maintenance, as planned" (or "short of the plan"),
+  and the scale shows what was really gained. Maintaining shows which side
+  of maintenance the range landed on and how many full days were within 10%.
+* GrainAI knows the goal. Building muscle, a big plate is the plan: a 900
+  kcal meal inside the target is no longer a "disaster", only going more
+  than 10% past the target or junk is, and being under three quarters of the
+  target after 8 pm gets the under eating roast. Loss roasts are unchanged.
+* Orange only means "against the goal": the share card's number and the
+  adaptive card's weight trend stay calm when a gainer gains. The share card
+  also stopped calling a surplus week "worth about X kg of fat".

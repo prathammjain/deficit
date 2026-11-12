@@ -57,6 +57,7 @@ export default function HistoryScreen() {
       targetKcal: t.targetKcal,
       maintenanceKcal: t.maintenanceKcal,
       proteinG: t.proteinG,
+      goal: t.goal,
     });
     setRecords(recs);
     setComplete(marks);

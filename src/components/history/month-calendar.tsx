@@ -205,7 +205,10 @@ function DaySummary({
   }
 
   const def = dayDeficit(rec, targets); // maintenance minus intake
-  const over = rec.kcal > targets.targetKcal;
+  // Over the target is only a warning when the plan is to stay under it.
+  const over =
+    targets.goal !== 'gain' &&
+    rec.kcal > targets.targetKcal * (targets.goal === 'maintain' ? 1.1 : 1);
   const low = rec.kcal < targets.targetKcal * UNFINISHED_SHARE;
   const counts = !low || confirmed;
   const toggle = async (on: boolean) => {

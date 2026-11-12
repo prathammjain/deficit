@@ -1,5 +1,7 @@
 import {
+  balanceNote,
   continuity,
+  onTarget,
   cumulativeDeficit,
   dayDeficit,
   dayStatus,
@@ -224,5 +226,90 @@ describe('fullDaysOnly', () => {
         (d) => d.intakeKcal,
       ),
     ).toEqual([1900, null, null, 300]);
+  });
+});
+
+describe('onTarget', () => {
+  const t = { targetKcal: 2000, maintenanceKcal: 2500, proteinG: 150 };
+  it('losing: at or under the target', () => {
+    expect(onTarget(1900, t)).toBe(true);
+    expect(onTarget(2100, t)).toBe(false);
+    expect(onTarget(1900, { ...t, goal: 'lose' })).toBe(true);
+  });
+  it('gaining: at or over the target', () => {
+    expect(onTarget(2100, { ...t, goal: 'gain' })).toBe(true);
+    expect(onTarget(1900, { ...t, goal: 'gain' })).toBe(false);
+  });
+  it('maintaining: within 10% either way', () => {
+    const m = { ...t, goal: 'maintain' as const };
+    expect(onTarget(2190, m)).toBe(true);
+    expect(onTarget(1810, m)).toBe(true);
+    expect(onTarget(2300, m)).toBe(false);
+    expect(onTarget(1700, m)).toBe(false);
+  });
+});
+
+describe('balanceNote', () => {
+  it('losing keeps its own wording', () => {
+    expect(balanceNote(undefined, 3000, 5, 6)).toBeNull();
+    expect(balanceNote('lose', -800, 2, 6)).toBeNull();
+  });
+  it('gaining: a surplus is the plan, never turned into kilograms', () => {
+    expect(balanceNote('gain', -1750, 6, 7)).toBe(
+      'Over maintenance, as planned',
+    );
+    expect(balanceNote('gain', 400, 2, 7)).toBe(
+      'Under maintenance, short of the plan',
+    );
+    expect(balanceNote('gain', 0, 0, 7)).toBe(
+      'At maintenance, short of the plan',
+    );
+  });
+  it('maintaining: which side overall, and the days within 10%', () => {
+    expect(balanceNote('maintain', 600, 5, 6)).toBe(
+      'Under maintenance overall, 5 of 6 full days within 10%',
+    );
+    expect(balanceNote('maintain', -90, 1, 1)).toBe(
+      'Over maintenance overall, 1 of 1 full day within 10%',
+    );
+  });
+});
+
+describe('summarizeHistory counts days on target by goal', () => {
+  const rec = (date: string, kcal: number): DayRecord => ({
+    date,
+    logged: true,
+    kcal,
+    proteinG: 150,
+    carbsG: 0,
+    fatG: 0,
+    weightKg: null,
+  });
+  const days = [2400, 2600, 2700, 2900, 3100, 3200].map((kcal, i) =>
+    rec(`2026-11-0${i + 1}`, kcal),
+  );
+  const base = { maintenanceKcal: 2800, proteinG: 150 };
+  it('losing: at or under the target', () => {
+    const s = summarizeHistory(days, { ...base, targetKcal: 2400 });
+    expect(s.daysOnTarget).toBe(1);
+    expect(s.onTargetRate).toBeCloseTo(1 / 6);
+  });
+  it('gaining: at or over the target', () => {
+    const s = summarizeHistory(days, {
+      ...base,
+      targetKcal: 3080,
+      goal: 'gain',
+    });
+    expect(s.daysOnTarget).toBe(2);
+    // Maintenance minus intake, summed: a net surplus of 100 kcal.
+    expect(s.totalDeficitKcal).toBe(-100);
+  });
+  it('maintaining: within 10% of maintenance', () => {
+    const s = summarizeHistory(days, {
+      ...base,
+      targetKcal: 2800,
+      goal: 'maintain',
+    });
+    expect(s.daysOnTarget).toBe(3);
   });
 });

@@ -9,6 +9,7 @@ import {
   type DayRecord,
   type HistoryTargets,
 } from './history-stats';
+import type { Goal } from './targets';
 
 export interface WeekReport {
   /** First and last day covered, YYYY-MM-DD. */
@@ -27,6 +28,10 @@ export interface WeekReport {
   avgProteinG: number | null;
   /** Last weigh in minus first, within the week. */
   weightChangeKg: number | null;
+  /** What the plan is for, so the card's words follow it. */
+  goal: Goal;
+  /** Full days on target for the goal. */
+  daysOnTarget: number;
 }
 
 /** The report for the last seven days of `days` (oldest first). */
@@ -52,6 +57,8 @@ export function weekReport(
     ).length,
     avgProteinG: s.avgProteinG,
     weightChangeKg: s.weightChangeKg,
+    goal: t.goal ?? 'lose',
+    daysOnTarget: s.daysOnTarget,
   };
 }
 

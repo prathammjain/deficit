@@ -31,12 +31,13 @@ import {
   type LogEntry,
 } from '@/lib/log-store';
 import { loadProfile } from '@/lib/profile-store';
-import { computeTargets } from '@/lib/targets';
+import { computeTargets, type Goal } from '@/lib/targets';
 
 export default function LogScreen() {
   const [loading, setLoading] = useState(true);
   const [targetKcal, setTargetKcal] = useState<number | null>(null);
   const [proteinTarget, setProteinTarget] = useState<number | null>(null);
+  const [goal, setGoal] = useState<Goal>('lose');
   const [meals, setMeals] = useState<LogEntry[]>([]);
   // Meals that failed to save (offline, say), kept so nothing typed is lost.
   const [unsaved, setUnsaved] = useState<
@@ -60,6 +61,7 @@ export default function LogScreen() {
           const t = computeTargets(profile);
           setTargetKcal(t.targetKcal);
           setProteinTarget(t.proteinG);
+          setGoal(t.goal);
         } else {
           setTargetKcal(null);
           setProteinTarget(null);
@@ -210,6 +212,7 @@ export default function LogScreen() {
           targetKcal: targetKcal ?? 0,
           proteinG: sum.proteinG,
           proteinTargetG: proteinTarget ?? 0,
+          goal,
         }}
       />
 
