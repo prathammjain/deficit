@@ -34,7 +34,7 @@ import {
 } from '@/lib/adaptive-tdee';
 import { formatToday } from '@/lib/date';
 import { loadCompleteDays } from '@/lib/fulldays';
-import { gatherDailyRecords, gatherHistory } from '@/lib/history';
+import { gatherDailyRecords, toDailyData } from '@/lib/history';
 import {
   continuity,
   fullDaysOnly,
@@ -60,17 +60,25 @@ import { latestWeight, setWeight } from '@/lib/weight-store';
 /** Days read for the top cards: enough to see a break and the return. */
 const LOOKBACK = 45;
 
+/** Days the weekly prediction and the adaptive maintenance read. */
+const HISTORY_DAYS = 21;
+
 /**
- * The last three weeks with unfinished days (under half the target, not
- * confirmed) blanked out, so a forgotten dinner never reads as a deficit in
- * the weekly prediction or the adaptive maintenance.
+ * The last three weeks of the records already loaded, with unfinished days
+ * (under half the target, not confirmed) blanked out, so a forgotten dinner
+ * never reads as a deficit in the weekly prediction or the adaptive
+ * maintenance.
  */
-async function honestHistory(targetKcal: number): Promise<DailyDatum[]> {
-  const [hist, complete] = await Promise.all([
-    gatherHistory(21),
-    loadCompleteDays().catch(() => new Set<string>()),
-  ]);
-  return fullDaysOnly(hist, targetKcal, complete);
+function honestHistory(
+  records: DayRecord[],
+  targetKcal: number,
+  complete: ReadonlySet<string>,
+): DailyDatum[] {
+  return fullDaysOnly(
+    toDailyData(records.slice(-HISTORY_DAYS)),
+    targetKcal,
+    complete,
+  );
 }
 
 /** Today isn't over, so its intake so far stays out of the maintenance math. */
@@ -98,16 +106,18 @@ export default function HomeScreen() {
   }, []);
 
   const refresh = useCallback(async () => {
-    const p = await loadProfile();
+    // All at once rather than the profile first: only a brand new account
+    // has no profile, and for everyone else that saves a round trip.
+    const [p, lw, ws, recs, marks] = await Promise.all([
+      loadProfile(),
+      latestWeight(),
+      loadWorkouts().catch(() => [] as Workout[]),
+      gatherDailyRecords(LOOKBACK).catch(() => [] as DayRecord[]),
+      loadCompleteDays().catch(() => new Set<string>()),
+    ]);
     setProfile(p);
     if (p) {
-      const [hist, lw, ws, recs, marks] = await Promise.all([
-        honestHistory(computeTargets(p).targetKcal),
-        latestWeight(),
-        loadWorkouts().catch(() => [] as Workout[]),
-        gatherDailyRecords(LOOKBACK).catch(() => [] as DayRecord[]),
-        loadCompleteDays().catch(() => new Set<string>()),
-      ]);
+      const hist = honestHistory(recs, computeTargets(p).targetKcal, marks);
       setAdaptive(estimateAdaptiveTdee(closedDays(hist)));
       setHistory(hist);
       setLastWeight(lw?.kg ?? null);
@@ -148,15 +158,23 @@ export default function HomeScreen() {
         setProfile(updated);
       }
       setLastWeight(kg);
+      // The records on screen with today's weigh in added: nothing to reload.
+      const today = todayKey();
+      const recs = records.map((r) =>
+        r.date === today ? { ...r, weightKg: kg } : r,
+      );
+      setRecords(recs);
       if (profile) {
-        const hist = await honestHistory(
+        const hist = honestHistory(
+          recs,
           computeTargets({ ...profile, weightKg: kg }).targetKcal,
+          complete,
         );
         setAdaptive(estimateAdaptiveTdee(closedDays(hist)));
         setHistory(hist);
       }
     },
-    [profile],
+    [profile, records, complete],
   );
 
   // The top cards use the same numbers as History.

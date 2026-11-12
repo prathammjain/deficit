@@ -48,6 +48,7 @@
 
 // @ts-nocheck
 import { INDIAN_FOODS } from './_indian-foods.ts';
+import { TtlCache, tokenExpiry, USDA_TTL_MS, usdaLookups } from './caches.ts';
 import { ifctSearch } from './ifct.ts';
 import {
   parseCandidates,
@@ -360,12 +361,17 @@ function indianSearch(query: string, max = 3) {
  * fell back to the local heuristic), while an HTTP error returned `[]` and was
  * indistinguishable from a genuine no-match.
  */
-async function usdaSearch(query: string, max = 5) {
+// A search normally answers in about 2 seconds. One that hangs is treated as
+// USDA unavailable (a degraded run, flagged and not cached) instead of
+// holding the meal until the platform gives up on the request.
+const USDA_TIMEOUT_MS = 8000;
+
+async function usdaSearch(query: string, max = 5, signal?: AbortSignal) {
   const key = Deno.env.get('USDA_API_KEY')?.trim();
   if (!key) return null;
-  let res: Response;
+  let data: any;
   try {
-    res = await fetch(
+    const res = await fetch(
       `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${key}`,
       {
         method: 'POST',
@@ -375,13 +381,16 @@ async function usdaSearch(query: string, max = 5) {
           pageSize: max,
           dataType: ['Foundation', 'SR Legacy', 'Survey (FNDDS)'],
         }),
+        signal: signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(USDA_TIMEOUT_MS)])
+          : AbortSignal.timeout(USDA_TIMEOUT_MS),
       },
     );
+    if (!res.ok) return null;
+    data = await res.json();
   } catch {
     return null;
   }
-  if (!res.ok) return null;
-  const data = await res.json();
   const foods = Array.isArray(data?.foods) ? data.foods : [];
   return foods
     .map((f: any) => {
@@ -530,12 +539,34 @@ function buildReason(
 
 // ---- Auth gate --------------------------------------------------------------
 
+// A meal makes up to three calls (parse, roast, correction) with the same
+// token, and asking Auth about it costs a round trip each time. A token Auth
+// has accepted is remembered on this instance for a few minutes, never past
+// its own expiry. A rejected one is never remembered.
+const USER_TTL_MS = 5 * 60 * 1000;
+const knownUsers = new TtlCache<string>(1000, USER_TTL_MS);
+
 /** The signed-in user's id, or null when the request isn't signed in. */
 async function signedInUserId(req: Request): Promise<string | null> {
   const token = (req.headers.get('Authorization') ?? '')
     .replace(/^Bearer\s+/i, '')
     .trim();
   if (!token) return null;
+  const known = knownUsers.get(token);
+  if (known) return known;
+  const id = await askAuth(token);
+  if (id) {
+    const exp = tokenExpiry(token);
+    knownUsers.set(
+      token,
+      id,
+      exp == null ? USER_TTL_MS : exp * 1000 - Date.now(),
+    );
+  }
+  return id;
+}
+
+async function askAuth(token: string): Promise<string | null> {
   const url = Deno.env.get('SUPABASE_URL');
   const apikey =
     Deno.env.get('SUPABASE_ANON_KEY') ??
@@ -714,14 +745,83 @@ async function pickEngine(
   return cfg ? { arm: 'beta', cfg } : live;
 }
 
+/** Lets work finish after the response has gone. */
+function background(work: Promise<unknown>): void {
+  const settled = work.catch(() => {});
+  // deno-lint-ignore no-explicit-any
+  (globalThis as any).EdgeRuntime?.waitUntil?.(settled);
+}
+
 /** Saves a run without holding up the response. */
 function saveRun(row: Record<string, unknown>): void {
-  const write = rest('engine_runs', {
-    method: 'POST',
-    body: JSON.stringify(row),
-  }).catch(() => {});
-  // deno-lint-ignore no-explicit-any
-  (globalThis as any).EdgeRuntime?.waitUntil?.(write);
+  background(
+    rest('engine_runs', {
+      method: 'POST',
+      body: JSON.stringify(row),
+    }),
+  );
+}
+
+// ---- USDA answers -------------------------------------------------------------
+// Kept in memory and in food_cache (see caches.ts). Stored under a hash of the
+// exact query, so nothing in a query can upset the database filter.
+
+const usdaMemory = new TtlCache<any[]>(2000, USDA_TTL_MS);
+const usdaKey = async (query: string) => `usda|v1|${await sha256(query)}`;
+
+async function loadUsda(queries: string[]): Promise<Map<string, any[]>> {
+  const keys = await Promise.all(queries.map(usdaKey));
+  const res = await rest(
+    `food_cache?key=in.(${keys.map((k) => encodeURIComponent(`"${k}"`)).join(',')})&select=key,value,created_at`,
+  );
+  if (!res.ok) return new Map();
+  const rows = await res.json();
+  const byKey = new Map(
+    (Array.isArray(rows) ? rows : [])
+      .filter(
+        (r: any) =>
+          Array.isArray(r?.value) &&
+          Date.now() - new Date(r.created_at).getTime() < USDA_TTL_MS,
+      )
+      .map((r: any) => [r.key, r.value]),
+  );
+  const found = new Map<string, any[]>();
+  queries.forEach((q, i) => {
+    if (byKey.has(keys[i])) found.set(q, byKey.get(keys[i]));
+  });
+  return found;
+}
+
+function saveUsda(found: Map<string, any[]>): void {
+  background(
+    (async () => {
+      const created_at = new Date();
+      const rows = await Promise.all(
+        [...found].map(async ([q, value]) => ({
+          key: await usdaKey(q),
+          value,
+          created_at,
+        })),
+      );
+      await rest('food_cache', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates' },
+        body: JSON.stringify(rows),
+      });
+    })(),
+  );
+}
+
+/** USDA rows for each query, in order; null where USDA was unavailable. */
+function usdaAnswers(queries: string[]): Promise<(any[] | null)[]> {
+  // Without the service role there is no store (the scorer runs this way).
+  const stored = cacheEnv() != null;
+  return usdaLookups(queries, {
+    memory: usdaMemory,
+    load: stored ? loadUsda : async () => new Map(),
+    fetch: (q, signal) => usdaSearch(q, 5, signal),
+    save: stored ? saveUsda : () => {},
+  });
 }
 
 // ---- Handler ----------------------------------------------------------------
@@ -731,13 +831,23 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS')
     return new Response('ok', { headers: corsHeaders(origin) });
   try {
-    const userId = await signedInUserId(req);
+    // Reading the body and the engine settings doesn't depend on who is
+    // asking, so neither waits for the sign in check.
+    const [userId, body] = await Promise.all([
+      signedInUserId(req),
+      req.json().then(
+        (value) => ({ value }),
+        (error) => ({ error }),
+      ),
+      engineSettings(),
+    ]);
     if (!userId) {
       return json({ error: 'sign in required' }, 401, origin);
     }
+    if ('error' in body) throw body.error;
 
     const { action, text, runId, logged, audio, mime, meal, items, day } =
-      await req.json();
+      body.value;
 
     if (action === 'roast') {
       const cfg = getLLMConfig();
@@ -905,30 +1015,31 @@ async function parseUncached(
   let degraded = false;
 
   const lookupStarted = Date.now();
-  const candidatesPerItem = await Promise.all(
-    described.map(async (d) => {
-      const usdaQuery = d.query || d.name;
-      // The curated Indian table is keyed on real dish names ("Paneer
-      // Paratha"), so match it on the display name — the generic USDA
-      // query ("wheat flatbread") would miss those entries. Fall back to
-      // the query only when the name finds nothing.
-      const byName = indianSearch(d.name, 3);
-      const indian = byName.length ? byName : indianSearch(usdaQuery, 3);
-      // IFCT is keyed on generic ingredient English ("Red gram, dal"),
-      // which is how structureMeal writes `query` — the mirror image of
-      // the curated dish table, keyed on dish names and matched on `name`.
-      const byQuery = ifctSearch(usdaQuery, 3);
-      const ifct = byQuery.length ? byQuery : ifctSearch(d.name, 3);
-      const usda = await usdaSearch(usdaQuery, 5);
-      if (usda === null) degraded = true;
-      // local first, so the curated table keeps the low indices the
-      // "PREFER local" rule relies on; IFCT ahead of USDA so the Indian
-      // ingredient is seen before the generic one. IFCT is compiled in
-      // with no network and no key, so it can never be unavailable and
-      // must never set `degraded`.
-      return [...indian, ...ifct, ...(usda ?? [])];
-    }),
-  );
+  // Every item's USDA search at once, each answered from memory, the store or
+  // USDA itself (see caches.ts).
+  const usdaRows = await usdaAnswers(described.map((d) => d.query || d.name));
+  const candidatesPerItem = described.map((d, i) => {
+    const usdaQuery = d.query || d.name;
+    // The curated Indian table is keyed on real dish names ("Paneer
+    // Paratha"), so match it on the display name — the generic USDA
+    // query ("wheat flatbread") would miss those entries. Fall back to
+    // the query only when the name finds nothing.
+    const byName = indianSearch(d.name, 3);
+    const indian = byName.length ? byName : indianSearch(usdaQuery, 3);
+    // IFCT is keyed on generic ingredient English ("Red gram, dal"),
+    // which is how structureMeal writes `query` — the mirror image of
+    // the curated dish table, keyed on dish names and matched on `name`.
+    const byQuery = ifctSearch(usdaQuery, 3);
+    const ifct = byQuery.length ? byQuery : ifctSearch(d.name, 3);
+    const usda = usdaRows[i];
+    if (usda === null) degraded = true;
+    // local first, so the curated table keeps the low indices the
+    // "PREFER local" rule relies on; IFCT ahead of USDA so the Indian
+    // ingredient is seen before the generic one. IFCT is compiled in
+    // with no network and no key, so it can never be unavailable and
+    // must never set `degraded`.
+    return [...indian, ...ifct, ...(usda ?? [])];
+  });
 
   trace.lookup.ms = Date.now() - lookupStarted;
   trace.lookup.output = candidatesPerItem;
@@ -1055,7 +1166,7 @@ async function parseUncached(
   // same wrong calories, while a phrase first parsed while USDA was
   // healthy stayed accurate. That is what made the engine look like it
   // was "sometimes right, sometimes wildly off".
-  if (items.length > 0 && !degraded) await cacheSet(key, result);
+  if (items.length > 0 && !degraded) background(cacheSet(key, result));
   saveRun({
     ...run,
     result,

@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Grain: how everything works</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+  :root {
+    --ink: #1f1b17; --muted: #5f574e; --faint: #8f867c; --line: #ddd6cc;
+    --bg: #ffffff; --card: #f6f2ec; --accent: #d9641e; --accent2: #2b6cb0;
+    --green: #2f7d4f; --red: #b3261e; --amber: #b7791f;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--ink); background: var(--bg); font-size: 11pt; line-height: 1.5; margin: 0; }
+  h1 { font-size: 26pt; margin: 0 0 6pt; letter-spacing: -0.5px; }
+  h2 { font-size: 18pt; margin: 0 0 10pt; padding-top: 6pt; border-top: 3px solid var(--accent); page-break-before: always; break-before: page; }
+  h2.first { page-break-before: avoid; break-before: avoid; }
+  h3 { font-size: 13.5pt; margin: 18pt 0 6pt; color: var(--ink); }
+  h4 { font-size: 11.5pt; margin: 14pt 0 4pt; color: var(--muted); text-transform: none; }
+  p { margin: 0 0 8pt; }
+  ul, ol { margin: 0 0 8pt 18pt; padding: 0; }
+  li { margin-bottom: 3pt; }
+  code, pre { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 9.2pt; }
+  code { background: var(--card); padding: 1px 4px; border-radius: 3px; }
+  pre { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 8pt 10pt; overflow: hidden; white-space: pre-wrap; margin: 6pt 0 10pt; page-break-inside: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 6pt 0 12pt; font-size: 9.6pt; page-break-inside: auto; }
+  th, td { border: 1px solid var(--line); padding: 4pt 6pt; vertical-align: top; text-align: left; }
+  th { background: var(--card); font-weight: 600; }
+  tr { page-break-inside: avoid; }
+  .box { background: var(--card); border-left: 4px solid var(--accent); padding: 8pt 12pt; margin: 8pt 0 12pt; border-radius: 4px; page-break-inside: avoid; }
+  .box.blue { border-left-color: var(--accent2); }
+  .box.green { border-left-color: var(--green); }
+  .box.red { border-left-color: var(--red); }
+  .box.amber { border-left-color: var(--amber); }
+  .box .t { font-weight: 700; display: block; margin-bottom: 3pt; }
+  .analogy { font-style: italic; color: var(--muted); }
+  .small { font-size: 9.2pt; color: var(--muted); }
+  .cover { height: 250mm; display: flex; flex-direction: column; justify-content: center; }
+  .cover .brand { color: var(--accent); font-weight: 800; letter-spacing: 6px; font-size: 13pt; margin-bottom: 18pt; }
+  .cover .sub { font-size: 14pt; color: var(--muted); max-width: 150mm; }
+  .cover .meta { margin-top: 36pt; color: var(--faint); font-size: 10pt; }
+  .toc li { margin-bottom: 2pt; }
+  figure { margin: 10pt 0 14pt; page-break-inside: avoid; }
+  figcaption { font-size: 9.2pt; color: var(--muted); margin-top: 4pt; }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  .kv td:first-child { width: 36%; font-family: "SF Mono", Menlo, monospace; font-size: 8.8pt; }
+  .two { columns: 2; column-gap: 24pt; }
+  .pill { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 0 7px; font-size: 8.8pt; color: var(--muted); }
+  .avoid { page-break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="brand">GRAIN</div>
+  <h1>How everything works</h1>
+  <p class="sub">A plain-language guide to every decision, every piece of architecture, every table, every function and every number in the Grain app and its food engine. Written for the founder, so nothing in the product is a black box.</p>
+  <p class="meta">Built from the code in the <code>deficit</code> repository (app) and the <code>grain_engine</code> repository (engine lab), plus both build logs. State of the code as of 12 November 2026. 333 automated tests pass.</p>
+</div>
+
+<h2 class="first">Contents</h2>
+<ol class="toc">
+  <li>How to read this, and the words you will meet</li>
+  <li>The story in one page</li>
+  <li>The big picture: who talks to whom</li>
+  <li>A tour of the repository</li>
+  <li>The app shell: screens, gates and the installable web app</li>
+  <li>Where data lives: the key/value idea</li>
+  <li>Sign in and accounts</li>
+  <li>The database, table by table</li>
+  <li>The food engine, stage by stage (the "RAG" part)</li>
+  <li>The three food tables and where their numbers come from</li>
+  <li>Voice notes</li>
+  <li>GrainAI, the roast</li>
+  <li>The maths: targets, budget, adaptive maintenance, predictions</li>
+  <li>Honest history: full days, breaks, fresh starts</li>
+  <li>Training: logger, set maths, records, offline sync</li>
+  <li>Describe a workout and import history (no AI)</li>
+  <li>Progress, and the one line only Grain can write</li>
+  <li>Programs, meal plans and coaches</li>
+  <li>Consent, privacy, export and delete</li>
+  <li>The back office: access, premium, CRM, stats</li>
+  <li>Hosting and deployment</li>
+  <li>Free tiers: how much Grain can handle today</li>
+  <li>What it costs when it grows</li>
+  <li>Known weaknesses and the engine roadmap</li>
+  <li>The decision log, dated</li>
+  <li>Appendix A: every storage key</li>
+  <li>Appendix B: every engine action and environment variable</li>
+  <li>Appendix C: every file in <code>src/lib</code> and what it owns</li>
+</ol>
+
+<h2>1. How to read this, and the words you will meet</h2>
+<p>Each chapter stands alone. If you only want the engine, go to chapter 9. If you want to know when the free tiers run out, go to chapter 22. Technical words are explained the first time with an everyday comparison, and the most common ones are collected here so you can come back to them.</p>
+
+<table>
+<tr><th style="width:22%">Word</th><th>What it means in Grain</th><th style="width:34%">Everyday picture</th></tr>
+<tr><td>App / PWA</td><td>Grain is a website that behaves like an app. "PWA" means progressive web app: it can be added to the home screen and opens full screen with no browser bar. There is no App Store build yet.</td><td class="analogy">A shop that rents a stall in the mall (the browser) but puts up its own sign and door so it feels like its own store.</td></tr>
+<tr><td>Expo / React Native</td><td>The toolkit the app is written in. It is designed for phone apps but is exported here as a website. The same code could later become a real iOS or Android app.</td><td class="analogy">Writing a recipe once in a way that works on a gas stove today and an induction hob tomorrow.</td></tr>
+<tr><td>Vercel</td><td>The company that hosts the website files and hands them to visitors. It rebuilds the site every time code is pushed to GitHub.</td><td class="analogy">The printer and courier: every time you save a new version of a leaflet, they print it and put it in every letterbox.</td></tr>
+<tr><td>Supabase</td><td>The backend provider. It gives Grain a Postgres database, sign in (Auth), and a place to run server code (Edge Functions).</td><td class="analogy">A rented office building with a vault (database), a reception desk that checks IDs (Auth) and a back room where staff do work customers cannot see (Edge Functions).</td></tr>
+<tr><td>Postgres</td><td>The database: tables with rows and columns, like spreadsheets that enforce rules.</td><td class="analogy">A filing cabinet where every drawer has a strict form.</td></tr>
+<tr><td>Row-level security (RLS)</td><td>A rule inside the database that says "a signed in person can only see rows that belong to them". It is enforced by the vault itself, not by the app, so a bug in the app cannot leak another person's meals.</td><td class="analogy">Lockers in a gym: your key only opens your locker, no matter what you try.</td></tr>
+<tr><td>Edge Function</td><td>A small program (<code>food</code>) that runs on Supabase's servers, written for the Deno runtime. The food engine lives here because it holds secret keys that must never be in the browser.</td><td class="analogy">The kitchen. Customers (the app) send an order ticket; the kitchen uses ingredients (API keys) the customers never touch.</td></tr>
+<tr><td>LLM / model</td><td>A large language model such as gpt-oss-120b on Groq. Grain uses it to read a meal description and to judge matches, never to invent the final numbers.</td><td class="analogy">A very well-read assistant with a bad memory for exact figures. Great at understanding, unreliable at arithmetic.</td></tr>
+<tr><td>Groq</td><td>A company that runs open models very fast and cheaply. Grain's meals and voice notes go there.</td><td class="analogy">A fast food counter for AI: limited menu, served in seconds.</td></tr>
+<tr><td>Token</td><td>A chunk of text, roughly three quarters of a word. Model providers charge and rate-limit by tokens. A meal costs about 3,000 tokens end to end.</td><td class="analogy">Mobile data: you pay per megabyte, not per message.</td></tr>
+<tr><td>API / API key</td><td>A door another service opens for programs, and the password for that door. Grain holds keys for Groq and USDA.</td><td class="analogy">A staff pass for a building you do not own.</td></tr>
+<tr><td>JSON</td><td>The text format everything is stored and sent in: <code>{"kcal": 120, "proteinG": 3}</code>.</td><td class="analogy">A labelled list, written in a way both humans and programs can read.</td></tr>
+<tr><td>Key/value store</td><td>Storage where each piece of data has a name (key) and content (value). Grain stores almost everything this way.</td><td class="analogy">Coat check: hand over a coat, get a numbered ticket, use the ticket to get the coat back.</td></tr>
+<tr><td>Cache</td><td>A saved copy of an answer so the same question does not have to be worked out twice. Grain caches engine answers for seven days.</td><td class="analogy">Writing the answer in the margin of the textbook so you do not redo the sum.</td></tr>
+<tr><td>CORS / allowed origins</td><td>A browser rule: a website may only call servers that explicitly allow that website. The engine only answers calls from <code>app.getgrain.fit</code> and localhost.</td><td class="analogy">A guest list at the door.</td></tr>
+<tr><td>Anon key vs service role key</td><td>Supabase gives two keys. The anon key is public and is in the app; RLS limits what it can do. The service role key bypasses RLS and lives only inside the Edge Function.</td><td class="analogy">A visitor badge versus the building manager's master key.</td></tr>
+<tr><td>Deterministic</td><td>Same input, same output, every time. All of Grain's arithmetic is deterministic; only the model's understanding of text is not.</td><td class="analogy">A calculator, as opposed to asking a friend.</td></tr>
+<tr><td>RAG</td><td>"Retrieval augmented generation": look up real documents first, then let the model answer using them. Grain's engine is a retrieval-grounded pipeline of this family, but it retrieves food rows by name matching, not by vector search. Chapter 9 explains the difference.</td><td class="analogy">An open-book exam instead of a closed-book one.</td></tr>
+</table>
+
+<h2>2. The story in one page</h2>
+<p>You had been training for seven or eight months, found muscle gain easy and fat loss hard in a carb-rich Indian household, and started logging dinner into a ChatGPT project each night to get calories, macros and the deficit. It sometimes hallucinated. The idea was a simple app where a meal typed in plain language is worked out by a hybrid: an AI for understanding the sentence, and a real food database for the numbers, each checking the other, so the daily dashboard updates every time you eat.</p>
+<p>That idea is still the north star, and it is now the private engine at the centre of a larger product called Grain:</p>
+<ul>
+  <li><b>Describe, don't scan.</b> A photo cannot see the ghee in the pan or the chicken under the rice. People who already know what they ate type or say it.</li>
+  <li><b>Grounded numbers.</b> Every food number comes from a measured source (a curated Indian dish table, India's lab-measured IFCT 2017, or USDA FoodData Central) or is visibly flagged as an estimate.</li>
+  <li><b>Arithmetic in code.</b> The model picks foods; code multiplies portions. A cross-check cannot catch a mistake both sides make, so weights never go through the model's maths.</li>
+  <li><b>Honest history.</b> Days nobody logged count as nothing, never as a deficit. A half-logged day is held out until finished.</li>
+  <li><b>An ecosystem for people who train.</b> Food, training with every set, programs and meal plans, imports of old history and a coach's view, all on one timeline. The engine is the moat; everything else is a service around it.</li>
+  <li><b>Audience.</b> Athletes, lifters, models and fitness creators, India first and now global. They weigh their food, notice a wrong number, and pay for tools that get it right.</li>
+</ul>
+<p>Names: the project started as <b>Deficit</b> (you still see <code>deficit</code> in folder names and storage keys) and became <b>Grain</b>, a name about precision rather than dieting. The domain is <b>getgrain.fit</b>; the app is at <b>app.getgrain.fit</b>.</p>
+
+<h2>3. The big picture: who talks to whom</h2>
+<figure>
+<svg viewBox="0 0 900 470" xmlns="http://www.w3.org/2000/svg" font-size="13">
+  <defs><marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5f574e"/></marker></defs>
+  <!-- phone -->
+  <rect x="20" y="150" width="170" height="170" rx="14" fill="#f6f2ec" stroke="#ddd6cc"/>
+  <text x="105" y="180" text-anchor="middle" font-weight="700">Your phone / laptop</text>
+  <text x="105" y="202" text-anchor="middle" fill="#5f574e">Browser running the</text>
+  <text x="105" y="218" text-anchor="middle" fill="#5f574e">Grain PWA (JavaScript)</text>
+  <text x="105" y="246" text-anchor="middle" fill="#5f574e">localStorage:</text>
+  <text x="105" y="262" text-anchor="middle" fill="#5f574e">offline copies, outbox,</text>
+  <text x="105" y="278" text-anchor="middle" fill="#5f574e">session token</text>
+  <text x="105" y="304" text-anchor="middle" fill="#8f867c" font-size="11">service worker caches the shell</text>
+  <!-- vercel -->
+  <rect x="260" y="30" width="190" height="90" rx="10" fill="#fff" stroke="#ddd6cc"/>
+  <text x="355" y="56" text-anchor="middle" font-weight="700">Vercel (hosting)</text>
+  <text x="355" y="76" text-anchor="middle" fill="#5f574e">app.getgrain.fit: the app files</text>
+  <text x="355" y="94" text-anchor="middle" fill="#5f574e">getgrain.fit: landing page</text>
+  <text x="355" y="110" text-anchor="middle" fill="#8f867c" font-size="11">rebuilt on every push to main</text>
+  <!-- supabase -->
+  <rect x="260" y="150" width="400" height="290" rx="12" fill="#fff" stroke="#2b6cb0" stroke-width="1.5"/>
+  <text x="460" y="174" text-anchor="middle" font-weight="700" fill="#2b6cb0">Supabase (one project)</text>
+  <rect x="280" y="190" width="170" height="60" rx="8" fill="#f6f2ec" stroke="#ddd6cc"/>
+  <text x="365" y="214" text-anchor="middle" font-weight="600">Auth</text>
+  <text x="365" y="232" text-anchor="middle" fill="#5f574e" font-size="12">Google sign in, sessions</text>
+  <rect x="470" y="190" width="170" height="60" rx="8" fill="#f6f2ec" stroke="#ddd6cc"/>
+  <text x="555" y="214" text-anchor="middle" font-weight="600">Postgres database</text>
+  <text x="555" y="232" text-anchor="middle" fill="#5f574e" font-size="12">user_kv, programs, CRM, runs</text>
+  <rect x="280" y="275" width="360" height="145" rx="8" fill="#fdf1e8" stroke="#d9641e"/>
+  <text x="460" y="298" text-anchor="middle" font-weight="700" fill="#d9641e">Edge Function "food" (Deno)</text>
+  <text x="460" y="318" text-anchor="middle" fill="#5f574e" font-size="12">the engine: split, look up, judge, calculate, flag</text>
+  <text x="460" y="336" text-anchor="middle" fill="#5f574e" font-size="12">voice to text, roast, run log, cache, beta switch</text>
+  <text x="460" y="362" text-anchor="middle" fill="#8f867c" font-size="11">holds the secret keys: GROQ_API_KEY, USDA_API_KEY,</text>
+  <text x="460" y="378" text-anchor="middle" fill="#8f867c" font-size="11">service role key, ENGINE_LOG_SALT</text>
+  <text x="460" y="404" text-anchor="middle" fill="#8f867c" font-size="11">compiled in: IFCT table (525 rows) + Indian dish table</text>
+  <!-- external -->
+  <rect x="720" y="250" width="160" height="70" rx="10" fill="#fff" stroke="#ddd6cc"/>
+  <text x="800" y="276" text-anchor="middle" font-weight="700">Groq</text>
+  <text x="800" y="294" text-anchor="middle" fill="#5f574e" font-size="12">gpt-oss-120b (meals)</text>
+  <text x="800" y="310" text-anchor="middle" fill="#5f574e" font-size="12">Qwen (roast), Whisper (voice)</text>
+  <rect x="720" y="345" width="160" height="60" rx="10" fill="#fff" stroke="#ddd6cc"/>
+  <text x="800" y="370" text-anchor="middle" font-weight="700">USDA FoodData Central</text>
+  <text x="800" y="388" text-anchor="middle" fill="#5f574e" font-size="12">measured macros per 100 g</text>
+  <!-- arrows -->
+  <line x1="190" y1="170" x2="260" y2="80" stroke="#5f574e" marker-end="url(#a)"/>
+  <text x="200" y="118" fill="#5f574e" font-size="11">1. loads the app</text>
+  <line x1="190" y1="220" x2="280" y2="220" stroke="#5f574e" marker-end="url(#a)"/>
+  <line x1="190" y1="235" x2="470" y2="235" stroke="#5f574e" marker-end="url(#a)" stroke-dasharray="4 3"/>
+  <text x="196" y="256" fill="#5f574e" font-size="11">2. signs in; 3. reads/writes own rows (RLS)</text>
+  <line x1="190" y1="300" x2="280" y2="340" stroke="#d9641e" marker-end="url(#a)" stroke-width="1.5"/>
+  <text x="120" y="340" fill="#d9641e" font-size="11">4. "parse this meal"</text>
+  <line x1="640" y1="300" x2="720" y2="285" stroke="#5f574e" marker-end="url(#a)"/>
+  <line x1="640" y1="360" x2="720" y2="375" stroke="#5f574e" marker-end="url(#a)"/>
+  <line x1="460" y1="275" x2="555" y2="250" stroke="#5f574e" marker-end="url(#a)" stroke-dasharray="4 3"/>
+  <text x="560" y="268" fill="#8f867c" font-size="11">cache + run log (service role)</text>
+</svg>
+<figcaption>Figure 1. The whole system. Solid lines are what happens on every meal; dashed lines are database traffic. Nothing secret ever reaches the phone.</figcaption>
+</figure>
+
+<p>Three things to hold in your head:</p>
+<ol>
+  <li><b>The app is a static website.</b> Vercel only hands out files. All the "thinking" happens either inside the phone's browser (the maths, the training logger, the offline parser) or inside Supabase (the engine).</li>
+  <li><b>The phone talks to Supabase directly for data.</b> There is no separate Grain API server. The app reads and writes its own rows in Postgres using the public anon key, and RLS keeps everyone in their own lane.</li>
+  <li><b>Only the Edge Function talks to Groq and USDA.</b> That is why the keys stay secret and why the engine can be upgraded without shipping a new app.</li>
+</ol>
+
+<h2>4. A tour of the repository</h2>
+<table>
+<tr><th style="width:30%">Folder or file</th><th>What lives there</th></tr>
+<tr><td><code>src/app/</code></td><td>One file per screen, routed by file name (expo-router): <code>index.tsx</code> Overview (home), <code>log.tsx</code> Log, <code>train.tsx</code>, <code>workout.tsx</code>, <code>exercise.tsx</code>, <code>history.tsx</code>, <code>profile.tsx</code>, <code>program.tsx</code>, <code>programs.tsx</code>, <code>write.tsx</code> (write a program), <code>import.tsx</code>, <code>admin.tsx</code>. <code>_layout.tsx</code> wraps them all; <code>+html.tsx</code> is the HTML shell.</td></tr>
+<tr><td><code>src/components/</code></td><td>Reusable pieces, grouped by feature: <code>dashboard/</code>, <code>log/</code>, <code>history/</code>, <code>train/</code>, <code>admin/</code>, <code>ui/</code>. Pure presentation; no business rules.</td></tr>
+<tr><td><code>src/lib/</code></td><td>The brains. Every rule and every calculation, written so it can run without a screen and be unit tested. Chapters 6 to 20 are mostly about this folder. Appendix C lists every file.</td></tr>
+<tr><td><code>src/lib/food/</code></td><td>The app side of the engine: the provider interface, the remote provider (calls the Edge Function), the local offline parser, and the curated Indian food table.</td></tr>
+<tr><td><code>src/lib/supabase/</code></td><td>Everything that touches Supabase from the app: client, auth, the cloud key/value store, consent, programs, admin, account export and delete.</td></tr>
+<tr><td><code>src/lib/train/</code></td><td>Training: exercise library and matching, set maths, storage with outbox, progress, programs, adherence, the workout text reader, the importer.</td></tr>
+<tr><td><code>supabase/schema.sql</code></td><td>The whole database, as SQL you paste into the Supabase SQL editor. Safe to run again.</td></tr>
+<tr><td><code>supabase/functions/food/</code></td><td>The engine Edge Function: <code>index.ts</code> (handler and pipeline), <code>portion.ts</code> (portion arithmetic), <code>ifct.ts</code> (IFCT search and cooked yields), <code>roast.ts</code> (GrainAI), <code>caches.ts</code> (remembered USDA answers and sign-ins), <code>_ifct.ts</code> and <code>_indian-foods.ts</code> (generated data).</td></tr>
+<tr><td><code>scripts/</code></td><td>Data importers: <code>import-ifct.py</code> (IFCT 2017 PDF to table), <code>import-indb.py</code> (INDB spreadsheet to curated entries), <code>sync-indian-foods.mjs</code> (copies the curated table into the engine).</td></tr>
+<tr><td><code>landing/</code></td><td>The marketing site: static HTML, CSS and JS with a working mini Grain in the hero phone. Its own Vercel project.</td></tr>
+<tr><td><code>public/</code></td><td><code>manifest.json</code> (PWA name and icons) and <code>sw.js</code> (service worker).</td></tr>
+<tr><td><code>docs/superpowers/</code></td><td>Design specs and plans, including the engine v2 design.</td></tr>
+<tr><td><code>x.md</code></td><td>The build log: every decision, dated, in plain words. The engine repo has its own.</td></tr>
+<tr><td><code>grain_engine/</code> (separate private repo)</td><td>The engine lab: the practice set (81 meals with reference answers), the scorer, results, and the engine review. The scorer imports the live engine's own code so there is one engine, not two.</td></tr>
+</table>
+
+<div class="box blue"><span class="t">Why the split between components and lib matters</span>Almost every rule (how a day is judged complete, how a record is detected, how a deficit becomes kilograms) is in <code>src/lib</code> with no screen attached. That is what makes 333 tests possible, and it is what lets the same rule run everywhere food is summed: the weekly card, the Home prediction, the Train progress view and the coach summary all call the same function, so they cannot disagree.</div>
+
+<h2>5. The app shell: screens, gates and the installable web app</h2>
+<h3>5.1 What happens when the app opens</h3>
+<figure>
+<svg viewBox="0 0 900 190" xmlns="http://www.w3.org/2000/svg" font-size="12">
+  <defs><marker id="b" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5f574e"/></marker></defs>
+  <g>
+    <rect x="10" y="60" width="130" height="60" rx="8" fill="#f6f2ec" stroke="#ddd6cc"/><text x="75" y="85" text-anchor="middle" font-weight="600">AuthProvider</text><text x="75" y="102" text-anchor="middle" fill="#5f574e" font-size="11">restores session</text>
+    <rect x="175" y="60" width="130" height="60" rx="8" fill="#f6f2ec" stroke="#ddd6cc"/><text x="240" y="85" text-anchor="middle" font-weight="600">AuthGate</text><text x="240" y="102" text-anchor="middle" fill="#5f574e" font-size="11">no session: sign in</text>
+    <rect x="340" y="60" width="130" height="60" rx="8" fill="#f6f2ec" stroke="#ddd6cc"/><text x="405" y="85" text-anchor="middle" font-weight="600">ConsentGate</text><text x="405" y="102" text-anchor="middle" fill="#5f574e" font-size="11">18+, terms, health</text>
+    <rect x="505" y="60" width="130" height="60" rx="8" fill="#f6f2ec" stroke="#ddd6cc"/><text x="570" y="85" text-anchor="middle" font-weight="600">AppTabs</text><text x="570" y="102" text-anchor="middle" fill="#5f574e" font-size="11">Overview, Log, Train,</text><text x="570" y="115" text-anchor="middle" fill="#5f574e" font-size="11">History, Profile</text>
+    <rect x="670" y="60" width="130" height="60" rx="8" fill="#fdf1e8" stroke="#d9641e"/><text x="735" y="85" text-anchor="middle" font-weight="600">Onboarding</text><text x="735" y="102" text-anchor="middle" fill="#5f574e" font-size="11">if no profile yet</text>
+    <line x1="140" y1="90" x2="175" y2="90" stroke="#5f574e" marker-end="url(#b)"/>
+    <line x1="305" y1="90" x2="340" y2="90" stroke="#5f574e" marker-end="url(#b)"/>
+    <line x1="470" y1="90" x2="505" y2="90" stroke="#5f574e" marker-end="url(#b)"/>
+    <line x1="635" y1="90" x2="670" y2="90" stroke="#5f574e" marker-end="url(#b)"/>
+    <text x="450" y="160" text-anchor="middle" fill="#8f867c" font-size="11">Any screen that crashes is caught by an ErrorBoundary that shows "Something went wrong. Everything you've logged is safe. Try again."</text>
+  </g>
+</svg>
+<figcaption>Figure 2. The gates in <code>_layout.tsx</code>. Each one is skipped when it does not apply (no Supabase configured means no sign in and no consent).</figcaption>
+</figure>
+<ul>
+  <li><b>AuthProvider</b> asks Supabase whether a session exists (sessions persist in the browser's localStorage). While it asks, a spinner shows. When a session arrives it points the storage facade at the cloud (chapter 6).</li>
+  <li><b>AuthGate</b> shows the sign in screen when accounts are switched on and nobody is signed in. If the two <code>EXPO_PUBLIC_SUPABASE_*</code> variables are missing, the app runs entirely on the device with no account at all.</li>
+  <li><b>ConsentGate</b> runs once per account and per consent version. If the device already remembers that this version was agreed, it costs nothing. Otherwise it asks the database, and any doubt (offline, error) is treated as "not yet agreed", because asking again is harmless.</li>
+  <li><b>AppTabs</b> is the tab bar. On Overview, if there is no saved profile, the onboarding questionnaire takes over the screen.</li>
+</ul>
+
+<h3>5.2 Onboarding</h3>
+<p>Seven questions, one per screen: biological sex, age, height, weight, activity level, desired loss rate, and a review that shows the computed target live before the user has finished (the "aha" lands early). Ages under 18 are refused. Each option explains itself in a short hint ("Hard exercise 6 to 7 days a week"). The result is a <code>ProfileInput</code> saved under the profile key; nothing else is stored from onboarding.</p>
+
+<h3>5.3 The five tabs</h3>
+<table>
+<tr><th style="width:16%">Tab</th><th>What it shows</th><th style="width:34%">Where the numbers come from</th></tr>
+<tr><td>Overview</td><td>The three hooks first: the fresh start or away card, Your week (shareable), Total deficit maintained. Then the plan (target, left to eat), the weekly forecast, the Training card, macros, weigh in, and the adaptive maintenance card.</td><td><code>history.ts</code> gathers 21 and 45 days; <code>history-stats.ts</code>, <code>weekly-prediction.ts</code>, <code>adaptive-tdee.ts</code>, <code>week-report.ts</code>.</td></tr>
+<tr><td>Log</td><td>Today's date, "Left to eat" with an arc gauge, the three macros, the meal composer (Describe, Search, Custom), plan meals when following a program, and the list of what was eaten with quantity steppers.</td><td><code>log-store.ts</code>, <code>budget.ts</code>, <code>food/</code>, <code>quantity.ts</code>.</td></tr>
+<tr><td>Train</td><td>Start a workout (empty, repeat last, or a routine), today's program day, the live logger, routines, progress, exercise pages.</td><td><code>train/</code> (chapters 15 to 18).</td></tr>
+<tr><td>History</td><td>A Food calendar and a Training calendar, then trends, the range (30, 90, Year) and charts.</td><td><code>history.ts</code>, <code>history-stats.ts</code>, <code>train/progress.ts</code>.</td></tr>
+<tr><td>Profile</td><td>Edit profile, roast switch, install button, plan line (free or premium), Download my data, Delete my account, Admin (admins only), sign out.</td><td><code>access.ts</code>, <code>account.ts</code>, <code>install-prompt.ts</code>.</td></tr>
+</table>
+
+<h3>5.4 The installable app: manifest, service worker, install button</h3>
+<p><b>Manifest.</b> <code>public/manifest.json</code> names the app ("Grain"), sets it to open full screen (<code>display: standalone</code>), and lists the icons. The icon URLs carry <code>?v=2</code> because installed phones kept the old logo when the files were replaced under the same name.</p>
+<p><b>Service worker.</b> A small script the browser keeps running in the background so the app can open offline. Its rules are deliberately narrow:</p>
+<ul>
+  <li>Anything not on the app's own domain (Supabase auth, database, Edge Function) is never touched. It goes straight to the network.</li>
+  <li>Build files with a content hash in their name (<code>/_expo/static/</code>, <code>/assets/</code>) are served cache first, because a changed file always gets a new name.</li>
+  <li>Everything else, above all the HTML page that names the current bundle, is network first with the cache as a fallback. So a new deploy is picked up on the next load.</li>
+</ul>
+<div class="box red"><span class="t">The bug that deleted meals</span>The first service worker cached every request, including database reads. The app stores a whole day as one JSON list and saves by read, modify, write. A stale cached read of today, plus a fresh write, saved the day with the newest meals missing. They were not hidden, they were gone. Lesson written into the code: offline caching and read-modify-write storage do not mix, so API traffic is never cached. The cache name was bumped to <code>grain-v3</code> to evict old copies on every phone.</div>
+<p><b>Install button.</b> Chrome offers "install this app" exactly once, early, via an event named <code>beforeinstallprompt</code>. The button lived on Profile, which mounts much later, so the offer was always missed. Fix: a tiny inline script in the HTML head catches the event before the 2.3 MB bundle even parses, stashes it on <code>window</code>, and <code>install-prompt.ts</code> hands it to the button when it appears. A prompt can be used once, so after "dismissed" the UI falls back to manual instructions.</p>
+<p><b>Look.</b> Light only, "warm instrument": bone background, warm ink, one orange accent. No dashes or minus signs anywhere in copy; the label carries the direction ("Down 1.2 kg"). Figures use tabular numerals so columns line up.</p>
+
+<h2>6. Where data lives: the key/value idea</h2>
+<p>This is the most important architectural decision in the app, and the one that makes everything else simple. Grain does not have a "meals table", a "weights table" and a "workouts table" in the database. It has <b>one storage interface with three methods</b> and everything is a JSON string under a named key.</p>
+<pre>interface KVStore {
+  get(key): Promise&lt;string | null&gt;;
+  set(key, value): Promise&lt;void&gt;;
+  remove(key): Promise&lt;void&gt;;
+}</pre>
+<p class="analogy">Picture a coat check with named hooks. The profile hangs on the hook "deficit.profile.v1". Today's meals hang on "deficit.log.v1.2026-11-12". The app never cares whether the coat room is in the phone or in the cloud.</p>
+
+<figure>
+<svg viewBox="0 0 900 300" xmlns="http://www.w3.org/2000/svg" font-size="12">
+  <defs><marker id="c" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5f574e"/></marker></defs>
+  <rect x="20" y="20" width="200" height="40" rx="8" fill="#f6f2ec" stroke="#ddd6cc"/><text x="120" y="45" text-anchor="middle">profile-store.ts</text>
+  <rect x="20" y="70" width="200" height="40" rx="8" fill="#f6f2ec" stroke="#ddd6cc"/><text x="120" y="95" text-anchor="middle">log-store.ts (one key per day)</text>
+  <rect x="20" y="120" width="200" height="40" rx="8" fill="#f6f2ec" stroke="#ddd6cc"/><text x="120" y="145" text-anchor="middle">weight-store.ts</text>
+  <rect x="20" y="170" width="200" height="40" rx="8" fill="#f6f2ec" stroke="#ddd6cc"/><text x="120" y="195" text-anchor="middle">train/store.ts (per month)</text>
+  <rect x="20" y="220" width="200" height="40" rx="8" fill="#f6f2ec" stroke="#ddd6cc"/><text x="120" y="245" text-anchor="middle">fulldays.ts, roast-setting.ts</text>
+  <rect x="330" y="100" width="180" height="90" rx="10" fill="#fff" stroke="#d9641e" stroke-width="1.5"/>
+  <text x="420" y="130" text-anchor="middle" font-weight="700">kv (the facade)</text>
+  <text x="420" y="150" text-anchor="middle" fill="#5f574e" font-size="11">forwards to whichever</text>
+  <text x="420" y="165" text-anchor="middle" fill="#5f574e" font-size="11">store is "active"</text>
+  <rect x="620" y="40" width="250" height="80" rx="10" fill="#fff" stroke="#ddd6cc"/>
+  <text x="745" y="66" text-anchor="middle" font-weight="600">localStore</text>
+  <text x="745" y="84" text-anchor="middle" fill="#5f574e" font-size="11">browser localStorage</text>
+  <text x="745" y="100" text-anchor="middle" fill="#5f574e" font-size="11">used when signed out</text>
+  <rect x="620" y="170" width="250" height="90" rx="10" fill="#fff" stroke="#2b6cb0"/>
+  <text x="745" y="196" text-anchor="middle" font-weight="600">createSupabaseStore(client, userId)</text>
+  <text x="745" y="214" text-anchor="middle" fill="#5f574e" font-size="11">table user_kv, one row per (user, key)</text>
+  <text x="745" y="230" text-anchor="middle" fill="#5f574e" font-size="11">set = upsert, remove = delete</text>
+  <text x="745" y="246" text-anchor="middle" fill="#5f574e" font-size="11">used when signed in</text>
+  <line x1="220" y1="40" x2="330" y2="130" stroke="#5f574e" marker-end="url(#c)"/>
+  <line x1="220" y1="90" x2="330" y2="140" stroke="#5f574e" marker-end="url(#c)"/>
+  <line x1="220" y1="140" x2="330" y2="145" stroke="#5f574e" marker-end="url(#c)"/>
+  <line x1="220" y1="190" x2="330" y2="155" stroke="#5f574e" marker-end="url(#c)"/>
+  <line x1="220" y1="240" x2="330" y2="165" stroke="#5f574e" marker-end="url(#c)"/>
+  <line x1="510" y1="130" x2="620" y2="80" stroke="#5f574e" marker-end="url(#c)" stroke-dasharray="4 3"/>
+  <line x1="510" y1="160" x2="620" y2="210" stroke="#2b6cb0" marker-end="url(#c)" stroke-width="1.5"/>
+  <text x="540" y="95" fill="#8f867c" font-size="11">signed out</text>
+  <text x="540" y="200" fill="#2b6cb0" font-size="11">signed in</text>
+</svg>
+<figcaption>Figure 3. Every store module talks to <code>kv</code>. Sign in swaps what is behind it; no call site changes.</figcaption>
+</figure>
+
+<h3>6.1 Sign in moves the facade, and migrates once</h3>
+<p>When a session appears, <code>auth.tsx</code> calls <code>setActiveStore(cloud)</code>. Then <code>migrateLocalToCloud</code> runs: if the cloud has no profile for this user yet, every <code>deficit.*</code> key in the phone's localStorage is pushed up. So someone who used Grain without an account keeps their data when they sign in. It runs once per device and is best effort; it never blocks sign in. On sign out the facade points back to the device.</p>
+
+<h3>6.2 Device-only keys are named per account</h3>
+<p>Some things must stay on the phone (offline copies, the outbox, cached consent). They are named <code>grain.&lt;accountId&gt;.&lt;name&gt;</code> via <code>deviceKey()</code>. That way two people signing in on one phone never see or sync each other's training. Deleting an account also clears that account's device keys.</p>
+
+<h3>6.3 The daily log, and why writes are queued</h3>
+<p>One key per calendar day, in the phone's local date (<code>todayKey()</code> uses local year, month and day, not UTC, so a meal at 11 pm in Mumbai lands on the right day). Each entry stores:</p>
+<table class="kv">
+<tr><th>Field</th><th>Meaning</th></tr>
+<tr><td>id, label, at</td><td>A short random id, the food's name, and when it was logged.</td></tr>
+<tr><td>kcal, proteinG, carbsG, fatG</td><td>Totals for this entry (unit × quantity).</td></tr>
+<tr><td>serving, quantity</td><td>The serving the unit macros describe ("1 katori (150g)" or "100g") and how many of it. Editable later.</td></tr>
+<tr><td>unitKcal, unitProteinG, unitCarbsG, unitFatG</td><td>Per-serving macros, kept so quantity can be rescaled without going back to the engine.</td></tr>
+<tr><td>confidence, source</td><td>The engine's trust signal at log time (high, medium, low) and where the number came from (local, usda, ifct, ai). This follows the entry into the log so a guess is never hidden.</td></tr>
+</table>
+<div class="box amber"><span class="t">The mutation queue</span>Add, remove and change-quantity each read the day, change it, and write it back. If two of these overlap (a multi-item meal logs several entries at once, or a double tap), the second read could see the old list and its write would drop the first entry. <code>log-store.ts</code> therefore chains every operation on the same day key behind the previous one (<code>serialized()</code>), and even reads go through the queue, because the Log screen reloads on every focus and a stale read once made a meal vanish from the list while it was still in storage.</div>
+<div class="box amber"><span class="t">7 grams became 50 grams</span>Quantities used to be floored at half a serving. For a food measured "per 100 g", half a serving is 50 g, so half a tablespoon of sugar (7 g, 27 kcal in the composer) was saved as 50 g and 193 kcal. Now the quantity is saved exactly as given; the stepper moves weighed foods in 5 g steps and countable foods in halves (<code>quantity.ts</code>), and "minus" at the bottom of the grid does nothing rather than jumping to a floor.</div>
+
+<h3>6.4 Workouts are stored per month</h3>
+<p>Finished workouts live under <code>deficit.workouts.v1.YYYY-MM</code> with an index of months under <code>deficit.workouts.months.v1</code>, so saving a workout never rewrites years of history. Chapter 15 covers the offline outbox that sits in front of this.</p>
+
+<h3>6.5 Trade-offs of this design, stated plainly</h3>
+<ul>
+  <li><b>Good:</b> one table, one security policy, trivially testable, no schema migrations for new features, offline mode and cloud mode share all code.</li>
+  <li><b>Cost:</b> the database cannot query inside the JSON cheaply. Admin stats parse each day's JSON with a helper SQL function (<code>log_entry_count</code>). Reading many days is batched: the store has an optional <code>getMany</code>, and the account store answers it with one request per hundred keys, so the Overview's 45 days, a month on the calendar or a year of History each cost one or a few round trips instead of one per day.</li>
+</ul>
+
+<h2>7. Sign in and accounts</h2>
+<ul>
+  <li><b>Google only.</b> The email magic link was removed on 22 October 2026: one path, nothing to deliver to an inbox, nothing to land in spam, and no SMTP to set up.</li>
+  <li><b>Implicit flow, on purpose.</b> Supabase supports two OAuth flows. PKCE stores a secret in the browser that started the sign in and expects the same browser to finish it; links opened in another browser or an in-app webview silently bounce back to the login screen. Implicit carries the session in the redirect itself, so it completes wherever it opens. Do not switch to PKCE without a verifier-free path.</li>
+  <li><b>Where the session lives.</b> In the browser's localStorage, refreshed automatically by the Supabase client.</li>
+  <li><b>Program links before sign in.</b> If someone opens <code>app.getgrain.fit/program?code=ABC123</code> while signed out, the code is remembered, Google sign in lands on Home, and Home opens the program.</li>
+  <li><b>Privacy copy.</b> The sign in screen and Profile say that meals are saved without your name to make estimates better (chapter 9.9 explains the salted hash).</li>
+</ul>
+
+<h2>8. The database, table by table</h2>
+<p>Everything below is created by <code>supabase/schema.sql</code>. "RLS on, no policies" means the table is invisible to the app's public key and only the Edge Function's master key can touch it.</p>
+
+<h3>8.1 Per-user data</h3>
+<table>
+<tr><th style="width:20%">Table</th><th>Columns</th><th style="width:34%">Who may touch it</th></tr>
+<tr><td><code>user_kv</code></td><td><code>user_id</code>, <code>key</code>, <code>value</code> (text JSON), <code>updated_at</code>. Primary key is (user_id, key).</td><td>Four RLS policies: select, insert, update, delete, each requiring <code>(select auth.uid()) = user_id</code>. Written that way, Postgres works out who is asking once per query instead of once per row, which on a 60,000 row table made a policy-only read about 14 times faster. The whole personal dataset is here.</td></tr>
+<tr><td><code>consents</code></td><td><code>user_id</code>, <code>version</code>, <code>adult</code>, <code>terms</code>, <code>health</code> (all must be true), <code>created_at</code>.</td><td>Users can insert and read their own; admins can read all. No update or delete policy exists, so a consent can never be edited.</td></tr>
+<tr><td><code>premium_access</code></td><td><code>user_id</code>, <code>source</code> ('gift' or 'subscription'), <code>ends_at</code> (null = no end), <code>note</code>, <code>granted_by</code>.</td><td>Users read their own row; admins do anything. No row means free.</td></tr>
+</table>
+
+<h3>8.2 Programs and coaching</h3>
+<table>
+<tr><th style="width:20%">Table</th><th>Columns</th><th style="width:34%">Who may touch it</th></tr>
+<tr><td><code>programs</code></td><td><code>owner_id</code>, <code>code</code> (six characters A to Z and 2 to 9, unique), <code>title</code>, <code>author_name</code>, <code>description</code>, <code>weeks</code> (1 to 52), <code>days</code> (JSON), <code>nutrition</code> (JSON meal plan or null), <code>exercises</code> (the author's custom exercises so followers have them), <code>published</code>.</td><td>Owner does anything. Anyone signed in can read a published program, or one they already follow even after it is unpublished.</td></tr>
+<tr><td><code>follows</code></td><td><code>follower_id</code>, <code>program_id</code>, <code>coach_id</code> (always the program's owner), <code>display_name</code>, <code>share_stats</code>, <code>stats</code> (the summary, only while sharing), <code>stats_at</code>, <code>started_at</code>. One row per (follower, program).</td><td>Followers read their own. A coach reads only rows where <code>share_stats</code> is true. Nobody can insert, update or delete directly: the functions below do it.</td></tr>
+</table>
+<p><b>Functions (run with the database's authority, each checking who is asking):</b></p>
+<ul>
+  <li><code>follow_program(code, share, name)</code>: finds a published program by code, deletes any other follow (one program at a time), inserts or updates the follow. Sharing off drops the stored summary.</li>
+  <li><code>update_follow(id, share, name, stats)</code>: changes sharing or name or pushes a fresh summary; turning sharing off wipes the summary the coach could see.</li>
+  <li><code>unfollow(id)</code>, <code>my_program_followers()</code> (counts per program, sharing or not).</li>
+</ul>
+
+<h3>8.3 The engine's own tables</h3>
+<table>
+<tr><th style="width:20%">Table</th><th>Columns</th><th style="width:30%">Purpose</th></tr>
+<tr><td><code>food_cache</code></td><td><code>key</code> (engine version | model | normalised text), <code>value</code> (the parsed meal), <code>created_at</code>.</td><td>Seven-day shared cache. RLS on, no policies.</td></tr>
+<tr><td><code>engine_runs</code></td><td><code>id</code>, <code>created_at</code>, <code>user_ref</code> (salted hash), <code>arm</code> ('live' or 'beta'), <code>engine</code> (e.g. v5/groq/openai/gpt-oss-120b), <code>text</code>, <code>result</code>, <code>trace</code> (each stage's output, tokens and time), <code>latency_ms</code>, <code>cached</code>, <code>degraded</code>, <code>error</code>.</td><td>One row per Match. The engine's flight recorder. Indexed by date and by (user_ref, arm, date) for the daily beta cap.</td></tr>
+<tr><td><code>engine_corrections</code></td><td><code>run_id</code>, <code>user_ref</code>, <code>logged</code> (what the user actually logged after edits).</td><td>Every edit is a free, labelled example of the engine being wrong.</td></tr>
+<tr><td><code>engine_settings</code></td><td>One row: <code>beta_enabled</code>, <code>beta_provider</code>, <code>beta_model</code>, <code>rollout_percent</code>, <code>beta_daily_cap</code> (default 30).</td><td>The engine switch for trying a new model on some users.</td></tr>
+<tr><td><code>engine_testers</code></td><td><code>user_id</code>, <code>note</code>.</td><td>People who always get the beta engine.</td></tr>
+</table>
+
+<h3>8.4 Admin and business</h3>
+<table>
+<tr><th style="width:20%">Table or function</th><th>What it is</th></tr>
+<tr><td><code>admins</code></td><td>Who may open the admin screens. No policies: only the <code>is_admin()</code> function reads it. You add yourself once by SQL.</td></tr>
+<tr><td><code>app_settings</code></td><td>One row: <code>paywall_enabled</code>. Everyone signed in can read it; only admins can change it. Off means everyone gets every feature.</td></tr>
+<tr><td><code>my_access()</code></td><td>Returns, for the caller: paywall on or off, premium source and end date, whether premium is active, and whether they are an admin. The app calls this once and shows the plan line.</td></tr>
+<tr><td><code>admin_users(search)</code></td><td>Up to 500 accounts, newest first, with joined date, last activity, days logged, meals logged and premium. Counts come from parsing <code>user_kv</code> day keys; it never returns a meal.</td></tr>
+<tr><td><code>admin_stats()</code></td><td>Aggregates only, in India time: signups (today, week, month, by day for 30 days), people logging each day, meals per day, activation (joined in 30 days and logged at least once), second-week retention (joined 14 to 27 days ago and logged between day 7 and 13), engine runs with degraded, cached and median latency, premium counts.</td></tr>
+<tr><td><code>crm_creators</code>, <code>crm_metrics</code>, <code>crm_touches</code></td><td>The creator CRM: a person with stage (prospect, contacted, replied, onboarded, active, partner, declined), follow-up date and contact details; every metrics snapshot per platform (followers, reach, weekly and total views, engagement) kept forever so growth shows; and every DM, call or message. Admin only.</td></tr>
+<tr><td><code>delete_my_account()</code></td><td>Deletes the caller's row in <code>auth.users</code>; foreign keys cascade everything (kv rows, consents, programs and their follows, follows, premium). Engine logs keep only the salted reference.</td></tr>
+</table>
+<p class="small">31 database-level checks of these rules passed in a local Postgres before the admin shipped; the app is never trusted to keep anyone out.</p>
+
+<h2>9. The food engine, stage by stage</h2>
+<h3>9.1 Is it RAG?</h3>
+<p>Yes in spirit, no in mechanism. Classic RAG turns documents into vectors (lists of numbers) and finds the closest ones to the question. Grain's engine instead <b>retrieves candidate foods by name matching</b> from three tables, hands those candidates to the model, and lets the model choose. Then code does the arithmetic. Call it <b>grounded parsing with a judge</b>. The reason for the simpler retrieval: food names are short, the tables are small (about 1,100 curated and IFCT rows compiled into the function, plus USDA over the network), and name matching is explainable: you can always see why a candidate appeared. The engine review in the lab notes this search is also the weakest link (it once offered "Betel leaves, big" for a Big Mac), and a proper food search with weights per household measure is on the roadmap.</p>
+
+<figure>
+<svg viewBox="0 0 900 560" xmlns="http://www.w3.org/2000/svg" font-size="12">
+  <defs><marker id="d" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5f574e"/></marker></defs>
+  <rect x="20" y="20" width="860" height="52" rx="8" fill="#f6f2ec" stroke="#ddd6cc"/>
+  <text x="30" y="42" font-weight="700">0. Guard</text>
+  <text x="30" y="60" fill="#5f574e" font-size="11">Allowed origin? Signed in (token checked against Supabase Auth)? Which engine does this user get (live or beta)? Is the answer already in the 7-day cache?</text>
+  <rect x="20" y="92" width="860" height="66" rx="8" fill="#fff" stroke="#d9641e"/>
+  <text x="30" y="114" font-weight="700" fill="#d9641e">1. Structure (LLM call 1)</text>
+  <text x="30" y="132" fill="#5f574e" font-size="11">"do roti, ek katori dal, 1 tbsp ghee" becomes a list: {name, quantity, query, grams}. "grams" is filled ONLY when the text states a measurable amount</text>
+  <text x="30" y="148" fill="#5f574e" font-size="11">("150 ml milk" gives 150, "1 tablespoon ghee" gives 14). "dal" or "2 roti" gives null: the model is told not to guess a typical portion.</text>
+  <rect x="20" y="178" width="860" height="100" rx="8" fill="#fff" stroke="#2b6cb0"/>
+  <text x="30" y="200" font-weight="700" fill="#2b6cb0">2. Look up (no LLM; three sources, in this order)</text>
+  <rect x="30" y="212" width="270" height="56" rx="6" fill="#f6f2ec" stroke="#ddd6cc"/><text x="165" y="232" text-anchor="middle" font-weight="600" font-size="11">Curated Indian dishes ("local")</text><text x="165" y="248" text-anchor="middle" fill="#5f574e" font-size="10.5">matched on the dish name; home portions,</text><text x="165" y="261" text-anchor="middle" fill="#5f574e" font-size="10.5">recipe fats included; up to 3</text>
+  <rect x="315" y="212" width="270" height="56" rx="6" fill="#f6f2ec" stroke="#ddd6cc"/><text x="450" y="232" text-anchor="middle" font-weight="600" font-size="11">IFCT 2017 ("ifct")</text><text x="450" y="248" text-anchor="middle" fill="#5f574e" font-size="10.5">matched on the generic query; per 100 g raw,</text><text x="450" y="261" text-anchor="middle" fill="#5f574e" font-size="10.5">staples offered cooked AND raw; up to 3 foods</text>
+  <rect x="600" y="212" width="270" height="56" rx="6" fill="#f6f2ec" stroke="#ddd6cc"/><text x="735" y="232" text-anchor="middle" font-weight="600" font-size="11">USDA FoodData Central ("usda")</text><text x="735" y="248" text-anchor="middle" fill="#5f574e" font-size="10.5">network call; Foundation, SR Legacy, FNDDS;</text><text x="735" y="261" text-anchor="middle" fill="#5f574e" font-size="10.5">per 100 g; up to 5; null if unavailable = degraded</text>
+  <rect x="20" y="298" width="860" height="80" rx="8" fill="#fff" stroke="#d9641e"/>
+  <text x="30" y="320" font-weight="700" fill="#d9641e">3. Judge (LLM call 2)</text>
+  <text x="30" y="338" fill="#5f574e" font-size="11">For each item the model sees every candidate with its source, serving and macros, and returns: chosen (index, or -1 with its own estimate), quantity in the</text>
+  <text x="30" y="354" fill="#5f574e" font-size="11">chosen serving, aiEstimateKcal (its OWN independent total, the cross-check), portionCertainty (clear or unsure), and a one-clause reason.</text>
+  <text x="30" y="370" fill="#5f574e" font-size="11">Rules in the prompt: prefer a specific Indian dish over a generic USDA row; never treat "100g raw" as 100 g eaten; a "100g cooked" row is already converted.</text>
+  <rect x="20" y="398" width="860" height="66" rx="8" fill="#fff" stroke="#2f7d4f"/>
+  <text x="30" y="420" font-weight="700" fill="#2f7d4f">4. Calculate (code, deterministic)</text>
+  <text x="30" y="438" fill="#5f574e" font-size="11">If the candidate is per 100 g and a weight was stated: multiplier = grams / 100, whatever the model said. Otherwise the judge's quantity stands ("2 roti" = 2).</text>
+  <text x="30" y="454" fill="#5f574e" font-size="11">kcal = candidate kcal × multiplier. Totals are summed in code. A stated weight also forces portionCertainty to "clear".</text>
+  <rect x="20" y="484" width="860" height="62" rx="8" fill="#fff" stroke="#b7791f"/>
+  <text x="30" y="506" font-weight="700" fill="#b7791f">5. Flag, cache, record</text>
+  <text x="30" y="524" fill="#5f574e" font-size="11">Confidence from the gap between database total and AI estimate. Reason text for the user. Alternates kept for one-tap correction. Degraded runs are flagged and never</text>
+  <text x="30" y="540" fill="#5f574e" font-size="11">cached. Every run is saved to engine_runs with its full trace, without holding up the reply.</text>
+  <line x1="450" y1="72" x2="450" y2="92" stroke="#5f574e" marker-end="url(#d)"/>
+  <line x1="450" y1="158" x2="450" y2="178" stroke="#5f574e" marker-end="url(#d)"/>
+  <line x1="450" y1="278" x2="450" y2="298" stroke="#5f574e" marker-end="url(#d)"/>
+  <line x1="450" y1="378" x2="450" y2="398" stroke="#5f574e" marker-end="url(#d)"/>
+  <line x1="450" y1="464" x2="450" y2="484" stroke="#5f574e" marker-end="url(#d)"/>
+</svg>
+<figcaption>Figure 4. One "Describe a meal" request through the <code>food</code> Edge Function. Two model calls, one network lookup per item, everything else is code.</figcaption>
+</figure>
+
+<h3>9.2 A worked example</h3>
+<p>Input: <b>"200g chicken breast, 1 katori dal tadka, 1 tablespoon ghee"</b>.</p>
+<ol>
+  <li><b>Structure</b> returns three items: chicken breast (quantity 1, query "cooked chicken breast", grams 200), dal tadka (quantity 1, query "cooked lentils dal", grams null), ghee (quantity 1, query "ghee clarified butter", grams 14).</li>
+  <li><b>Look up.</b> Chicken: the curated table has nothing exact, IFCT offers "Chicken, breast" raw at 100 g raw, USDA offers "Chicken, breast, cooked" per 100 g. Dal: the curated table offers "Dal Tadka, 1 katori (150g)", IFCT offers red gram cooked and raw. Ghee: curated "Ghee, 1 tsp (5g)" and USDA "Butter oil, anhydrous" per 100 g.</li>
+  <li><b>Judge</b> picks USDA cooked chicken (the user said 200 g of something cooked), the curated Dal Tadka with quantity 1, and USDA ghee. It estimates 330, 180 and 125 kcal independently.</li>
+  <li><b>Calculate.</b> Chicken: per 100 g and 200 g stated, so multiplier 2.0 (165 × 2 = 330). Dal: countable serving, quantity 1 (180). Ghee: per 100 g, 14 g stated, multiplier 0.14 (876 × 0.14 = 123). Before this rule existed, this ghee logged as 876 kcal with a "high" badge, because the model's cross-check made the same mistake.</li>
+  <li><b>Flag.</b> All three gaps are small and portions are clear, so all three are "high". Total 633 kcal.</li>
+</ol>
+
+<h3>9.3 The confidence rule, exactly</h3>
+<pre>function calcConfidence(dbTotal, aiKcal, portionCertainty, source) {
+  if (!aiKcal) return 'low';            // no cross-check at all = a guess
+  gap = |dbTotal - aiKcal| / max(aiKcal, dbTotal, 1);
+  tol = source === 'local' ? 0.25 : 0.20; // home recipes vary more
+  if (portionCertainty === 'clear' && gap <= tol) return 'high';
+  if (gap <= 0.40) return 'medium';
+  return 'low';
+}</pre>
+<p>In words: <b>high</b> means the database and the model agree within 20% (25% for home dishes) and the portion was clear. <b>medium</b> means they are within 40% or the portion was guessed. <b>low</b> means they really disagree, or there was no cross-check, or no database match at all (the model's own estimate is always low). The app shows these as Matched, Likely, Unsure. The reason line for anything below high says it plainly: "Database says 180 kcal, AI estimate about 260 kcal, recipes vary."</p>
+<div class="box amber"><span class="t">An honest limitation</span>Confidence is the model agreeing with the database, and nobody has yet measured how often "high" is actually right. That measurement is what the practice set in the lab is for (chapter 24).</div>
+
+<h3>9.4 Degraded runs</h3>
+<p>A run is <b>degraded</b> when infrastructure or the judge failed: USDA was unreachable (distinct from "USDA answered and had nothing"), the model returned no decision for an item, or an item could not be placed at all. A degraded run still answers (logging must never hard-fail), shows a note ("Grounding was incomplete for this meal... try again in a minute"), and is <b>never cached</b>. An honest low-confidence result is not degraded and is cached, because it is reproducible and already flagged.</p>
+<div class="box red"><span class="t">Why the engine once looked random</span>Runs made while USDA was down were being cached for a week, shared across all users. The same meal typed again returned the same wrong calories for seven days, while a phrase first parsed when USDA was healthy stayed right. That is what made the engine look "sometimes right, sometimes wildly off". Caching only fully grounded runs fixed it.</div>
+
+<h3>9.5 The cache</h3>
+<p>Key: <code>v5 | model name | lower-cased, whitespace-collapsed text</code>. So "200g chicken" and "200G  chicken" share an answer, switching models starts a fresh namespace, and bumping <code>ENGINE_VERSION</code> (now v5) after any change to the output retires every old answer. Hits are served in well under a second and still produce a run row marked <code>cached</code>. The cache is written after the reply has gone, so it never adds to the wait.</p>
+<p><b>USDA answers are remembered too</b> (<code>caches.ts</code>). A USDA search takes about 2 seconds from India, and the same foods come up constantly ("cooked white rice", "chicken breast cooked"), even when the whole meal text is new. Each answer is kept in the instance's memory and in <code>food_cache</code> under <code>usda|v1|</code> plus a hash of the exact query, for 30 days, because USDA's data barely changes. On a meal, memory is checked first; for the rest, the stored answers and USDA are asked at the same time and a stored answer cancels its USDA search. So a known food costs nothing or one database read, and a new one waits no longer than before. "USDA unavailable" is never remembered, a search that hangs past 8 seconds counts as unavailable (a degraded run), and the answers are byte for byte the ones USDA gave.</p>
+
+<h3>9.6 The two prompts</h3>
+<p><b>Structure prompt</b> (paraphrased): "You are a nutrition assistant for Indian food. Break this meal into items. For each return a display name, quantity as a decimal, a concise generic English search query ('cooked lentils dal', 'wheat flatbread roti'), and grams: the edible weight of the whole eaten amount, only when a measurable amount is stated. Normalise Indian portions. Return only JSON."</p>
+<p><b>Judge prompt</b> (paraphrased): "You are grounding a food log so its numbers can be trusted. For each item you get real candidates from three sources... Choose the best; prefer a specific Indian table match over a generic USDA one; if none fits use -1 and give your own estimate with a serving label. Raw vs as-eaten rules. Return quantity in the chosen serving, your own independent kcal estimate (do NOT copy the candidate), portion certainty and a short reason. Portion reference: 1 roti about 40 g, 1 katori about 150 g, 1 glass about 250 ml..."</p>
+<p>Both calls use temperature 0 (ask for the most likely answer, not a creative one) and JSON mode, so identical meals give identical structure.</p>
+
+<h3>9.7 Which model, and the switch</h3>
+<ul>
+  <li><b>Live engine:</b> Groq, <code>openai/gpt-oss-120b</code>, chosen after an evaluation: 16.8% median calorie error against 19.4% for llama-3.3-70b and no 400% blow-ups. A reasoning model handles the per-100 g scaling better.</li>
+  <li><b>Pluggable:</b> <code>LLM_PROVIDER</code> can be <code>groq</code> or <code>openai</code>; models are set by env. Both speak the same OpenAI-compatible API, so only the URL, key and model name differ.</li>
+  <li><b>Gemini came and went:</b> on 28 October the engine moved to Gemini Flash through Google's compatible endpoint, and the same day went back to Groq: one key, one bill, nearly free, and Gemini is out until the practice set shows it is worth paying for.</li>
+  <li><b>Beta switch:</b> <code>engine_settings</code> can enable a second provider/model for testers plus a percentage of everyone else. A user's place in the rollout is fixed by their hash, so raising the percentage only adds people. A per-user daily cap (30 uncached runs) protects the budget. Everything fails towards the live engine.</li>
+</ul>
+
+<h3>9.8 Health check</h3>
+<p>The app probes <code>{action: 'health'}</code> on load. It used to report "ok" if a key string merely existed, so an expired key showed as healthy while every parse silently fell back. Now it makes a real one-token call to the provider (cached five minutes) and returns a human-readable reason (401 expired key, 429 quota, 404 retired model). The Log screen says nothing while the engine works and shows one line only when it is offline. The app asks at most once every five minutes, since every Match reports the engine's state anyway.</p>
+
+<h3>9.9 The run log and corrections</h3>
+<p>Every parse writes an <code>engine_runs</code> row: the text, each stage's output, token counts and milliseconds per stage, the final result, whether it was cached or degraded. When the user edits a portion or swaps a food before logging, the app fires <code>{action: 'correction'}</code> with what was actually logged, keyed to the run id. The user appears as <code>sha256(ENGINE_LOG_SALT + user id)</code>: a one-way fingerprint that cannot be turned back into a name or email, and changing the salt unlinks all old runs. The first recorded real meal ("100 gm paneer cooked with quarter tablespoon of ghee") found two bugs on day one.</p>
+
+<h3>9.10 Security of the function</h3>
+<ul>
+  <li>Deployed with <code>--no-verify-jwt</code> so the function can answer the browser's CORS preflight, but every real request is checked: the bearer token is sent to Supabase Auth and must resolve to a user. A token Auth accepted is remembered on that instance for up to five minutes (never past its own expiry), because one meal makes up to three calls with it; the trade-off is that a token revoked by signing out can still reach the engine for those few minutes. A rejected token is never remembered.</li>
+  <li>Allowed origins: <code>https://app.getgrain.fit</code>, the old <code>deficit-cyan.vercel.app</code>, and localhost. A new domain must be added in <code>index.ts</code> and redeployed.</li>
+  <li>Inputs are bounded: audio at most 4 MB of base64, roast text at most 300 characters and 15 items, corrections at most 30 items.</li>
+</ul>
+
+<h3>9.11 When the engine is unreachable: the offline parser</h3>
+<p>If Supabase is not configured, or the function errors, <code>RemoteFoodProvider</code> falls back to <code>LocalFoodProvider</code>: a heuristic in the phone. It splits the text on commas, "and", "+", line breaks and full stops (never a decimal point), pulls a leading number or number word ("two", "half"), strips unit words (katori, bowl, tbsp...), and ranks the curated Indian table with a simple score: exact name or alias 100, starts with 80, contains 60, token overlap 20 plus 10 per token. A stated weight is only scaled against a serving that states its weight in the same unit; otherwise it stays one serving and is flagged. The local table never claims high confidence: a strong hit is medium, a loose one is low. Type-ahead <b>Search</b> always uses this local table, because it must be instant.</p>
+
+<h3>9.12 Swapping a match</h3>
+<p>Each parsed item carries its other candidates. Tapping one calls <code>swapParsedItem</code>. The quantity only transfers when the new serving string is identical; otherwise it resets to 1 and confidence drops to medium with a reason, because carrying "1.5 katori" onto a "100 g raw" row once logged triple the real intake under a high badge. The replaced food stays in the list so a swap is never a dead end.</p>
+
+<h2>10. The three food tables and where their numbers come from</h2>
+<table>
+<tr><th style="width:18%">Table</th><th>What it covers</th><th>How it is built</th><th style="width:22%">Licence</th></tr>
+<tr><td>Curated Indian dishes<br><span class="pill">local</span></td><td>About 160 cooked dishes and common items with home servings: roti (1 piece, 40 g), dal tadka (1 katori, 150 g), paneer paratha, biryani, idli, chai, ghee by the teaspoon. Aliases widen matching (chapati, phulka, rotli).</td><td><code>src/lib/food/indian-foods.ts</code>, hand curated, part derived by <code>import-indb.py</code> from the Indian Nutrient Databank with validation (Atwater check: 4P + 4C + 9F within 30% of stated kcal; range caps). Copied into the engine by <code>sync-indian-foods.mjs</code> so the two never drift.</td><td>Own curation; INDB values are facts (not copyrightable), the selection is Grain's own.</td></tr>
+<tr><td>IFCT 2017<br><span class="pill">ifct</span></td><td>525 Indian ingredients measured in a lab by ICMR-NIN: millets, dals, Indian fish and meats, local vegetables. Per 100 g edible portion, raw unless published cooked (eggs).</td><td><code>import-ifct.py</code> reads Table 1 (PDF pages 41 to 68) in layout mode, handles two column layouts, converts kJ to kcal, applies the Atwater check and range caps, and asserts the row census per food group. Dropped 3 of 528 rows. The PDF's hash is recorded.</td><td><b>Open item.</b> The publisher requires written permission to reproduce the data in a product. Settle before marketing or investor conversations. The dataset is not named on the landing page for this reason.</td></tr>
+<tr><td>USDA FoodData Central<br><span class="pill">usda</span></td><td>Measured macros per 100 g for tens of thousands of foods. Foundation, SR Legacy and FNDDS (dishes as eaten). Branded foods excluded.</td><td>Live search over the network, five results, remembered for 30 days in memory and in <code>food_cache</code> (chapter 9.5). Nutrient ids 1008 (energy), 1003 protein, 1005 carbs, 1004 fat.</td><td>Public domain.</td></tr>
+</table>
+
+<h3>10.1 Raw versus cooked, done in code</h3>
+<p>IFCT has no cooked foods. People eat rice and dal cooked, and 100 g of cooked rice is about 33 g raw. If a raw row reached the judge unconverted, it would be read as 100 g eaten: a three-times overcount on the most-logged foods there are. So <code>ifct.ts</code> carries a short, auditable table of yields and offers staples twice:</p>
+<pre>cooked kcal per 100 g = raw kcal per 100 g / yield
+rice (A013, A014, A015): yield 3.0     -> 356 kcal raw becomes 119 cooked
+dals (chana, urad, moong, masoor, toor, rajmah): 2.5
+wheat vermicelli (A023, A024): 2.2</pre>
+<p>Cross-check: 119 against USDA cooked white rice at 130 and the curated row at 133. Within 10%, deliberately on the low side because the raw figure carries no cooking fat. Both readings are offered ("100g cooked" first, "100g raw (uncooked weight)" second) and the judge picks the one matching how the portion was described. Eggs are detected as already cooked from their names (boiled, omlet).</p>
+<p>A few hand aliases map vernacular to botanical English (toor dal to Red gram; chawal, poha, suji, atta). Six rows start with "Rice" and tied, so plain rice did not make the top three until an exact alias settled it.</p>
+
+<h2>11. Voice notes</h2>
+<ol>
+  <li>The phone records with the browser's MediaRecorder in whatever format it likes (Chrome webm, Safari mp4). Maximum 60 seconds.</li>
+  <li><code>voice.ts</code> decodes it and resamples to <b>16 kHz mono WAV</b> (22.05 kHz on old Safari). Speech models work at 16 kHz internally so nothing is lost; a 30-second note stays under 1 MB; and WAV is the one format every speech model reads.</li>
+  <li>It is sent as base64 to <code>{action: 'transcribe'}</code>. The function forwards it to Whisper large v3 on Groq with language English and a <b>prompt that is a sample meal</b>: "do roti, ek katori dal, 200g chicken breast, 1 tablespoon ghee, paneer bhurji, besan chilla, 1 scoop whey". That steers Whisper to Roman-script Hinglish and the usual spellings, because a general speech model otherwise hears Hindi food words as English ones.</li>
+  <li>The text lands in the box to check before matching. Nothing is logged from voice alone.</li>
+</ol>
+<p>Cost: Whisper on Groq is $0.111 per hour of audio billed at a minimum of 10 seconds, about 3 paise a note. Gemini transcription was tried first and dropped the same day, with Groq Whisper kept as the single path.</p>
+
+<h2>12. GrainAI, the roast</h2>
+<p>Every described meal gets one brutal line after the numbers appear. It is the app's personality, on by default, with a quiet switch on Profile. Mechanics:</p>
+<ol>
+  <li><b>The verdict is computed in code first</b> (<code>verdict()</code>): under eating if it is late (8 pm to 4 am) and the day is under half the target; disaster if the meal is 900 kcal or more, or pushes the day over target, or is 400 kcal or more with under 12% of energy from protein; clean if 30% or more of energy is protein; otherwise sloppy.</li>
+  <li><b>The facts are worked out in code</b> and written as a short note, not JSON (JSON in pulls formal language out): the meal, its kcal and protein, the time, the verdict, calories left or over, protein still needed.</li>
+  <li><b>The model</b> is Qwen 3.8 27B on Groq at temperature 1, with a system prompt that describes a person ("the most savage friend in the group chat"), bans soft AI phrases ("bold", "interesting choice", "keep it up"), allows swearing, and shows ten example roasts it must not reuse. gpt-oss was tried and reads every number back like a bank statement.</li>
+  <li><b>Three candidates come back.</b> <code>parseCandidates</code> strips numbering, quotes and every kind of hyphen. <code>pickRoast</code> drops anything matching the banned list, prefers lines without bot tells (fewer than three numbers, under 130 characters, no "ah" or exclamation marks), and picks at random among the survivors. If nothing survives, no roast is shown.</li>
+</ol>
+<div class="box green"><span class="t">The line it never crosses</span>Nothing about the body, weight, looks, abs or belly. Nothing sexual. Nothing about eating disorders, starving, skipping meals, self harm, depression, illness or dying. No religion, caste, race, gender, sexuality or disability. It never guesses gender ("your ex", never "bro" or "girlfriend"). It never tells anyone to eat less than their target. The reason is the audience: athletes and models are exactly the people most at risk from food and body shame, and a tracker that mocks someone for logging a brownie teaches them to stop logging it. A request to roast the belly and the sex life was declined on this basis. The prompt says all this and a word filter on the server enforces it; against the 64 lines from testing, the filter dropped every one that crossed.</div>
+<p>No fallback to gpt-oss when Qwen is busy: Groq rate limits are per model, and a roast must never use up the capacity meal matching needs.</p>
+
+<h2>13. The maths: targets, budget, adaptive maintenance, predictions</h2>
+<p>None of this touches AI. Same input, same output, every time.</p>
+
+<h3>13.1 From profile to daily target (<code>targets.ts</code>)</h3>
+<pre>BMR (Mifflin-St Jeor) = 10 × weight(kg) + 6.25 × height(cm) − 5 × age  (+5 men, −161 women)
+Maintenance (TDEE)    = BMR × activity factor
+                        sedentary 1.2, light 1.375, moderate 1.55, active 1.725, very active 1.9
+Loss rate             = chosen kg/week, clamped between 0.25 and 1.0
+Daily deficit         = rate × 7,700 / 7            (7,700 kcal is about 1 kg of fat)
+Target                = maintenance − deficit
+Floor                 = max(BMR, 1,200): the target never goes below it
+                        (if even the floor exceeds maintenance, eat at maintenance)
+Protein               = 1.8 g per kg bodyweight (or the user's manual number)
+Fat                   = 0.8 g per kg
+Carbs                 = whatever calories remain, never negative</pre>
+<p>Example: 28-year-old man, 178 cm, 85 kg, moderate, 0.5 kg a week. BMR 1,818; maintenance 2,818; deficit 550; target 2,268; protein 153 g; fat 68 g; carbs 261 g. When the floor bites, a note says "We've set a safer pace. Aggressive deficits backfire and erode muscle."</p>
+
+<h3>13.2 Left to eat (<code>budget.ts</code>)</h3>
+<p><code>remaining = target + credited exercise − consumed</code>. Exercise credit has a configurable "eat back" factor because eating back 100% of a fuzzy tracker estimate stalls fat loss; today the Log screen passes 0 burned, so the budget is simply target minus eaten. The gauge fraction is consumed over target clamped to 0 to 1; "Over by" replaces "Left to eat" when negative.</p>
+
+<h3>13.3 Learning your real maintenance (<code>adaptive-tdee.ts</code>)</h3>
+<p class="analogy">The formula above is a textbook guess. Your body is the real experiment. If you ate 2,300 a day for two weeks and lost 0.5 kg, your real maintenance must have been about 2,300 + 0.5 × 7,700 / 14 = 2,575.</p>
+<pre>weight trend (kg/day) = least-squares slope through the weigh-ins   (robust to water-weight noise)
+estimated TDEE        = average logged intake − slope × 7,700
+recommended target    = max(floor, estimated TDEE − your chosen daily deficit)</pre>
+<p>It refuses to guess until there is enough data: at least 7 logged days, 3 weigh-ins spanning 7 days, and <b>coverage of at least 70%</b> of the days between the first and last weigh-in. Coverage matters because the scale keeps counting through a holiday but the intake average does not; ten unlogged days of eating out would show up as weight gained on the logged intake and read as a slow metabolism. Confidence grows with data: low, medium (10 days, 5 weigh-ins, 10-day span), high (14 days, 8 weigh-ins, 14-day span). Today's partial intake is excluded, and unfinished days are blanked first (chapter 14).</p>
+
+<h3>13.4 The weekly forecast (<code>weekly-prediction.ts</code>)</h3>
+<p>The window is the seven days ending <b>yesterday</b>, because a half-eaten today looks like a huge deficit and would swing the number all morning. Average (maintenance − intake) over logged days, times 7, divided by 7,700 gives "on pace to lose 0.42 kg this week". Fewer than 5 logged days shows "building" instead of a number; zero shows "fresh". Missing one or two days are implicitly filled with the logged-day average, which is what average × 7 does.</p>
+
+<h3>13.5 The shareable week (<code>week-report.ts</code>, <code>week-card.ts</code>)</h3>
+<p>Deficit over the last seven full days, days logged, days protein was hit, average kcal against target, weight change. Drawn on a canvas at 1080 × 1350 (Instagram portrait) in the app's own fonts, with getgrain.fit at the bottom; the preview is the exact file shared. On phones the share sheet opens to Instagram or WhatsApp; desktops download. This is the marketing loop for an audience that already posts its progress.</p>
+
+<h2>14. Honest history: full days, breaks, fresh starts</h2>
+<p>This is a product rule as much as a calculation, and it runs everywhere food is summed.</p>
+<table>
+<tr><th style="width:18%">A day is...</th><th>When</th><th style="width:34%">Effect</th></tr>
+<tr><td><b>counted</b></td><td>Something logged and at least half the calorie target, or the user confirmed it was really everything (a fast, a sick day) from the calendar.</td><td>In every total and average.</td></tr>
+<tr><td><b>unfinished</b></td><td>Logged, but under half the target and not confirmed. Almost always breakfast logged, the rest forgotten.</td><td>Held out until finished or confirmed. Would otherwise read as a 2,000 kcal deficit.</td></tr>
+<tr><td><b>missing</b></td><td>Nothing logged.</td><td>Unknown. Adds nothing as deficit or surplus. Nothing is ever guessed to fill it.</td></tr>
+</table>
+<ul>
+  <li><b>Today is open</b>, so it never counts against a streak in the morning; the streak starts from yesterday if today is not full yet.</li>
+  <li><b>A break</b> is three or more days in a row without a full day, after the person has logged at least one full day (the days before someone ever logged are not a lapse).</li>
+  <li><b>Away:</b> while a break is running, History says so plainly: last full day, days since, and that the numbers start again from the next full day.</li>
+  <li><b>Restart:</b> for 14 days after coming back, History leads with a fresh start that names the break with its dates and counts from the return, with 30, 90 and Year a tap away. No cheering, no guilt.</li>
+  <li><b>Total deficit maintained</b> = sum over counted days of (maintenance − intake), and estimated fat = that / 7,700. Targets are not versioned per day, so the current maintenance is the reference line; a fair approximation for a journey view.</li>
+</ul>
+<div class="box"><span class="t">Why</span>Before this, a fortnight off looked like a fortnight of discipline, and a lone breakfast looked like a 2,000 kcal deficit. A person cannot lie to themselves, so a flattering number that is not true is worse than no number. The same <code>dayStatus()</code> function now feeds the weekly card, the Home prediction, Train progress food averages, the adaptive maintenance estimate and the summary a coach sees.</div>
+
+<h2>15. Training: logger, set maths, records, offline sync</h2>
+<h3>15.1 The exercise library and name matching</h3>
+<p>104 exercises, each with a muscle, equipment, kind (weighted or bodyweight) and aliases, ordered roughly by how common they are so ties go to the common one. Matching is built for gym shorthand: names and queries are normalised the same way (lowercase, equipment words shortened: dumbbell to db, barbell to bb; plurals folded; filler dropped; spaces removed), then scored 0 to 100: exact 100; every query word starts a candidate word 72 minus 3 per extra word; prefix 66; substring 56; small typos by edit distance (with neighbour swaps counting as one) 40 to 50. Below 30 is no match. "rdl", "ohp", "db bench", "bss", "skullcrushers" and "pullups" all land. Anything missing becomes a custom exercise in two taps.</p>
+
+<h3>15.2 The set maths (<code>workout.ts</code>)</h3>
+<pre>Estimated one rep max (Epley): e1rm = kg × (1 + reps / 30), for 1 to 15 reps (1 rep = the lift itself)
+Load of a set               = kg, or for bodyweight moves: bodyweight + added kg
+Set score                   = e1rm of the load   (how records are judged)
+Hard set                    = ticked, not a warmup, with reps
+Volume                      = kg × reps over hard sets (warmups move none)
+Record                      = a hard set whose score beats every earlier score by more than 0.05,
+                              history first, then earlier sets today; a first ever session sets none</pre>
+<p>Bodyweight lifts count bodyweight plus added load, so 10 pull ups at 80 kg compare fairly with 6 pull ups carrying 10 kg.</p>
+
+<h3>15.3 The logger's one-tap sets</h3>
+<ul>
+  <li>Each exercise is a card of sets: set label (W, D, F or the working number), previous, kg, reps, tick.</li>
+  <li><b>Placeholders</b> are last time's matching set (warmups against warmups, working against working, in order), else the nearest set above it today, else the last set from last time. So a set done the same as last time is one tap on the tick.</li>
+  <li>Tapping a previous set copies it in. A set's number opens its type (warmup, drop, failure) and optional RPE (6 to 10).</li>
+  <li>Every tick starts a rest timer whose length is remembered per exercise (default 90 s); the screen stays awake and the phone buzzes at the end.</li>
+  <li>Finishing names the session from what was trained (60% or more of hard sets in one group gives Push, Pull, Legs or Core; under 20% legs gives Upper body; else Full body) unless the user named it, offers to tick sets with numbers but no tick, lists the records, and can save the layout as a routine.</li>
+</ul>
+
+<h3>15.4 Gyms are basements: the offline design (<code>train/store.ts</code>)</h3>
+<figure>
+<svg viewBox="0 0 900 250" xmlns="http://www.w3.org/2000/svg" font-size="12">
+  <defs><marker id="e" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5f574e"/></marker></defs>
+  <rect x="20" y="30" width="250" height="190" rx="10" fill="#f6f2ec" stroke="#ddd6cc"/>
+  <text x="145" y="55" text-anchor="middle" font-weight="700">On the phone (per account)</text>
+  <text x="35" y="82" font-size="11">session.v1: the workout in progress</text>
+  <text x="35" y="102" font-size="11">outbox.v1: finished workouts and</text>
+  <text x="35" y="116" font-size="11">deletes waiting to be sent</text>
+  <text x="35" y="140" font-size="11">workouts.cache.v1: history as last seen</text>
+  <text x="35" y="164" font-size="11">exercises.v1: custom exercises</text>
+  <text x="35" y="195" font-size="10.5" fill="#8f867c">written FIRST on every change</text>
+  <rect x="630" y="30" width="250" height="190" rx="10" fill="#fff" stroke="#2b6cb0"/>
+  <text x="755" y="55" text-anchor="middle" font-weight="700" fill="#2b6cb0">In the account (user_kv)</text>
+  <text x="645" y="82" font-size="11">deficit.session.v1 (newer copy wins)</text>
+  <text x="645" y="106" font-size="11">deficit.workouts.v1.YYYY-MM</text>
+  <text x="645" y="120" font-size="11">deficit.workouts.months.v1</text>
+  <text x="645" y="144" font-size="11">deficit.exercises.v1 (merged)</text>
+  <text x="645" y="168" font-size="11">deficit.routines.v1, deficit.train.v1</text>
+  <text x="645" y="195" font-size="10.5" fill="#8f867c">written when the network allows</text>
+  <line x1="270" y1="100" x2="630" y2="100" stroke="#5f574e" marker-end="url(#e)"/>
+  <text x="450" y="92" text-anchor="middle" font-size="11">flushOutbox(): oldest first, stops at the first failure</text>
+  <line x1="630" y1="150" x2="270" y2="150" stroke="#5f574e" marker-end="url(#e)"/>
+  <text x="450" y="170" text-anchor="middle" font-size="11">loadWorkouts(): fetch months, cache on device, overlay the outbox</text>
+</svg>
+<figcaption>Figure 5. No set ever depends on the network. The outbox is replayed on every load and every save.</figcaption>
+</figure>
+<ul>
+  <li><b>The workout in progress</b> is saved to the device on every tap and to the account when possible; on load the newer of the two copies wins. Clearing it on the device while offline writes a "cleared at" marker so a stale synced copy is ignored and removed later.</li>
+  <li><b>Finished workouts</b> go into an outbox as operations (put or delete). The outbox is flushed oldest first and stops at the first failure, so order is preserved. History shows outbox items immediately, overlaid on the synced list.</li>
+  <li><b>Imports</b> write one month at a time, index first, and need the network; running the same import twice updates rather than doubles because ids are stable.</li>
+  <li><b>Custom exercises</b> are merged from both copies; one made offline goes up the next time the account answers.</li>
+</ul>
+
+<h2>16. Describe a workout and import history (no AI)</h2>
+<p><code>describe.ts</code> reads a workout typed or spoken in plain words. It is plain code on the phone: instant, free, and the same words always read the same way. Whatever it cannot place is handed back so the screen asks instead of guessing.</p>
+<pre>bench 80x8, 80x8, 85x6          squat 100kg 5x5          ohp 50 for 8, 8 and 7
+lat pulldown 3 sets of 12 at 60  pull ups bw x 10, +10 x 6
+"squats five sets of five at a hundred kilos"   (number words become digits; pounds become kg)</pre>
+<p>How: normalise (× to x, "body weight" to bw, kilos to kg, pounds to lb, number words to digits, "80 and a half" to 80.5); split into pieces on lines, sentences, commas and "then"; strip leading filler ("and then I did"); move a trailing "on rows" to the front; split each piece into a name and its numbers at the first digit; carry the weight across clauses so "80x8, 8, 7" means three sets at 80; and read patterns such as weight × reps × sets, sets × reps at weight, reps for sets, and "+10" as added load on a bodyweight move. Up to 20 sets per clause. Exercise names go through the library matcher.</p>
+<p><code>importer.ts</code> reads a Strong export, a Hevy export, any training spreadsheet saved as CSV, or pasted notes ("Mon 3 Nov: bench 80x8, 85x6"). Names are matched to the library (Strong's "Incline Bench Press (Dumbbell)" becomes Incline dumbbell press); unknowns are listed first with a muscle guessed, to keep, rename or leave out. Rest timers and timed or distance rows are left out and counted.</p>
+
+<h2>17. Progress, and the one line only Grain can write</h2>
+<p><code>progress.ts</code> compares a Monday-to-Sunday week or a calendar month with the one before. A week still running is compared with the same days last week, so a Monday is not judged against a whole week. It reports volume and hard sets, hard sets per muscle against a 10-sets-a-week mark, food averages over full days against targets, bodyweight change (against the last weigh-in before the period, else the first in it), and each lift's best estimated max with its change against the previous period (or the last session before, after a break).</p>
+<p><b>Records per exercise:</b> best estimated max, heaviest set, most reps, best session volume, and rep maxes for 1, 2, 3, 5, 8, 10 and 12 reps where a rep count only earns a line if it beats every higher count (95 × 8 already says 95 kg for 5, 3, 2 and 1).</p>
+<p><b>The one line</b> (<code>periodRead</code>) joins the three streams in priority order:</p>
+<ol>
+  <li>Bodyweight down 0.2 kg or more and median lift change up 2% or more: "Lifts up 3.0% while bodyweight fell 0.6 kg."</li>
+  <li>Bodyweight down and lifts within half a percent: "Strength held while bodyweight fell 0.6 kg."</li>
+  <li>Lifts down 2% or more, at least half the days logged, and average kcal under 85% of target: "Lifts slipped 2.4% on 1,850 kcal a day, 18% under target."</li>
+  <li>Protein averaging under 80% of target over 3 or more full days: "Protein averaged 110 g a day, short of your 150 g target."</li>
+  <li>Then: lifts up, more hard sets than before, lifts holding, or a plain count.</li>
+</ol>
+<p>Only an app holding food, training and the scale together can write lines 1 to 4. That is the reason to switch from three single-purpose apps.</p>
+
+<h2>18. Programs, meal plans and coaches</h2>
+<ul>
+  <li><b>Writing:</b> named days with exercises, sets (1 to 10) and rep ranges (1 to 50), how many weeks (1 to 52), and optionally a meal plan with daily calories, protein and named meals. Publishing gives a six-character code (no O, 0, I or 1) and a link.</li>
+  <li><b>Following:</b> one program at a time. Today's day sits on top of Train with one tap to start; the logger shows each exercise's rep target. <b>The next day is always the one after the last program day done</b>, so a missed session shifts the plan instead of being skipped. Week = workouts done ÷ days per week, plus one. Plan meals appear on the Log screen and log in one tap.</li>
+  <li><b>The device copy:</b> the followed program is cached on the phone so Train shows today's day instantly and offline.</li>
+  <li><b>Sharing with the coach</b> (<code>adherence.ts</code>): off until ticked, reversible, and turning it off deletes the summary. The summary covers the last 28 days ending yesterday (or since the follow started): program workouts done against planned (days per week scaled to the window), last workout date, full food days, average kcal and protein, latest weight and change. Never meals, sets or notes. It is refreshed at most every six hours. The coach's screen validates the shape of anything it receives and shows nothing rather than breaking on bad data.</li>
+</ul>
+
+<h2>19. Consent, privacy, export and delete</h2>
+<ul>
+  <li><b>Consent</b> before anything else, three separate taps with nothing pre-ticked: 18 or older, terms and privacy policy, health data used for targets. Each agreement is an uneditable row with a version (<code>CONSENT_VERSION = '2026-11-09'</code>); raising the version asks everyone again.</li>
+  <li><b>Agreeing never waits on the network.</b> The first version blocked every new sign in when the table did not exist yet. Now the person has agreed the moment they tick, the app opens, and if the row cannot be stored it waits on the device and is sent on a later launch.</li>
+  <li><b>Download my data:</b> every <code>user_kv</code> row (parsed), consents, programs written, and follows, as one JSON file.</li>
+  <li><b>Delete my account:</b> one database function removes the auth user and everything cascades. Device keys for that account are cleared.</li>
+  <li><b>What the engine keeps about a person:</b> only a salted hash. Meal text is kept to improve the engine, as the sign in screen says. The landing site has a privacy policy and terms.</li>
+</ul>
+
+<h2>20. The back office: access, premium, CRM, stats</h2>
+<ul>
+  <li><b>Access model:</b> one subscription for everyone, price not set. The paywall switch stays off until payments exist; off means everyone gets every feature. <code>hasPremium = !paywall || premiumActive</code>. Admins gift premium by hand with no end date or for 3, 6 or 12 months; a gift shows on that person's Profile as "Premium, a gift from Grain". Nobody can gift themselves.</li>
+  <li><b>Users:</b> the list with activity counts and gifts.</li>
+  <li><b>Stats:</b> the numbers in chapter 8.4, refreshed every minute.</li>
+  <li><b>Creators CRM:</b> on a laptop (1024 px or wider) a full workspace: a strip of what needs you today (follow ups due, overdue, replied with nothing planned, reply rate, roster reach), saved views (needs action, all, roster, prospects, declined), a dense table sorted by urgency (most overdue first, then due today, then replies waiting), inline stage and follow-up edits, bulk moves, CSV export, a side panel with timeline and growth, a pipeline board with drag to move, and keyboard shortcuts (J/K move, Enter open, 1 to 7 set stage, T/W follow up tomorrow or in a week, N new, X select, slash search). Growth is follower change since each platform's previous snapshot.</li>
+</ul>
+
+<h2>21. Hosting and deployment</h2>
+<table>
+<tr><th style="width:24%">Piece</th><th>Where</th><th>How it ships</th></tr>
+<tr><td>The app</td><td>Vercel project <code>deficit</code>, root directory <code>/</code>, domain <code>app.getgrain.fit</code> (old <code>deficit-cyan.vercel.app</code> still works).</td><td>Every push to <code>main</code> runs <code>npx expo export --platform web</code> into <code>dist/</code>. Two env variables on the project: <code>EXPO_PUBLIC_SUPABASE_URL</code> and <code>EXPO_PUBLIC_SUPABASE_ANON_KEY</code>. These are baked into the bundle at build time.</td></tr>
+<tr><td>The landing page</td><td>Vercel project <code>grain</code>, root directory <code>landing</code>, domains <code>getgrain.fit</code> and <code>www</code>.</td><td>No build; files served as they are. <code>/go</code> rewrites to <code>/</code> because X ignores query strings when caching link previews, so a new path is the only way to force a fresh card.</td></tr>
+<tr><td>The database</td><td>Supabase project.</td><td>Paste <code>supabase/schema.sql</code> into the SQL editor. Safe to run again.</td></tr>
+<tr><td>The engine</td><td>Supabase Edge Function <code>food</code>.</td><td><code>supabase secrets set GROQ_API_KEY=... USDA_API_KEY=...</code> then <code>supabase functions deploy food --no-verify-jwt</code>. Optional: <code>LLM_PROVIDER</code>, <code>GROQ_MODEL</code>, <code>OPENAI_API_KEY</code>, <code>OPENAI_MODEL</code>, <code>ROAST_MODEL</code>, <code>ENGINE_LOG_SALT</code>.</td></tr>
+<tr><td>Local development</td><td>Your laptop.</td><td><code>npm install</code>, <code>npm run web</code>. With no <code>.env</code> the app runs fully on-device. <code>npm test</code>, <code>npm run typecheck</code>, <code>npm run lint</code>.</td></tr>
+</table>
+<p>The engine lab (<code>grain_engine</code>) runs the scorer with Deno against the live engine's own code, with sign in faked and the cache and run log switched off, so an evaluation never pollutes production data.</p>
+
+<h2>22. Free tiers: how much Grain can handle today</h2>
+<p>The numbers below combine what the code and logs record with the published free-tier limits as last known. Providers change limits; treat the table as the shape of the problem and confirm current figures in each dashboard before a launch push.</p>
+
+<table>
+<tr><th style="width:17%">Service</th><th style="width:30%">Free tier limit (last known)</th><th>What Grain uses per unit</th><th style="width:22%">Rough ceiling</th></tr>
+<tr><td><b>Groq</b> (LLM)</td><td>Per model, per account. gpt-oss-120b: about 8,000 tokens per minute and about 200,000 tokens per day. Qwen (roast): about 1,000 output tokens per minute.</td><td>About 3,000 tokens per uncached meal (two calls). Cached repeats are free. A roast is a third, separate call on a separate model budget.</td><td><b>About 66 new meals a day across all users</b>, and a handful a minute. This is the binding constraint. The engine review and the 29 October log both say the paid Developer tier is required before any marketing push.</td></tr>
+<tr><td><b>Supabase</b> (database)</td><td>500 MB database, 50,000 monthly active users for Auth, 5 GB egress, 500,000 Edge Function invocations a month, 2 free projects, and <b>projects pause after about a week of inactivity</b>.</td><td>A day of meals is about 1 to 2 KB; a user logging all year is under 1 MB including workouts. An <code>engine_runs</code> row with its trace is 5 to 10 KB.</td><td>Personal data: hundreds of users for years. <b>Engine logs are the storage hog:</b> 50,000 runs is roughly 250 to 500 MB. Prune traces or archive them before that.</td></tr>
+<tr><td><b>Supabase</b> (Edge Function calls)</td><td>500,000 invocations a month.</td><td>A described meal is up to 3 calls (parse, roast, correction) plus a health probe per app open. Say 15 calls per active user per day.</td><td>About 1,100 daily active users before the call cap. Groq runs out first.</td></tr>
+<tr><td><b>Vercel</b> (Hobby)</td><td>100 GB bandwidth a month, generous static requests. <b>Hobby plans are for non-commercial use</b>; a paid product on Hobby is against the terms.</td><td>The app bundle is 2.3 MB on first load and cached by the service worker after that. Landing page is kilobytes.</td><td>Roughly 40,000 fresh app loads a month. Not the constraint. <b>Move to Pro (about $20 a month) when charging money.</b></td></tr>
+<tr><td><b>USDA FoodData Central</b></td><td>1,000 requests an hour per key (api.data.gov default).</td><td>One request per food it hasn't seen in 30 days; known foods are answered from memory or <code>food_cache</code>.</td><td>Far past the Groq ceiling. A USDA outage only degrades runs with foods it hasn't seen before.</td></tr>
+<tr><td><b>Google OAuth</b></td><td>Free.</td><td>One redirect per sign in.</td><td>Not a constraint.</td></tr>
+</table>
+
+<figure>
+<svg viewBox="0 0 900 230" xmlns="http://www.w3.org/2000/svg" font-size="12">
+  <text x="20" y="22" font-weight="700">What breaks first, in daily active users who each describe about 4 meals a day</text>
+  <g>
+    <text x="20" y="60">Groq free tier</text><rect x="200" y="46" width="22" height="18" fill="#b3261e"/><text x="230" y="60" fill="#5f574e">~15 to 20 users (66 uncached meals a day)</text>
+    <text x="20" y="95">Supabase storage</text><rect x="200" y="81" width="330" height="18" fill="#b7791f"/><text x="540" y="95" fill="#5f574e">hundreds, if engine traces are pruned</text>
+    <text x="20" y="130">Edge invocations</text><rect x="200" y="116" width="560" height="18" fill="#2f7d4f"/><text x="770" y="130" fill="#5f574e">~1,100 users</text>
+    <text x="20" y="165">Vercel bandwidth</text><rect x="200" y="151" width="640" height="18" fill="#2f7d4f"/><text x="850" y="165" fill="#5f574e">1,000s</text>
+    <text x="20" y="200">USDA requests</text><rect x="200" y="186" width="600" height="18" fill="#2f7d4f"/><text x="810" y="200" fill="#5f574e">~1,000s</text>
+  </g>
+  <text x="20" y="225" fill="#8f867c" font-size="10.5">Bars are illustrative scale, not to proportion. The red bar is the one to fix before growth.</text>
+</svg>
+<figcaption>Figure 6. The ceiling today is the free Groq quota, by a wide margin. Everything else is comfortable for a first few hundred users.</figcaption>
+</figure>
+
+<h3>22.1 Two things that are easy to forget</h3>
+<ul>
+  <li><b>Supabase pauses idle free projects.</b> A week with no traffic and the database stops until someone clicks restore in the dashboard. With real users this does not happen, but a quiet test project will.</li>
+  <li><b>The Vercel Hobby plan is non-commercial.</b> The moment a paywall is on, the app project should be on Pro.</li>
+</ul>
+
+<h2>23. What it costs when it grows</h2>
+<table>
+<tr><th style="width:26%">Line</th><th>Cost</th><th>Notes from the logs</th></tr>
+<tr><td>Groq, paid Developer tier, gpt-oss-120b</td><td>Under a tenth of a US cent per meal (about 3,000 tokens). A full practice-set run of 81 meals is about 6 cents.</td><td>Lifts the per-day token cap by orders of magnitude. 1,000 users × 4 meals × 30 days = 120,000 meals, well under $100 a month before caching.</td></tr>
+<tr><td>Whisper on Groq</td><td>$0.111 per hour of audio, 10-second minimum: about 3 paise a note.</td><td>Negligible.</td></tr>
+<tr><td>Roast (Qwen on Groq)</td><td>Similar order to a meal, one short call.</td><td>Could be made cheaper by only roasting on tap; currently every described meal.</td></tr>
+<tr><td>A frontier model (if the bake-off proves it wins)</td><td>Gemini Flash was about $0.75 in and $3.75 out per million tokens, roughly a rupee per uncached meal, two after 1 January 2027.</td><td>Decision on record: pay only after the practice set shows a clear win at a known cost per meal. The cache and the daily cap keep spend predictable.</td></tr>
+<tr><td>Supabase Pro</td><td>About $25 a month, 8 GB database, 100 GB egress, no pausing.</td><td>Needed when engine logs grow or users pass a few hundred.</td></tr>
+<tr><td>Vercel Pro</td><td>About $20 a month per seat.</td><td>Needed for commercial use.</td></tr>
+<tr><td>Domain</td><td>getgrain.fit (grain.fit was too expensive).</td><td></td></tr>
+</table>
+<p>Design constraint still in force from the engine v2 plan: a solo developer with an AI budget of $10 to $20 a month, and a Match that must return in under 8 to 9 seconds (it was 10 to 15 s; the first recorded meal took 6.4 s).</p>
+
+<h2>24. Known weaknesses and the engine roadmap</h2>
+<h3>24.1 Where the engine is weak today (from the lab's review of 38 items)</h3>
+<ul>
+  <li>The name search is naive: "big" matched "Betel leaves, big" for a Big Mac; chicken biryani ranks ahead of chicken breast for "chicken breast".</li>
+  <li>Cups and spoons are still turned into grams by the model's memory in stage 1. Code should do it from a weight per household measure for each food, the way FNDDS and Nutritionix do.</li>
+  <li>A stated weight is ignored when the matched food is a home serving such as "1 katori (150g)"; only per-100 g rows get the arithmetic.</li>
+  <li>Confidence has not been validated against truth.</li>
+  <li>The practice set is small (27 of 30 weighed meals passing could mean 74% to 97%), and 27 reference rows still need checking against a source or a label.</li>
+  <li>Brands are out of scope: whey, soya chunks, low-fat paneer and protein bars each have one standard row with a note that brands vary. A future "scan a label" feature is the intended answer.</li>
+  <li>The curated table calls itself a stub in its header; its values are reasonable home-portion estimates, which is why the engine prefers it only for dishes and never lets it claim high confidence offline.</li>
+</ul>
+
+<h3>24.2 The plan that is on record</h3>
+<ol>
+  <li><b>Practice set</b>: 81 meals (53 Indian, 28 global), typed as people type them, with reference answers computed from source rows (USDA ids, IFCT codes, pack labels), never typed in. Targets: weighed meals within 5%, dishes within 15%, never off by 2× or more, lower median error than ChatGPT on calories and on protein, answer under 9 seconds.</li>
+  <li><b>Scorer</b>: runs the live engine code, resumes partial runs (a full run exceeds a free day of Groq tokens), prints each failure's trace, and reports pass rates with 95% intervals and signed error.</li>
+  <li><b>Own food database in Supabase</b> replacing live USDA calls: USDA as the backbone (FNDDS has thousands of dishes as eaten with real portion weights), IFCT for Indian ingredients, chains looked up from their published numbers, the user's country deciding defaults ("milk" is toned in India and 2% in the US). Open Food Facts for packaged food only once its share-alike licence is settled.</li>
+  <li><b>Bake-off</b> of stronger models on the set, then pay only if one clearly wins.</li>
+  <li><b>Ship through the beta switch</b>, watching corrections.</li>
+</ol>
+
+<h3>24.3 App-side things worth knowing</h3>
+<ul>
+  <li>Route-level code splitting (Expo's async routes) would cut the first download by another 67 KB, but on SDK 56 it leaves every screen blank. Expo calls it stable on the web from SDK 58, so it comes with an SDK upgrade. The Supabase client also carries about 90 KB of realtime and storage code Grain never uses; removing it means replacing the client and retesting Google sign-in.</li>
+  <li>The adaptive estimate uses the current maintenance as the reference for all past days; targets are not versioned.</li>
+  <li>No native build exists yet; on native the storage would need an AsyncStorage adapter (a comment in <code>kv.ts</code> marks the spot).</li>
+  <li>IFCT licence, SMTP (if email ever returns), and Google Search Console verification are the open operational items.</li>
+</ul>
+
+<h2>25. The decision log, dated</h2>
+<p>Condensed from both <code>x.md</code> files. The full entries are in the repositories.</p>
+<table>
+<tr><th style="width:14%">When</th><th>Decision</th><th style="width:34%">Why</th></tr>
+<tr><td>Earlier</td><td>Describe, don't scan. Deficit becomes Grain. Audience is athletes, lifters, models, creators. Landing page with no framework.</td><td>Photos cannot see oil or weight; a name about precision; they notice wrong numbers and pay; a static page is sharp and fast.</td></tr>
+<tr><td>Earlier</td><td>Arithmetic in code, not the model. Only grounded runs cached. IFCT added with cooked and raw readings.</td><td>876 kcal ghee under a high badge; a cache that froze bad numbers; a 3× overcount on rice.</td></tr>
+<tr><td>21 Oct 2026</td><td>Engine v2 plan with measurable targets.</td><td>ChatGPT beat the engine on a soya-chunk meal (319 vs 733 kcal).</td></tr>
+<tr><td>22 Oct</td><td>Google sign in only. Every run recorded. Beta engine switch.</td><td>Nothing to deliver to an inbox; every edit is a labelled example; building beside a live app.</td></tr>
+<tr><td>23 Oct</td><td>Engine gets its own private repo. Engine first for two weeks. SEO basics on the landing page. /go path for X.</td><td>The engine is the edge and holds licensed data; accuracy is the promise; X ignores query strings.</td></tr>
+<tr><td>28 Oct</td><td>Voice notes. Gemini tried and reverted the same day; Groq only. Quieter screens: no dashes, Describe first. Weekly share card. GrainAI roast, then roast on for everyone with a body-safe hard line.</td><td>One key, one bill; a calmer UI; a marketing loop; personality without shame.</td></tr>
+<tr><td>29 Oct</td><td>Roast tuned on real output; Qwen stays; filter widened; no fallback to gpt-oss. Groq free tier identified as the ceiling. Practice set and scorer built. Grain goes global.</td><td>gpt-oss reads like a bank statement; limits are per model; 1,000 tokens a minute; the audience is the same person in Mumbai and Austin.</td></tr>
+<tr><td>31 Oct</td><td>Scorer resumes partial runs; full engine review with 38 fixes ordered.</td><td>A full run exceeds a free day of tokens.</td></tr>
+<tr><td>8 Nov</td><td>Grain becomes an ecosystem for people who train. Back office: CRM, users, stats.</td><td>The space is scattered; one timeline is the reason to switch; growth starts with athletes and creators.</td></tr>
+<tr><td>9 Nov</td><td>Laptop CRM. Training joins the log. Missed days count as nothing. Consent and 18+. Import history. Programs and coaches. Nothing typed gets lost.</td><td>Admin work happens on a laptop; gyms are basements; flattering numbers lie; legal footing; bring your history; a reason for coaches to bring athletes.</td></tr>
+<tr><td>10 Nov</td><td>Agreeing never waits on the network. Landing phone becomes a working mini Grain. Training on Home.</td><td>Consent blocked every sign in before its table existed.</td></tr>
+<tr><td>11 Nov</td><td>Guided tour in the hero phone. Home leads with the hooks, History with calendars, professional pass.</td><td>A senior product manager's four points, all taken.</td></tr>
+</table>
+
+<h2>Appendix A: every storage key</h2>
+<table class="kv">
+<tr><th>Key</th><th>Holds</th></tr>
+<tr><td>deficit.profile.v1</td><td>The profile: sex, age, height, weight, activity, rate, protein mode, created and updated times, schema version 1. Its presence in the cloud is also the "already migrated" flag.</td></tr>
+<tr><td>deficit.log.v1.YYYY-MM-DD</td><td>One day's meals as a JSON list of entries.</td></tr>
+<tr><td>deficit.weight.v1</td><td>All weigh-ins, one per day, sorted.</td></tr>
+<tr><td>deficit.complete.v1</td><td>Days the user confirmed were complete despite being under half the target.</td></tr>
+<tr><td>deficit.session.v1</td><td>The synced copy of a workout in progress.</td></tr>
+<tr><td>deficit.workouts.v1.YYYY-MM / deficit.workouts.months.v1</td><td>Finished workouts per month and the index of months.</td></tr>
+<tr><td>deficit.exercises.v1 / deficit.routines.v1 / deficit.train.v1</td><td>Custom exercises, saved routines, and per-exercise rest settings.</td></tr>
+<tr><td>grain.roast.v1</td><td>Roast on or off (absent means on).</td></tr>
+<tr><td>grain.&lt;account&gt;.session.v1 / outbox.v1 / workouts.cache.v1 / exercises.v1</td><td>Device-only training copies, per account.</td></tr>
+<tr><td>grain.&lt;account&gt;.consent.v1 / consent.pending.v1</td><td>The agreed consent version, and one waiting to be sent.</td></tr>
+<tr><td>grain.&lt;account&gt;.follow.v1</td><td>The followed program as last seen.</td></tr>
+<tr><td>grain.after_signin</td><td>A program code opened before signing in.</td></tr>
+</table>
+<p class="small">Keys starting with <code>deficit.</code> are the ones migrated to the cloud on first sign in and synced thereafter. Keys starting with <code>grain.</code> stay on the device.</p>
+
+<h2>Appendix B: every engine action and environment variable</h2>
+<table>
+<tr><th style="width:18%">Action</th><th>Body</th><th>Returns</th></tr>
+<tr><td>health</td><td><code>{action:'health'}</code></td><td><code>{ok, provider, model, usda, llm}</code>; <code>llm</code> is a human-readable reason on failure.</td></tr>
+<tr><td>parse</td><td><code>{action:'parse', text}</code></td><td>A ParsedMeal: items with confidence, reason and alternates, totals, an optional note, <code>runId</code>, and <code>cached</code> when served from cache.</td></tr>
+<tr><td>correction</td><td><code>{action:'correction', runId, logged[]}</code></td><td><code>{ok:true}</code>. Fire and forget from the app.</td></tr>
+<tr><td>transcribe</td><td><code>{action:'transcribe', audio (base64 WAV), mime:'audio/wav'}</code></td><td><code>{text}</code>.</td></tr>
+<tr><td>roast</td><td><code>{action:'roast', meal, items[], day{eatenKcal, targetKcal, proteinG, proteinTargetG, hour}}</code></td><td><code>{line}</code> or <code>{line:null}</code>.</td></tr>
+</table>
+<table>
+<tr><th style="width:26%">Variable</th><th>Where</th><th>Meaning</th></tr>
+<tr><td>EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY</td><td>App (Vercel env, local .env)</td><td>Turn on accounts and sync. Public by design.</td></tr>
+<tr><td>GROQ_API_KEY</td><td>Edge Function secret</td><td>Meals, roast and Whisper.</td></tr>
+<tr><td>USDA_API_KEY</td><td>Edge Function secret</td><td>USDA search. Missing means every run is degraded.</td></tr>
+<tr><td>LLM_PROVIDER, GROQ_MODEL, OPENAI_API_KEY, OPENAI_MODEL, ROAST_MODEL</td><td>Edge Function secret</td><td>Provider and model switches. Defaults: groq, openai/gpt-oss-120b, gpt-4o-mini, qwen/qwen3.8-27b.</td></tr>
+<tr><td>ENGINE_LOG_SALT</td><td>Edge Function secret</td><td>Salt for the user hash in run logs. Changing it unlinks old runs.</td></tr>
+<tr><td>SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY</td><td>Provided by Supabase to the function</td><td>Checking sign in, and the master key for cache, run log and settings.</td></tr>
+</table>
+
+<h2>Appendix C: every file in <code>src/lib</code> and what it owns</h2>
+<table>
+<tr><th style="width:28%">File</th><th>Owns</th></tr>
+<tr><td>kv.ts</td><td>The KVStore interface, the local store, the facade, device-scoped keys, JSON helpers.</td></tr>
+<tr><td>log-store.ts</td><td>Day keys, entries, summarising a day, the per-key mutation queue, portioned entries.</td></tr>
+<tr><td>profile-store.ts, weight-store.ts, fulldays.ts, roast-setting.ts</td><td>Profile, weigh-ins, confirmed complete days, roast switch.</td></tr>
+<tr><td>targets.ts, budget.ts</td><td>BMR, TDEE, deficit, floor, macros; left to eat.</td></tr>
+<tr><td>adaptive-tdee.ts, weekly-prediction.ts</td><td>Learned maintenance from intake and weight slope; the week's forecast.</td></tr>
+<tr><td>history.ts, history-stats.ts</td><td>Gathering day series; day status, summaries, streaks, breaks, restarts.</td></tr>
+<tr><td>week-report.ts, week-card.ts</td><td>The week's numbers; drawing and sharing the image.</td></tr>
+<tr><td>quantity.ts, date.ts</td><td>Weighed vs countable servings and the stepper grid; date formatting.</td></tr>
+<tr><td>voice.ts, install-prompt.ts</td><td>Recording and WAV conversion; the PWA install offer.</td></tr>
+<tr><td>access.ts</td><td>Free vs premium as the database reports it; the plan line.</td></tr>
+<tr><td>food/types.ts, index.ts, remote-provider.ts, local-provider.ts, provider-status.ts, indian-foods.ts</td><td>The provider contract and pure helpers (swap, totals); choosing remote or local; the Edge Function client; the offline parser; the online/offline observable; the curated table.</td></tr>
+<tr><td>supabase/client.ts, config.ts, auth.tsx, supabase-kv.ts, consent.ts, account.ts, access.ts, programs.ts, admin.ts</td><td>Client and config; auth state and Google sign in; the cloud store and migration; consent; export and delete; access fetch; programs and follows; every admin read and write.</td></tr>
+<tr><td>train/exercises.ts, workout.ts, store.ts, progress.ts, program.ts, adherence.ts, describe.ts, importer.ts</td><td>Library and matching; set maths and sessions; offline-first storage; progress and the one line; programs and positions; the coach summary; the workout text reader; imports.</td></tr>
+<tr><td>admin/crm.ts, admin/format.ts</td><td>CRM urgency, views, sorting, funnel, CSV; counts, growth, stages, follow-ups, gift lengths.</td></tr>
+</table>
+<p class="small">Every file above with a matching <code>.test.ts</code> is covered by the 333 tests that pass on this version of the code.</p>
+
+</body>
+</html>

@@ -17,21 +17,24 @@ create table if not exists public.user_kv (
 alter table public.user_kv enable row level security;
 
 -- Each policy restricts access to the caller's own rows (auth.uid()).
+-- Policies here write it (select auth.uid()) so Postgres works it out once
+-- per query instead of once per row (Supabase's performance advice); the
+-- meaning is the same.
 drop policy if exists "own rows - select" on public.user_kv;
 create policy "own rows - select" on public.user_kv
-  for select using (auth.uid() = user_id);
+  for select using ((select auth.uid()) = user_id);
 
 drop policy if exists "own rows - insert" on public.user_kv;
 create policy "own rows - insert" on public.user_kv
-  for insert with check (auth.uid() = user_id);
+  for insert with check ((select auth.uid()) = user_id);
 
 drop policy if exists "own rows - update" on public.user_kv;
 create policy "own rows - update" on public.user_kv
-  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  for update using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 drop policy if exists "own rows - delete" on public.user_kv;
 create policy "own rows - delete" on public.user_kv
-  for delete using (auth.uid() = user_id);
+  for delete using ((select auth.uid()) = user_id);
 
 -- Shared cache for the food Edge Function's parsed-meal results. Keyed on
 -- normalised meal text (user-independent), read/written only by the function
@@ -144,7 +147,7 @@ create policy "signed in select" on public.app_settings
 drop policy if exists "admin update" on public.app_settings;
 create policy "admin update" on public.app_settings
   for update to authenticated
-  using (public.is_admin()) with check (public.is_admin());
+  using ((select public.is_admin())) with check ((select public.is_admin()));
 
 -- Premium access: one row per user who has it; no row means free. Admins
 -- gift it by hand; paid subscriptions will write here too once payments exist.
@@ -161,12 +164,12 @@ alter table public.premium_access enable row level security;
 
 drop policy if exists "own row select" on public.premium_access;
 create policy "own row select" on public.premium_access
-  for select to authenticated using (auth.uid() = user_id);
+  for select to authenticated using ((select auth.uid()) = user_id);
 
 drop policy if exists "admin all" on public.premium_access;
 create policy "admin all" on public.premium_access
   for all to authenticated
-  using (public.is_admin()) with check (public.is_admin());
+  using ((select public.is_admin())) with check ((select public.is_admin()));
 
 -- What the signed in user may use, for the app.
 create or replace function public.my_access()
@@ -434,17 +437,17 @@ alter table public.crm_touches enable row level security;
 drop policy if exists "admin all" on public.crm_creators;
 create policy "admin all" on public.crm_creators
   for all to authenticated
-  using (public.is_admin()) with check (public.is_admin());
+  using ((select public.is_admin())) with check ((select public.is_admin()));
 
 drop policy if exists "admin all" on public.crm_metrics;
 create policy "admin all" on public.crm_metrics
   for all to authenticated
-  using (public.is_admin()) with check (public.is_admin());
+  using ((select public.is_admin())) with check ((select public.is_admin()));
 
 drop policy if exists "admin all" on public.crm_touches;
 create policy "admin all" on public.crm_touches
   for all to authenticated
-  using (public.is_admin()) with check (public.is_admin());
+  using ((select public.is_admin())) with check ((select public.is_admin()));
 
 -- ---- Consent, programs, follows, account deletion (added 2026-11-09) ---------
 -- Safe to run again: every statement checks before it creates.
@@ -467,15 +470,15 @@ alter table public.consents enable row level security;
 
 drop policy if exists "own insert" on public.consents;
 create policy "own insert" on public.consents
-  for insert to authenticated with check (user_id = auth.uid());
+  for insert to authenticated with check (user_id = (select auth.uid()));
 
 drop policy if exists "own select" on public.consents;
 create policy "own select" on public.consents
-  for select to authenticated using (user_id = auth.uid());
+  for select to authenticated using (user_id = (select auth.uid()));
 
 drop policy if exists "admin select" on public.consents;
 create policy "admin select" on public.consents
-  for select to authenticated using (public.is_admin());
+  for select to authenticated using ((select public.is_admin()));
 -- No update or delete policies: a consent record can't be changed.
 
 -- Programs: training plans (and an optional meal plan) that anyone can write
@@ -519,7 +522,7 @@ alter table public.follows enable row level security;
 drop policy if exists "owner all" on public.programs;
 create policy "owner all" on public.programs
   for all to authenticated
-  using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+  using (owner_id = (select auth.uid())) with check (owner_id = (select auth.uid()));
 
 -- Anyone signed in can read a published program; people already following
 -- keep it even after the author unpublishes it to stop new joiners.
@@ -528,17 +531,17 @@ create policy "published read" on public.programs
   for select to authenticated using (
     published or exists (
       select 1 from public.follows f
-      where f.program_id = programs.id and f.follower_id = auth.uid()
+      where f.program_id = programs.id and f.follower_id = (select auth.uid())
     )
   );
 
 drop policy if exists "follower read" on public.follows;
 create policy "follower read" on public.follows
-  for select to authenticated using (follower_id = auth.uid());
+  for select to authenticated using (follower_id = (select auth.uid()));
 
 drop policy if exists "coach read shared" on public.follows;
 create policy "coach read shared" on public.follows
-  for select to authenticated using (coach_id = auth.uid() and share_stats);
+  for select to authenticated using (coach_id = (select auth.uid()) and share_stats);
 -- No insert, update or delete policies: changes go through the functions
 -- below, which fix coach_id to the program's owner and drop the summary
 -- whenever sharing is off.

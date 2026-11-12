@@ -39,7 +39,13 @@ export default function HistoryScreen() {
   const loadDays = Math.max(typeof picked === 'number' ? picked : 30, LOOKBACK);
 
   const refresh = useCallback(async () => {
-    const profile = await loadProfile();
+    // The days and the profile at once; a profile is missing only before
+    // onboarding.
+    const [profile, recs, marks] = await Promise.all([
+      loadProfile(),
+      gatherDailyRecords(loadDays),
+      loadCompleteDays().catch(() => new Set<string>()),
+    ]);
     if (!profile) {
       setTargets(null);
       setRecords([]);
@@ -52,10 +58,6 @@ export default function HistoryScreen() {
       maintenanceKcal: t.maintenanceKcal,
       proteinG: t.proteinG,
     });
-    const [recs, marks] = await Promise.all([
-      gatherDailyRecords(loadDays),
-      loadCompleteDays().catch(() => new Set<string>()),
-    ]);
     setRecords(recs);
     setComplete(marks);
     setLoading(false);

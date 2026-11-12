@@ -15,6 +15,11 @@ export interface KVStore {
   get(key: string): Promise<string | null>;
   set(key: string, value: string): Promise<void>;
   remove(key: string): Promise<void>;
+  /**
+   * Optional: many keys in one round trip, values in the order asked. A
+   * store without it is read key by key (see getMany).
+   */
+  getMany?(keys: string[]): Promise<(string | null)[]>;
 }
 
 /** In-memory fallback. Used on native (for now) and in tests. */
@@ -88,6 +93,7 @@ export const kv: KVStore = {
   get: (key) => active.get(key),
   set: (key, value) => active.set(key, value),
   remove: (key) => active.remove(key),
+  getMany: (keys) => getMany(active, keys),
 };
 
 /** Point the global store at a new backend (e.g. Supabase after sign-in). */
@@ -136,18 +142,39 @@ export function clearDeviceKeys(): void {
   }
 }
 
-/** Small helpers so call sites don't repeat JSON.parse/stringify + try/catch. */
-export async function getJSON<T>(
+/** Many keys at once: one round trip where the store can, else key by key. */
+export function getMany(
   store: KVStore,
-  key: string,
-): Promise<T | null> {
-  const raw = await store.get(key);
+  keys: string[],
+): Promise<(string | null)[]> {
+  return store.getMany
+    ? store.getMany(keys)
+    : Promise.all(keys.map((k) => store.get(k)));
+}
+
+function parse<T>(raw: string | null): T | null {
   if (raw == null) return null;
   try {
     return JSON.parse(raw) as T;
   } catch {
     return null;
   }
+}
+
+/** Small helpers so call sites don't repeat JSON.parse/stringify + try/catch. */
+export async function getJSON<T>(
+  store: KVStore,
+  key: string,
+): Promise<T | null> {
+  return parse<T>(await store.get(key));
+}
+
+/** getJSON for many keys in one round trip, in the order asked. */
+export async function getManyJSON<T>(
+  store: KVStore,
+  keys: string[],
+): Promise<(T | null)[]> {
+  return (await getMany(store, keys)).map((raw) => parse<T>(raw));
 }
 
 export async function setJSON<T>(

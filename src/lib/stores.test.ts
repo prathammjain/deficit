@@ -1,4 +1,12 @@
-import { createMemoryStore, getJSON, setJSON, type KVStore } from './kv';
+import { gatherDailyRecords, gatherRange, toDailyData } from './history';
+import {
+  createMemoryStore,
+  getJSON,
+  getMany,
+  getManyJSON,
+  setJSON,
+  type KVStore,
+} from './kv';
 import {
   clearProfile,
   hasProfile,
@@ -8,6 +16,7 @@ import {
 import {
   addEntry,
   loadDay,
+  loadDays,
   portionedEntry,
   remaining,
   removeEntry,
@@ -17,6 +26,7 @@ import {
   type LogEntry,
 } from './log-store';
 import type { ProfileInput } from './targets';
+import { setWeight } from './weight-store';
 
 const SAMPLE: ProfileInput = {
   sex: 'male',
@@ -45,6 +55,51 @@ function slowStore(inner: KVStore, ms = 20): KVStore {
     },
   };
 }
+
+/** A store that reads many keys in one go, and counts its round trips. */
+function batchStore(inner: KVStore = createMemoryStore(), ms = 0) {
+  const calls = { get: 0, getMany: 0 };
+  const wait = () => new Promise((r) => setTimeout(r, ms));
+  const store: KVStore = {
+    async get(k) {
+      calls.get++;
+      await wait();
+      return inner.get(k);
+    },
+    async getMany(keys) {
+      calls.getMany++;
+      await wait();
+      return Promise.all(keys.map((k) => inner.get(k)));
+    },
+    async set(k, v) {
+      await wait();
+      return inner.set(k, v);
+    },
+    async remove(k) {
+      await wait();
+      return inner.remove(k);
+    },
+  };
+  return { store, calls };
+}
+
+describe('kv batched reads', () => {
+  it('reads key by key from a store that has no batched read', async () => {
+    const s = createMemoryStore({ a: '1', c: '3' });
+    expect(await getMany(s, ['a', 'b', 'c'])).toEqual(['1', null, '3']);
+  });
+
+  it('uses the store’s batched read when it has one', async () => {
+    const { store, calls } = batchStore(createMemoryStore({ a: '{"x":1}' }));
+    expect(await getManyJSON(store, ['a', 'b'])).toEqual([{ x: 1 }, null]);
+    expect(calls).toEqual({ get: 0, getMany: 1 });
+  });
+
+  it('reads corrupt json in a batch as null', async () => {
+    const s = createMemoryStore({ bad: '{not json', ok: '2' });
+    expect(await getManyJSON(s, ['bad', 'ok'])).toEqual([null, 2]);
+  });
+});
 
 describe('kv json helpers', () => {
   it('round-trips a value', async () => {
@@ -177,6 +232,168 @@ describe('log-store', () => {
 
     expect(await writing).toHaveLength(1);
     expect(reloaded.map((e) => e.label)).toEqual(['Dal']);
+  });
+
+  it('reads many days in one round trip, in the order asked', async () => {
+    const { store, calls } = batchStore();
+    await addEntry('2026-06-05', { label: 'A', kcal: 100 }, store);
+    await addEntry('2026-06-07', { label: 'B', kcal: 200 }, store);
+    calls.get = 0;
+
+    const days = await loadDays(
+      ['2026-06-07', '2026-06-06', '2026-06-05'],
+      store,
+    );
+    expect(days.map((d) => d.map((e) => e.label))).toEqual([['B'], [], ['A']]);
+    expect(calls).toEqual({ get: 0, getMany: 1 });
+  });
+
+  it('a batched read during an in-flight write sees the post-write state', async () => {
+    const { store } = batchStore(createMemoryStore(), 20);
+    const date = '2026-06-06';
+
+    const writing = addEntry(date, { label: 'Dal', kcal: 150 }, store);
+    await new Promise((r) => setTimeout(r, 5));
+    const [day, other] = await loadDays([date, '2026-06-05'], store);
+
+    expect(await writing).toHaveLength(1);
+    expect(day.map((e) => e.label)).toEqual(['Dal']);
+    expect(other).toEqual([]);
+  });
+
+  it('a write issued during a read resolves after it, with nothing lost', async () => {
+    // Resolution order has to match issue order: a slow read that resolved
+    // after a later write would hand the screen the day from before it.
+    const { store } = batchStore(createMemoryStore(), 20);
+    const date = '2026-06-06';
+    await addEntry(date, { label: 'A', kcal: 100 }, store);
+
+    const order: string[] = [];
+    const reading = loadDays([date], store).then((d) => {
+      order.push('read');
+      return d;
+    });
+    const writing = addEntry(date, { label: 'B', kcal: 200 }, store).then(
+      (d) => {
+        order.push('write');
+        return d;
+      },
+    );
+
+    expect((await reading)[0].map((e) => e.label)).toEqual(['A']);
+    expect((await writing).map((e) => e.label)).toEqual(['A', 'B']);
+    expect(order).toEqual(['read', 'write']);
+  });
+
+  it('overlapping reads run side by side instead of in a line', async () => {
+    const { store } = batchStore(createMemoryStore(), 30);
+    const started = Date.now();
+    await Promise.all([
+      loadDays(['2026-06-05', '2026-06-06'], store),
+      loadDays(['2026-06-06', '2026-06-07'], store),
+      loadDay('2026-06-06', store),
+    ]);
+    // Three reads of 30 ms each: about 30 ms together, 90 ms in a line.
+    expect(Date.now() - started).toBeLessThan(75);
+  });
+
+  it('a failed read does not hold up the writes after it', async () => {
+    const inner = createMemoryStore();
+    let down = true;
+    const store: KVStore = {
+      get: (k) => inner.get(k),
+      set: (k, v) => inner.set(k, v),
+      remove: (k) => inner.remove(k),
+      async getMany(keys) {
+        if (down) throw new Error('offline');
+        return Promise.all(keys.map((k) => inner.get(k)));
+      },
+    };
+    const date = '2026-06-06';
+    await expect(loadDays([date], store)).rejects.toThrow('offline');
+    down = false;
+    expect(await addEntry(date, { label: 'A', kcal: 100 }, store)).toHaveLength(
+      1,
+    );
+  });
+});
+
+describe('history', () => {
+  /** Day keys for the `n` days ending today, oldest first. */
+  const lastDays = (n: number) =>
+    Array.from({ length: n }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (n - 1 - i));
+      return todayKey(d);
+    });
+
+  it('gathers a range of days in one read of the log', async () => {
+    const { store, calls } = batchStore();
+    const [dayBefore, yesterday, today] = lastDays(3);
+    await addEntry(dayBefore, { label: 'A', kcal: 500, proteinG: 30 }, store);
+    await addEntry(today, { label: 'B', kcal: 700, carbsG: 80 }, store);
+    await addEntry(today, { label: 'C', kcal: 100, fatG: 5 }, store);
+    await setWeight(yesterday, 81.5, store);
+    calls.get = 0;
+
+    const recs = await gatherDailyRecords(45, store);
+    expect(recs).toHaveLength(45);
+    expect(recs.slice(-3)).toEqual([
+      {
+        date: dayBefore,
+        logged: true,
+        kcal: 500,
+        proteinG: 30,
+        carbsG: 0,
+        fatG: 0,
+        weightKg: null,
+      },
+      {
+        date: yesterday,
+        logged: false,
+        kcal: 0,
+        proteinG: 0,
+        carbsG: 0,
+        fatG: 0,
+        weightKg: 81.5,
+      },
+      {
+        date: today,
+        logged: true,
+        kcal: 800,
+        proteinG: 0,
+        carbsG: 80,
+        fatG: 5,
+        weightKg: null,
+      },
+    ]);
+    // 45 days of meals in one round trip, and one for the weigh ins.
+    expect(calls).toEqual({ get: 1, getMany: 1 });
+  });
+
+  it('gathers between two day keys, both included', async () => {
+    const s = createMemoryStore();
+    await addEntry('2026-03-01', { label: 'A', kcal: 400 }, s);
+    const recs = await gatherRange('2026-02-27', '2026-03-01', s);
+    expect(recs.map((r) => r.date)).toEqual([
+      '2026-02-27',
+      '2026-02-28',
+      '2026-03-01',
+    ]);
+    expect(recs.map((r) => r.kcal)).toEqual([0, 0, 400]);
+  });
+
+  it('turns day records into the intake and weight series', () => {
+    const base = { logged: true, proteinG: 0, carbsG: 0, fatG: 0 };
+    expect(
+      toDailyData([
+        { ...base, date: '2026-06-05', kcal: 2100, weightKg: 80 },
+        { ...base, date: '2026-06-06', kcal: 0, logged: false, weightKg: null },
+      ]),
+    ).toEqual([
+      { date: '2026-06-05', intakeKcal: 2100, weightKg: 80 },
+      { date: '2026-06-06', intakeKcal: null, weightKg: null },
+    ]);
   });
 });
 

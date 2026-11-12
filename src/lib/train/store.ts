@@ -18,6 +18,7 @@
 import {
   deviceKey,
   getJSON,
+  getManyJSON,
   kv,
   localStore,
   setJSON,
@@ -197,9 +198,7 @@ export async function loadWorkouts(
   let synced: Workout[] | null = null;
   try {
     const months = (await getJSON<string[]>(cloud, MONTHS)) ?? [];
-    const lists = await Promise.all(
-      months.map((m) => getJSON<Workout[]>(cloud, monthKey(m))),
-    );
+    const lists = await getManyJSON<Workout[]>(cloud, months.map(monthKey));
     synced = lists.flatMap((list) => list ?? []);
     if (cache) await setJSON(device, CACHE(), synced);
   } catch {

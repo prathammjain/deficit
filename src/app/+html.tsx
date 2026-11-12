@@ -7,6 +7,8 @@ const DESCRIPTION =
   'get calories and macros you can trust. AI grounded on real food data, ' +
   'built for Indian food.';
 const URL = 'https://app.getgrain.fit';
+/** The account and the engine both live here; inlined at build time. */
+const SUPABASE = process.env.EXPO_PUBLIC_SUPABASE_URL;
 
 /**
  * +html.tsx — the static HTML shell for web export. This is the only place the
@@ -39,6 +41,24 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="twitter:title" content={TITLE} />
         <meta name="twitter:description" content={DESCRIPTION} />
         <meta name="twitter:image" content={`${URL}/og.png`} />
+
+        {/* Open the connections the first screen needs while the bundle
+            downloads: the two font hosts, and the account. */}
+        <link rel="preconnect" href="https://api.fontshare.com" />
+        <link
+          rel="preconnect"
+          href="https://cdn.fontshare.com"
+          crossOrigin="anonymous"
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        {SUPABASE ? (
+          <link rel="preconnect" href={SUPABASE} crossOrigin="anonymous" />
+        ) : null}
 
         {/* PWA: installable, named, iconed */}
         <link rel="manifest" href="/manifest.json" />

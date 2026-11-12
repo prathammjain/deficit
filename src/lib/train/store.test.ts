@@ -140,6 +140,34 @@ describe('finished workouts', () => {
     expect(all.map((w) => w.id)).toEqual(['a', 'b', 'c']);
   });
 
+  it('reads every month in one round trip when the account can', async () => {
+    const inner = createMemoryStore();
+    const device = createMemoryStore();
+    for (const [id, date] of [
+      ['a', '2026-09-12'],
+      ['b', '2026-10-30'],
+      ['c', '2026-11-04'],
+    ]) {
+      await saveWorkout(workout(id, date), undefined, inner, device);
+    }
+    const calls = { get: 0, getMany: 0 };
+    const cloud: KVStore = {
+      ...inner,
+      get(k) {
+        calls.get++;
+        return inner.get(k);
+      },
+      getMany(keys) {
+        calls.getMany++;
+        return Promise.all(keys.map((k) => inner.get(k)));
+      },
+    };
+    const all = await loadWorkouts(cloud, device);
+    expect(all.map((w) => w.id)).toEqual(['a', 'b', 'c']);
+    // The list of months, then all three months together.
+    expect(calls).toEqual({ get: 1, getMany: 1 });
+  });
+
   it('moves an edited workout to its new month and drops empty months', async () => {
     const cloud = flaky();
     const device = createMemoryStore();

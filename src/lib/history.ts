@@ -1,12 +1,14 @@
 /**
- * history.ts — assemble the trailing-window dataset the adaptive engine needs.
+ * history.ts — assemble the per-day datasets the dashboards and the adaptive
+ * engine need.
  *
  * Pulls each day's logged intake (sum of meals) and weigh-in into a single
- * series keyed by date. IO lives here; the math in adaptive-tdee.ts stays pure.
+ * series keyed by date, however many days, in one read of the log. IO lives
+ * here; the math in adaptive-tdee.ts stays pure.
  */
 
 import { kv, type KVStore } from './kv';
-import { loadDay, summarize, todayKey } from './log-store';
+import { loadDays, summarize, todayKey } from './log-store';
 import { loadWeights } from './weight-store';
 import type { DailyDatum } from './adaptive-tdee';
 import type { DayRecord } from './history-stats';
@@ -18,67 +20,63 @@ function dateMinus(offset: number, from: Date = new Date()): string {
   return todayKey(d);
 }
 
-/** The last `days` calendar days (inclusive of today), with intake + weight. */
-export async function gatherHistory(
-  days = 21,
-  store: KVStore = kv,
-): Promise<DailyDatum[]> {
-  const dates: string[] = [];
-  for (let i = days - 1; i >= 0; i--) dates.push(dateMinus(i));
-
-  const weights = await loadWeights(store);
+/**
+ * Macros and weigh in for each of `dates`, in two round trips side by side:
+ * one for every day's meals, one for the weigh ins.
+ */
+async function recordsFor(
+  dates: string[],
+  store: KVStore,
+): Promise<DayRecord[]> {
+  const [weights, days] = await Promise.all([
+    loadWeights(store),
+    loadDays(dates, store),
+  ]);
   const weightByDate = new Map(weights.map((w) => [w.date, w.kg]));
-
-  const data = await Promise.all(
-    dates.map(async (date): Promise<DailyDatum> => {
-      const meals = await loadDay(date, store);
-      const kcal = summarize(meals).kcal;
-      return {
-        date,
-        intakeKcal: kcal > 0 ? kcal : null,
-        weightKg: weightByDate.get(date) ?? null,
-      };
-    }),
-  );
-
-  return data;
+  return dates.map((date, i): DayRecord => {
+    const s = summarize(days[i]);
+    return {
+      date,
+      logged: s.count > 0,
+      kcal: s.kcal,
+      proteinG: s.proteinG,
+      carbsG: s.carbsG,
+      fatG: s.fatG,
+      weightKg: weightByDate.get(date) ?? null,
+    };
+  });
 }
 
 /**
- * The last `days` calendar days with full macro breakdown + weigh-in — the
- * richer series the History dashboard charts and exports.
+ * Day records as the intake and weight series the adaptive engine and the
+ * weekly prediction read. Pure.
  */
-export async function gatherDailyRecords(
+export function toDailyData(records: DayRecord[]): DailyDatum[] {
+  return records.map((r) => ({
+    date: r.date,
+    intakeKcal: r.kcal > 0 ? r.kcal : null,
+    weightKg: r.weightKg,
+  }));
+}
+
+/**
+ * The last `days` calendar days (inclusive of today) with full macro
+ * breakdown + weigh-in — the series the dashboards chart and export.
+ */
+export function gatherDailyRecords(
   days = 90,
   store: KVStore = kv,
 ): Promise<DayRecord[]> {
   const dates: string[] = [];
   for (let i = days - 1; i >= 0; i--) dates.push(dateMinus(i));
-
-  const weights = await loadWeights(store);
-  const weightByDate = new Map(weights.map((w) => [w.date, w.kg]));
-
-  return Promise.all(
-    dates.map(async (date): Promise<DayRecord> => {
-      const s = summarize(await loadDay(date, store));
-      return {
-        date,
-        logged: s.count > 0,
-        kcal: s.kcal,
-        proteinG: s.proteinG,
-        carbsG: s.carbsG,
-        fatG: s.fatG,
-        weightKg: weightByDate.get(date) ?? null,
-      };
-    }),
-  );
+  return recordsFor(dates, store);
 }
 
 /**
  * Every day from `start` to `end` (day keys, both included) with macros and
  * weigh ins. The training Progress view joins these with workouts.
  */
-export async function gatherRange(
+export function gatherRange(
   start: string,
   end: string,
   store: KVStore = kv,
@@ -89,24 +87,7 @@ export async function gatherRange(
     dates.push(todayKey(day));
     day.setDate(day.getDate() + 1);
   }
-
-  const weights = await loadWeights(store);
-  const weightByDate = new Map(weights.map((w) => [w.date, w.kg]));
-
-  return Promise.all(
-    dates.map(async (date): Promise<DayRecord> => {
-      const s = summarize(await loadDay(date, store));
-      return {
-        date,
-        logged: s.count > 0,
-        kcal: s.kcal,
-        proteinG: s.proteinG,
-        carbsG: s.carbsG,
-        fatG: s.fatG,
-        weightKg: weightByDate.get(date) ?? null,
-      };
-    }),
-  );
+  return recordsFor(dates, store);
 }
 
 /**
@@ -114,7 +95,7 @@ export async function gatherRange(
  * order, with full macro breakdown + weigh-in. Powers the History calendar,
  * which lets the user pick any day and see that day's totals and deficit.
  */
-export async function gatherMonthRecords(
+export function gatherMonthRecords(
   anchor: Date,
   store: KVStore = kv,
 ): Promise<DayRecord[]> {
@@ -126,22 +107,5 @@ export async function gatherMonthRecords(
   for (let d = 1; d <= daysInMonth; d++) {
     dates.push(todayKey(new Date(year, month, d)));
   }
-
-  const weights = await loadWeights(store);
-  const weightByDate = new Map(weights.map((w) => [w.date, w.kg]));
-
-  return Promise.all(
-    dates.map(async (date): Promise<DayRecord> => {
-      const s = summarize(await loadDay(date, store));
-      return {
-        date,
-        logged: s.count > 0,
-        kcal: s.kcal,
-        proteinG: s.proteinG,
-        carbsG: s.carbsG,
-        fatG: s.fatG,
-        weightKg: weightByDate.get(date) ?? null,
-      };
-    }),
-  );
+  return recordsFor(dates, store);
 }

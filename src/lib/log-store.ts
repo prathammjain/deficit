@@ -7,7 +7,7 @@
  */
 
 import type { Confidence, FoodItem } from './food';
-import { getJSON, kv, type KVStore, setJSON } from './kv';
+import { getJSON, getManyJSON, kv, type KVStore, setJSON } from './kv';
 
 export interface LogEntry {
   /** Stable id (uuid-ish) for list keys and deletes. */
@@ -126,7 +126,7 @@ export function remaining(targetKcal: number, consumedKcal: number): number {
 /**
  * Read a day straight from the store, bypassing the mutation queue.
  *
- * Only for use *inside* a queued mutation: a serialized read there would wait
+ * Only for use *inside* a queued mutation: a queued read there would wait
  * on the very mutation that issued it and deadlock the key's queue.
  */
 async function readDay(date: string, store: KVStore): Promise<LogEntry[]> {
@@ -134,33 +134,43 @@ async function readDay(date: string, store: KVStore): Promise<LogEntry[]> {
 }
 
 /**
- * Serialize read-modify-write mutations on a single day key.
+ * Order reads and read-modify-write mutations on a single day key.
  *
  * `addEntry`/`removeEntry`/`updateEntryQuantity` each read the day from the
  * store, modify it, and write it back. When two such calls overlap — the UI
  * fires several un-awaited mutations in quick succession (rapid taps, a
  * multi-item "describe a meal" log, or a duplicated press event) — the second
  * read can observe the pre-write snapshot and its write silently overwrites
- * the first, dropping entries. Queuing mutations per key makes the last write
- * always include every entry, and keeps the returned arrays consistent with
- * what's actually stored.
+ * the first, dropping entries. So a mutation waits for everything issued
+ * before it on that day, mutations and reads alike, and the last write always
+ * includes every entry.
+ *
+ * Reads wait only for the mutations issued before them. Two reads with no
+ * mutation between them see the same day, so they run side by side: a screen
+ * can load a range and a month that overlap in one round trip each, at once.
  */
-const mutationQueues = new Map<string, Promise<unknown>>();
+interface DayQueue {
+  /** The last mutation issued; never rejects. */
+  write: Promise<unknown>;
+  /** Reads issued since that mutation and still running; none reject. */
+  reads: Set<Promise<unknown>>;
+}
 
-function serialized<T>(key: string, fn: () => Promise<T>): Promise<T> {
-  const tail = mutationQueues.get(key) ?? Promise.resolve();
-  const next = tail.then(fn, fn);
-  // Keep the chain alive whether this mutation resolved or rejected, so a
-  // single failure can't strand the whole queue.
-  mutationQueues.set(
-    key,
-    next.catch(() => undefined),
-  );
+const queues = new Map<string, DayQueue>();
+const noop = () => undefined;
+
+function mutation<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const q = queues.get(key);
+  const before = q ? Promise.all([q.write, ...q.reads]) : Promise.resolve();
+  const next = before.then(fn);
+  // Settled either way, so a single failure can't strand the queue.
+  queues.set(key, { write: next.then(noop, noop), reads: new Set() });
   return next;
 }
 
 /**
- * Read a day's entries, queued behind any in-flight mutation on that day.
+ * Runs a read of `keys` behind the mutations already issued on them, and
+ * makes later mutations on them wait for it.
  *
  * The queue matters as much for reads as for writes. The log screen reloads
  * the day on every focus (`useFocusEffect`), so a tab switch moments after a
@@ -171,11 +181,42 @@ function serialized<T>(key: string, fn: () => Promise<T>): Promise<T> {
  * Queueing reads makes resolution order match issue order, so the UI's last
  * write of state is always the freshest view of the store.
  */
+function queuedRead<T>(keys: string[], fn: () => Promise<T>): Promise<T> {
+  const read = Promise.all(keys.map((k) => queues.get(k)?.write)).then(fn);
+  const settled = read.then(noop, noop);
+  for (const key of keys) {
+    let q = queues.get(key);
+    if (!q) {
+      q = { write: Promise.resolve(), reads: new Set() };
+      queues.set(key, q);
+    }
+    const { reads } = q;
+    reads.add(settled);
+    void settled.then(() => reads.delete(settled));
+  }
+  return read;
+}
+
+/** Read a day's entries, queued behind any in-flight mutation on that day. */
 export function loadDay(
   date: string,
   store: KVStore = kv,
 ): Promise<LogEntry[]> {
-  return serialized(dayKey(date), () => readDay(date, store));
+  return queuedRead([dayKey(date)], () => readDay(date, store));
+}
+
+/**
+ * Read many days in one round trip, in the order asked, each queued behind
+ * any in-flight mutation on its own day exactly as loadDay is.
+ */
+export function loadDays(
+  dates: string[],
+  store: KVStore = kv,
+): Promise<LogEntry[][]> {
+  const keys = dates.map(dayKey);
+  return queuedRead(keys, async () =>
+    (await getManyJSON<LogEntry[]>(store, keys)).map((day) => day ?? []),
+  );
 }
 
 export function addEntry(
@@ -183,7 +224,7 @@ export function addEntry(
   entry: Omit<LogEntry, 'id' | 'at'>,
   store: KVStore = kv,
 ): Promise<LogEntry[]> {
-  return serialized(dayKey(date), async () => {
+  return mutation(dayKey(date), async () => {
     const entries = await readDay(date, store);
     const full: LogEntry = {
       ...entry,
@@ -201,7 +242,7 @@ export function removeEntry(
   id: string,
   store: KVStore = kv,
 ): Promise<LogEntry[]> {
-  return serialized(dayKey(date), async () => {
+  return mutation(dayKey(date), async () => {
     const entries = await readDay(date, store);
     const next = entries.filter((e) => e.id !== id);
     await setJSON(store, dayKey(date), next);
@@ -225,7 +266,7 @@ export function updateEntryQuantity(
   // weighed food into 50 g. A non-amount is ignored rather than replaced.
   const valid = isAmount(quantity);
   const q = tidy(quantity);
-  return serialized(dayKey(date), async () => {
+  return mutation(dayKey(date), async () => {
     const entries = await readDay(date, store);
     const next = entries.map((e) => {
       if (!valid || e.id !== id || e.unitKcal == null) return e;

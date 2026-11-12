@@ -23,15 +23,22 @@ export const foodProvider: FoodProvider = supabase
   ? new RemoteFoodProvider(supabase, local)
   : local;
 
+/** How often the Log screen may ask whether the engine is up. */
+const PROBE_EVERY_MS = 5 * 60 * 1000;
+let lastProbe = 0;
+
 /**
- * Ask the live engine whether it's ready (cheap, no AI/DB calls) so the UI can
- * show "AI grounding active" vs "offline — local foods". No-op for the local
- * provider, which is always ready.
+ * Ask the live engine whether it's ready so the UI can show the offline line
+ * when it isn't. At most once every few minutes: the Log screen asks on every
+ * visit, each ask is a function call, and every Match reports the engine's
+ * state on its own anyway. No-op for the local provider, which is always
+ * ready.
  */
-export async function probeProvider(): Promise<void> {
-  if (foodProvider instanceof RemoteFoodProvider) {
-    await foodProvider.health();
-  }
+export async function probeProvider(now = Date.now()): Promise<void> {
+  if (!(foodProvider instanceof RemoteFoodProvider)) return;
+  if (now - lastProbe < PROBE_EVERY_MS) return;
+  lastProbe = now;
+  await foodProvider.health();
 }
 
 export * from './types';

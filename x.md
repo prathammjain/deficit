@@ -581,3 +581,54 @@ Feedback from a senior product manager, all four points taken.
   says "I"; charts carry a light scale and their first and last dates;
   stat labels no longer wrap; figures are tabular so columns line up;
   cards have a shadow too soft to notice.
+
+## 2026-11-12
+
+### The whole product, explained in one document
+
+notes.pdf, at the repository root, with its source in docs/notes.html, walks
+through everything: how the app, Vercel, Supabase and the engine fit
+together; the key/value storage idea and why sign in only swaps what is
+behind it; every table and policy in the schema; the engine stage by stage
+(split, look up, judge, calculate in code, flag), with the confidence rule,
+the cache, degraded runs and the run log; the three food tables and their
+licences; voice and the roast; the maths for targets, budget, adaptive
+maintenance and the forecast; full days, breaks and fresh starts; training,
+the workout reader, progress and programs; consent and the back office;
+hosting; and what the free tiers can carry today. The binding limit is
+Groq's free tier at about 66 uncached meals a day, so roughly 15 to 20
+daily users; Supabase storage is next, through engine traces; Vercel Hobby
+is non-commercial and must move to Pro when the paywall turns on. Written
+in plain words with analogies and diagrams, for the owner.
+
+### Faster everywhere, measured
+
+A pass to make Grain faster without changing a single number it shows. Every
+change was checked against the old code: the same seeded data rendered the
+same text on all eight screens in a real browser, the engine gave identical
+answers on the same meals, and the database allowed and refused exactly the
+same things.
+
+* Reading many days is one request, not one per day. The Overview used to
+  make about 70 database requests on every visit (each of 45 days, then 21
+  of them again); it now makes about 7. A month on the History calendar went
+  from 30 requests to 1, a year of History from 365 to 4. Screens that ask
+  for the same thing at the same moment share one request.
+* The Overview and History start every read at once instead of the profile
+  first, and sign in no longer waits on a network check at each launch.
+* The app downloads a fifth less: 430 KB instead of 545 KB compressed, and
+  1.99 MB of JavaScript to run instead of 2.75 MB. A quarter of it was the
+  animation library, pulled in by a leftover template icon nothing showed.
+* Build files are cached by browsers for a year (their names change with
+  every deploy), and the page opens its connections to the font hosts and
+  the account while the app downloads.
+* The database's privacy rules now work out who is asking once per query,
+  not once per row. On a 60,000 row table a read that leans on them went
+  from 0.75 ms to 0.055 ms. Run supabase/schema.sql again to apply it.
+* Tests run in 2 seconds instead of 14: they no longer type check, since
+  npm run typecheck does that.
+
+Tried and left out: splitting the app per screen would save another 67 KB,
+but on Expo SDK 56 it leaves every screen blank (Expo calls it stable from
+SDK 58). Expo's experimental tree shaking saved only 10 KB, not worth an
+experimental flag on a live app.
