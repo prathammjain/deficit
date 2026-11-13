@@ -338,6 +338,7 @@ export const INDIAN_FOODS: IndianFood[] = [
     proteinG: 14,
     carbsG: 8,
     fatG: 17,
+    aliases: ['anda curry'],
   },
   {
     id: 'boiled-egg',
@@ -692,6 +693,25 @@ export const INDIAN_FOODS: IndianFood[] = [
     aliases: ['paneer roll'],
   },
   {
+    // Dry weight, as the pack is labelled and as people weigh it: 100 g dry
+    // is about 300 g soaked. Nutrela label, per 100 g.
+    id: 'soya-chunks',
+    name: 'Soya Chunks (dry)',
+    serving: '100g',
+    kcal: 345,
+    proteinG: 52,
+    carbsG: 33,
+    fatG: 0.5,
+    aliases: [
+      'soya chunks',
+      'soy chunks',
+      'soya nuggets',
+      'soya badi',
+      'meal maker',
+      'nutrela',
+    ],
+  },
+  {
     id: 'soya-curry',
     name: 'Soya Chunk Curry',
     serving: '1 katori (120g)',
@@ -699,7 +719,7 @@ export const INDIAN_FOODS: IndianFood[] = [
     proteinG: 12,
     carbsG: 8,
     fatG: 12,
-    aliases: ['soya chunk', 'meal maker', 'nutrela'],
+    aliases: ['soya chunk sabzi', 'soya sabzi', 'meal maker curry'],
   },
   {
     id: 'chicken-sandwich',

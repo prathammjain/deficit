@@ -47,7 +47,6 @@
 // Targets the Deno runtime; excluded from the app's TS build (tsconfig).
 
 // @ts-nocheck
-import { INDIAN_FOODS } from './_indian-foods.ts';
 import { TtlCache, tokenExpiry, USDA_TTL_MS, usdaLookups } from './caches.ts';
 import { ifctSearch } from './ifct.ts';
 import {
@@ -62,6 +61,7 @@ import {
   portionCertainty as statedCertainty,
   servingMultiplier,
 } from './portion.ts';
+import { byRelevance, indianSearch } from './search.ts';
 
 // ---- CORS -------------------------------------------------------------------
 
@@ -313,42 +313,6 @@ async function roastLine(
 
 // ---- Candidate sources ------------------------------------------------------
 
-/** Curated Indian home-cooking table — ranked by name/alias match. */
-function indianSearch(query: string, max = 3) {
-  const q = String(query ?? '')
-    .trim()
-    .toLowerCase();
-  if (!q) return [];
-  const toks = q.split(/\s+/).filter(Boolean);
-  return INDIAN_FOODS.map((f: any) => {
-    const name = f.name.toLowerCase();
-    const aliases = (f.aliases ?? []).map((a: string) => a.toLowerCase());
-    const hay = [name, ...aliases];
-    let s = 0;
-    if (hay.some((h) => h === q)) s = 100;
-    else if (name.startsWith(q) || aliases.some((a) => a.startsWith(q))) s = 80;
-    else if (hay.some((h) => h.includes(q))) s = 60;
-    else {
-      const overlap = toks.filter((t) => hay.some((h) => h.includes(t))).length;
-      s = overlap > 0 ? 20 + overlap * 10 : 0;
-    }
-    return { f, s };
-  })
-    .filter((x) => x.s > 0)
-    .sort((a, b) => b.s - a.s)
-    .slice(0, max)
-    .map(({ f }) => ({
-      id: String(f.id),
-      name: String(f.name),
-      serving: String(f.serving),
-      kcal: Math.round(f.kcal),
-      proteinG: Math.round(f.proteinG),
-      carbsG: Math.round(f.carbsG),
-      fatG: Math.round(f.fatG),
-      source: 'local' as const,
-    }));
-}
-
 /**
  * USDA FoodData Central search (measured macros per 100g). Branded excluded.
  *
@@ -463,6 +427,10 @@ async function judgeCandidates(
     index: i,
     eaten: d.name,
     statedQuantity: d.quantity,
+    // The weight the user gave, in grams; null when they gave none. Without
+    // it the judge read "100 grams soya chunks" as "soya chunks", picked a
+    // katori of soya chunk curry, and made its cross check for a guess.
+    statedGrams: Number(d.grams) > 0 ? Number(d.grams) : null,
     candidates: candidatesPerItem[i].map((c, ci) => ({
       i: ci,
       source: c.source,
@@ -478,10 +446,10 @@ async function judgeCandidates(
   const parsed = await callLLM(
     cfg,
     `You are grounding a food log so its numbers can be trusted. For each EATEN item you get real CANDIDATE foods from three sources: a curated Indian home-cooking table ("local" — macros per the stated home serving, recipe fats included), IFCT 2017 ("ifct" — Indian lab-measured macros per 100g of a single raw ingredient), and USDA ("usda" — macros per 100g). For each item return a decision:
-- "chosen": index i of the candidate that best matches the eaten dish. PREFER a specific Indian-table ("local") match over a generic USDA one when both reasonably fit (e.g. real "Dal Tadka" over plain "cooked lentils"). If NONE is a reasonable match, use -1 and provide your own "estimate" (per-serving macros for a typical Indian home portion, with a "serving" label like "1 katori (150g)").
+- "chosen": index i of the candidate that is the SAME food in the SAME form as what was eaten. The Indian-table and IFCT candidates come first, most relevant first, then USDA's. A plain ingredient ("soya chunks", "paneer", "chicken breast", "curd"), above all one with "statedGrams", is that ingredient, never a dish cooked from it ("Soya Chunk Curry", "Palak Paneer", "Chicken Curry"): choose a dish only when the eaten text names that dish. When the eaten text names a dish, prefer a specific Indian-table ("local") dish over a generic USDA ingredient (real "Dal Tadka" over plain "cooked lentils"). If NONE is a reasonable match, use -1 and provide your own "estimate" (per-serving macros for a typical Indian home portion, with a "serving" label like "1 katori (150g)").
 - RAW vs AS-EATEN. Every candidate's "serving" says which it is. An "ifct" candidate labelled "100g raw (uncooked weight)" is the dry/uncooked ingredient, NOT the cooked food on the plate: 100g of cooked rice is roughly 33g raw. Never treat a raw candidate's 100g as 100g eaten. For a cooked dish prefer a "local" candidate, or an "ifct" one already labelled "100g cooked"; pick a raw "ifct" candidate only when the food really is eaten raw or uncooked (fruit, salad, nuts, curd, a measured weight of dry grain). A candidate labelled "100g cooked" is ALREADY converted — do not adjust it again. A staple may appear TWICE, once as "100g cooked" and once as "100g raw (uncooked weight)": these are the same food, not two foods, so choose the reading that matches how the portion was described.
-- "quantity": how many of the CHOSEN candidate's stated serving were eaten. (candidate serving "1 katori (150g)", ate ~1.5 katori => 1.5; candidate serving "100g", ate ~150g => 1.5.)
-- "aiEstimateKcal": your OWN independent best estimate of the TOTAL calories for the eaten portion, from your knowledge of the dish. Do NOT just copy the candidate — this is an independent cross-check.
+- "quantity": how many of the CHOSEN candidate's stated serving were eaten. (candidate serving "1 katori (150g)", ate ~1.5 katori => 1.5; candidate serving "100g", ate ~150g => 1.5.) "statedGrams", when given, is the weight eaten.
+- "aiEstimateKcal": your OWN independent best estimate of the TOTAL calories for the eaten portion (for "statedGrams" when given), from your knowledge of the food. Do NOT just copy the candidate — this is an independent cross-check.
 - "portionCertainty": "clear" if the eaten portion is well specified, "unsure" if you had to guess it.
 - "reason": one short clause, e.g. "matched dal tadka, 1.5 katori".
 Portion reference (use unless grams are given): 1 roti/chapati≈40g, 1 paratha≈80g, 1 naan≈90g, 1 katori (dal/curry/sabzi/rice)≈150g, 1 bowl≈200g, 1 idli≈40g, 1 dosa≈90g, 1 glass≈250ml.
@@ -496,6 +464,10 @@ Items: ${JSON.stringify(payload)}`,
 // ---- Confidence + reason ----------------------------------------------------
 
 const num = (v: unknown) => Math.max(0, Math.round(Number(v) || 0));
+
+/** A candidate as the app sees it: the search score stays in the run log. */
+// deno-lint-ignore no-unused-vars
+const shown = ({ match, ...row }: any) => row;
 
 function calcConfidence(
   dbKcalTotal: number,
@@ -588,7 +560,10 @@ async function askAuth(token: string): Promise<string | null> {
 // Keyed on ENGINE_VERSION + model + normalised text so switching providers or
 // models automatically uses a separate cache namespace.
 
-const ENGINE_VERSION = 'v5';
+// v6: search by relevance, dry soya chunks, the judge sees stated grams, and a
+// stated weight is honoured for home servings that name their grams. A new
+// version is a new cache namespace, so answers cached under v5 are not served.
+const ENGINE_VERSION = 'v6';
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const cacheKey = (cfg: LLMConfig, text: string) =>
@@ -1024,25 +999,21 @@ async function parseUncached(
   const usdaRows = await usdaAnswers(described.map((d) => d.query || d.name));
   const candidatesPerItem = described.map((d, i) => {
     const usdaQuery = d.query || d.name;
-    // The curated Indian table is keyed on real dish names ("Paneer
-    // Paratha"), so match it on the display name — the generic USDA
-    // query ("wheat flatbread") would miss those entries. Fall back to
-    // the query only when the name finds nothing.
-    const byName = indianSearch(d.name, 3);
-    const indian = byName.length ? byName : indianSearch(usdaQuery, 3);
-    // IFCT is keyed on generic ingredient English ("Red gram, dal"),
-    // which is how structureMeal writes `query` — the mirror image of
-    // the curated dish table, keyed on dish names and matched on `name`.
-    const byQuery = ifctSearch(usdaQuery, 3);
-    const ifct = byQuery.length ? byQuery : ifctSearch(d.name, 3);
+    // The curated table is keyed on dish names ("Paneer Paratha") and IFCT
+    // on generic English ("Red gram, dal"), so each table is searched with
+    // both the food as the user named it and the split's English query, and
+    // a row keeps its better fit. Searching each table with only one of them
+    // let a dish that fits the name ("potato" in Aloo Paratha's alias "potato
+    // paratha") outrank, and push out, IFCT's potato found by "boiled potato".
+    const indian = indianSearch([d.name, usdaQuery], 3);
+    const ifct = ifctSearch([usdaQuery, d.name], 3);
     const usda = usdaRows[i];
     if (usda === null) degraded = true;
-    // local first, so the curated table keeps the low indices the
-    // "PREFER local" rule relies on; IFCT ahead of USDA so the Indian
-    // ingredient is seen before the generic one. IFCT is compiled in
-    // with no network and no key, so it can never be unavailable and
-    // must never set `degraded`.
-    return [...indian, ...ifct, ...(usda ?? [])];
+    // The curated table and IFCT together, most relevant first (search.ts),
+    // then USDA, so the Indian rows are seen before the generic ones. IFCT
+    // is compiled in with no network and no key, so it can never be
+    // unavailable and must never set `degraded`.
+    return [...byRelevance(indian, ifct), ...(usda ?? [])];
   });
 
   trace.lookup.ms = Date.now() - lookupStarted;
@@ -1090,7 +1061,7 @@ async function parseUncached(
         ? calcConfidence(dbKcalTotal, aiKcal, portionCertainty, picked.source)
         : 'low';
       items.push({
-        item: { ...picked, name: d.name || picked.name },
+        item: { ...shown(picked), name: d.name || picked.name },
         quantity: scaled,
         confidence,
         reason: judged
@@ -1102,7 +1073,7 @@ async function parseUncached(
               decision?.reason,
             )
           : 'Not cross checked, verify this portion.',
-        alternates: candidates.filter((_, ci) => ci !== chosen),
+        alternates: candidates.filter((_, ci) => ci !== chosen).map(shown),
       });
     } else if (decision?.estimate) {
       const e = decision.estimate;
@@ -1131,7 +1102,7 @@ async function parseUncached(
         reason: scaled
           ? `No database match. AI estimate per ${estServing}, scaled to the ${d.grams} g you gave.`
           : plain(decision.reason) || 'No database match, AI estimate.',
-        alternates: candidates,
+        alternates: candidates.map(shown),
       });
     } else {
       unmatched.push(d.name);

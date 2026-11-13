@@ -12,6 +12,7 @@
 
 // @ts-nocheck
 import { IFCT_FOODS } from './_ifct.ts';
+import { rank } from './search.ts';
 
 /**
  * IFCT names are botanical English ("Red gram, dal"); users and the meal
@@ -35,7 +36,7 @@ const IFCT_ALIASES: Record<string, string[]> = {
   A013: ['brown rice'],
   A014: ['parboiled rice', 'sella rice'],
   A015: ['rice', 'white rice', 'cooked rice', 'chawal'],
-  A011: ['poha'],
+  A011: ['poha', 'flattened rice', 'beaten rice'],
   A012: ['murmura'],
   A019: ['atta', 'wheat flour'],
   A022: ['suji', 'rava', 'semolina'],
@@ -85,9 +86,9 @@ const COOKED_YIELD: Record<string, number> = {
 const isCooked = (name: string) => /\b(boiled|omlet)\b/i.test(name);
 
 /**
- * Ranked IFCT matches. Scoring is `indianSearch`'s, so an IFCT candidate is
- * structurally indistinguishable from a curated one apart from source,
- * serving and state.
+ * Ranked IFCT matches. Scoring is `indianSearch`'s (search.ts), so an IFCT
+ * candidate is structurally indistinguishable from a curated one apart from
+ * source, serving and state, and the two can be ordered by `match` together.
  *
  * `max` caps distinct FOODS, not returned rows: a staple with a cooked yield
  * comes back twice, once per reading, so a grain or legume query can return up
@@ -95,81 +96,62 @@ const isCooked = (name: string) => /\b(boiled|omlet)\b/i.test(name);
  * per food, so the widening is confined to exactly the foods where raw vs
  * cooked is ambiguous.
  */
-export function ifctSearch(query: string, max = 3) {
-  const q = String(query ?? '')
-    .trim()
-    .toLowerCase();
-  if (!q) return [];
-  const toks = q.split(/\s+/).filter(Boolean);
-  return IFCT_FOODS.map((f: any) => {
-    const name = f.name.toLowerCase();
-    const aliases = (IFCT_ALIASES[f.code] ?? []).map((a: string) =>
-      a.toLowerCase(),
-    );
-    const hay = [name, ...aliases];
-    let s = 0;
-    if (hay.some((h) => h === q)) s = 100;
-    else if (name.startsWith(q) || aliases.some((a) => a.startsWith(q))) s = 80;
-    else if (hay.some((h) => h.includes(q))) s = 60;
-    else {
-      const overlap = toks.filter((t) => hay.some((h) => h.includes(t))).length;
-      s = overlap > 0 ? 20 + overlap * 10 : 0;
-    }
-    return { f, s };
-  })
-    .filter((x) => x.s > 0)
-    .sort((a, b) => b.s - a.s)
-    .slice(0, max)
-    .flatMap(({ f }) => {
-      const scale = (y: number) => ({
-        kcal: Math.round(f.kcal / y),
-        proteinG: Math.round(f.proteinG / y),
-        carbsG: Math.round(f.carbsG / y),
-        fatG: Math.round(f.fatG / y),
-      });
-      const base = { name: String(f.name), source: 'ifct' as const };
-      const y = COOKED_YIELD[f.code];
+export function ifctSearch(query: string | string[], max = 3) {
+  return rank(
+    query,
+    IFCT_FOODS,
+    (f: any) => [f.name, ...(IFCT_ALIASES[f.code] ?? [])],
+    max,
+  ).flatMap(({ row: f, match }: any) => {
+    const scale = (y: number) => ({
+      kcal: Math.round(f.kcal / y),
+      proteinG: Math.round(f.proteinG / y),
+      carbsG: Math.round(f.carbsG / y),
+      fatG: Math.round(f.fatG / y),
+    });
+    const base = { name: String(f.name), source: 'ifct' as const, match };
+    const y = COOKED_YIELD[f.code];
 
-      if (!y) {
-        const cooked = isCooked(f.name);
-        return [
-          {
-            ...base,
-            id: `ifct-${f.code}`,
-            // The serving text is what the judge reads, and what the user sees
-            // if they open the alternates list — so it must say which weight
-            // this is.
-            serving: cooked ? '100g' : '100g raw (uncooked weight)',
-            state: cooked ? ('as-eaten' as const) : ('raw' as const),
-            ...scale(1),
-          },
-        ];
-      }
-
-      // A staple that absorbs water is genuinely two readings of one food, and
-      // which one applies depends on what the user said: "1 katori rice" is
-      // cooked, "100g dry rice" is raw. Offering only the cooked row made the
-      // judge undercount a weighed-out dry portion ~3x, and contradicted the
-      // prompt, which tells it to pick a raw candidate for "a measured weight
-      // of dry grain". So offer both and let it choose. Cooked comes first:
-      // it is much the commoner way people log these.
+    if (!y) {
+      const cooked = isCooked(f.name);
       return [
         {
           ...base,
-          id: `ifct-${f.code}-cooked`,
-          serving: '100g cooked',
-          state: 'as-eaten' as const,
-          ...scale(y),
-        },
-        {
-          ...base,
-          id: `ifct-${f.code}-raw`,
-          serving: '100g raw (uncooked weight)',
-          state: 'raw' as const,
+          id: `ifct-${f.code}`,
+          // The serving text is what the judge reads, and what the user sees
+          // if they open the alternates list — so it must say which weight
+          // this is.
+          serving: cooked ? '100g' : '100g raw (uncooked weight)',
+          state: cooked ? ('as-eaten' as const) : ('raw' as const),
           ...scale(1),
         },
       ];
-    });
+    }
+
+    // A staple that absorbs water is genuinely two readings of one food, and
+    // which one applies depends on what the user said: "1 katori rice" is
+    // cooked, "100g dry rice" is raw. Offering only the cooked row made the
+    // judge undercount a weighed-out dry portion ~3x, and contradicted the
+    // prompt, which tells it to pick a raw candidate for "a measured weight
+    // of dry grain". So offer both and let it choose. Cooked comes first:
+    // it is much the commoner way people log these.
+    return [
+      {
+        ...base,
+        id: `ifct-${f.code}-cooked`,
+        serving: '100g cooked',
+        state: 'as-eaten' as const,
+        ...scale(y),
+      },
+      {
+        ...base,
+        id: `ifct-${f.code}-raw`,
+        serving: '100g raw (uncooked weight)',
+        state: 'raw' as const,
+        ...scale(1),
+      },
+    ];
+  });
 }
 
 export { COOKED_YIELD, IFCT_ALIASES };

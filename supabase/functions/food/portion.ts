@@ -28,10 +28,13 @@ export function isPer100(serving: string): boolean {
  * The multiplier to apply to a candidate's serving.
  *
  * Deterministic whenever the eaten amount was stated as a weight or measure
- * AND the candidate is per-100g. Otherwise the judge's own quantity stands:
- * for countable servings ("2 roti", "1.5 katori") the model's answer is the
- * right kind of answer, and guessing grams for an unstated portion would
- * replace one estimate with another.
+ * and the candidate's serving names its grams: per 100 g, or a home serving
+ * with its weight ("1 katori (120g)"). The second case used to fall back to
+ * the judge, so "100 grams soya chunks" matched to a 120 g katori logged one
+ * whole katori: the weight the user typed was silently ignored. Otherwise the
+ * judge's own quantity stands: for countable servings ("2 roti", "1.5 katori")
+ * the model's answer is the right kind of answer, and guessing grams for an
+ * unstated portion would replace one estimate with another.
  */
 export function servingMultiplier(
   serving: string,
@@ -39,11 +42,12 @@ export function servingMultiplier(
   judgedQuantity: number,
 ): number {
   const fallback = judgedQuantity > 0 ? judgedQuantity : 1;
-  if (!isPer100(serving)) return fallback;
   const grams = Number(statedGrams);
   if (!Number.isFinite(grams) || grams <= 0) return fallback;
+  const per = isPer100(serving) ? 100 : servingGrams(serving);
+  if (!per) return fallback;
   // Floor at 0.01 so a tiny garnish still logs something rather than zero.
-  return Math.max(0.01, Math.round(grams) / 100);
+  return Math.max(0.01, Math.round((grams / per) * 100) / 100);
 }
 
 /** Grams (or ml) in one serving, when the label names them: "100g" -> 100,

@@ -41,11 +41,20 @@ describe('servingMultiplier', () => {
     expect(Math.round(876 * servingMultiplier('100g', 14, 1))).toBe(123);
   });
 
-  it('keeps the judged quantity for countable servings', () => {
-    // "2 roti" against "1 piece (40g)" is genuinely 2 — grams must not
-    // hijack a serving that is counted rather than weighed.
+  it('honours a stated weight against a home serving that names its grams', () => {
+    // Live case: "100 grams soya chunks" matched a "1 katori (120g)" row and
+    // logged one whole katori, ignoring the 100 g the user typed.
+    expect(servingMultiplier('1 katori (120g)', 100, 1)).toBe(0.83);
+    expect(servingMultiplier('1 katori (150g)', 300, 1)).toBe(2); // "300 g dal tadka"
     expect(servingMultiplier('1 piece (40g)', 80, 2)).toBe(2);
-    expect(servingMultiplier('1 katori (150g)', 150, 1.5)).toBe(1.5);
+  });
+
+  it('keeps the judged quantity for countable servings', () => {
+    // "2 roti" or "1.5 katori" states no weight, and a serving that names no
+    // grams can't be divided into, so the judge's count stands.
+    expect(servingMultiplier('1 piece (40g)', null, 2)).toBe(2);
+    expect(servingMultiplier('1 katori (150g)', null, 1.5)).toBe(1.5);
+    expect(servingMultiplier('1 katori', 150, 1.5)).toBe(1.5);
   });
 
   it('keeps the judged quantity when no amount was stated', () => {

@@ -339,7 +339,10 @@ export const INDIAN_FOODS = [
     "kcal": 240,
     "proteinG": 14,
     "carbsG": 8,
-    "fatG": 17
+    "fatG": 17,
+    "aliases": [
+      "anda curry"
+    ]
   },
   {
     "id": "boiled-egg",
@@ -758,6 +761,23 @@ export const INDIAN_FOODS = [
     ]
   },
   {
+    "id": "soya-chunks",
+    "name": "Soya Chunks (dry)",
+    "serving": "100g",
+    "kcal": 345,
+    "proteinG": 52,
+    "carbsG": 33,
+    "fatG": 0.5,
+    "aliases": [
+      "soya chunks",
+      "soy chunks",
+      "soya nuggets",
+      "soya badi",
+      "meal maker",
+      "nutrela"
+    ]
+  },
+  {
     "id": "soya-curry",
     "name": "Soya Chunk Curry",
     "serving": "1 katori (120g)",
@@ -766,9 +786,9 @@ export const INDIAN_FOODS = [
     "carbsG": 8,
     "fatG": 12,
     "aliases": [
-      "soya chunk",
-      "meal maker",
-      "nutrela"
+      "soya chunk sabzi",
+      "soya sabzi",
+      "meal maker curry"
     ]
   },
   {
