@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import type { MetricRow } from '@/lib/admin/format';
 import {
+  addCreators as insertCreators,
   addMetrics,
   addTouch,
   deleteCreator,
@@ -106,6 +107,21 @@ export function useCrm() {
     [],
   );
 
+  /** Adds many at once; the number added, or null when saving failed. */
+  const addCreators = useCallback(
+    async (rows: CreatorFields[]): Promise<number | null> => {
+      try {
+        const added = await insertCreators(rows);
+        setData((d) => d && { ...d, creators: [...added, ...d.creators] });
+        return added.length;
+      } catch (e) {
+        setError(message(e));
+        return null;
+      }
+    },
+    [],
+  );
+
   const saveDetails = useCallback(
     async (id: string, fields: CreatorFields): Promise<boolean> => {
       try {
@@ -189,6 +205,7 @@ export function useCrm() {
     load,
     patchCreators,
     addCreator,
+    addCreators,
     saveDetails,
     removeCreator,
     logTouch,

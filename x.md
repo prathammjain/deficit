@@ -678,3 +678,21 @@ how to lose (every pace was clamped to 0.25 to 1 kg a week).
 * Orange only means "against the goal": the share card's number and the
   adaptive card's weight trend stay calm when a gainer gains. The share card
   also stopped calling a surplus week "worth about X kg of fat".
+
+## 2026-11-13
+
+### Creators straight from a WhatsApp chat
+
+Creator links pile up in WhatsApp. The CRM now imports them: Import beside
+Export CSV on a laptop, Import from WhatsApp on a phone. Choose the chat
+export (an iPhone's .zip or Android's .txt, Without media) or paste
+messages, and every Instagram, YouTube, X, Threads, TikTok, LinkedIn,
+Facebook, Snapchat and Linktree profile in it is listed once. The same
+handle on two sites is one person. Anyone already in the CRM is marked and
+left unticked. The chosen ones go in as prospects in one step, with the
+message they came in ("powerlifter, Pune, about 180k") and every link in
+their notes. Reels and videos don't say whose they are, so they're listed
+apart to open by hand.
+
+The chat is read in the browser, zip included, with no library and no
+upload: only the creators added are saved.

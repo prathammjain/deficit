@@ -42,6 +42,7 @@ import {
   profileUrl,
 } from './bits';
 import css from './crm.module.css';
+import { ImportPanel } from './import';
 import type { Crm } from './state';
 
 const CHANNELS = ['Instagram', 'WhatsApp', 'Email', 'Call', 'In person'];
@@ -86,6 +87,9 @@ export function CreatorPanel({
 }) {
   if (id === 'new') {
     return <NewCreator crm={crm} onClose={onClose} onCreated={onCreated} />;
+  }
+  if (id === 'import') {
+    return <ImportPanel crm={crm} onClose={onClose} />;
   }
   const creator = crm.data?.creators.find((c) => c.id === id);
   if (!creator) return null;

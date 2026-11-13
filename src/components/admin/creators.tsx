@@ -21,14 +21,23 @@ import { todayKey } from '@/lib/log-store';
 import { listCreators, listMetrics, type Creator } from '@/lib/supabase/admin';
 
 import { CreatorPage } from './creator';
-import { Chips, ErrorLine, Field, Loading, message, ui } from './ui';
+import { CreatorImport } from './creator-import';
+import {
+  Chips,
+  ErrorLine,
+  Field,
+  Loading,
+  QuietButton,
+  message,
+  ui,
+} from './ui';
 
 export function CreatorsView({ adminId }: { adminId: string }) {
   const [creators, setCreators] = useState<Creator[] | null>(null);
   const [metrics, setMetrics] = useState<MetricRow[]>([]);
   const [stage, setStage] = useState<Stage | 'all'>('all');
   const [query, setQuery] = useState('');
-  const [open, setOpen] = useState<Creator | 'new' | null>(null);
+  const [open, setOpen] = useState<Creator | 'new' | 'import' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(
@@ -56,6 +65,18 @@ export function CreatorsView({ adminId }: { adminId: string }) {
     }
     return (id: string) => by.get(id) ?? [];
   }, [metrics]);
+
+  if (open === 'import') {
+    return (
+      <CreatorImport
+        existing={creators ?? []}
+        onClose={(changed) => {
+          setOpen(null);
+          if (changed) void load();
+        }}
+      />
+    );
+  }
 
   if (open) {
     return (
@@ -97,6 +118,11 @@ export function CreatorsView({ adminId }: { adminId: string }) {
         label="Add creator"
         onPress={() => setOpen('new')}
         style={{ marginTop: 16 }}
+      />
+      <QuietButton
+        label="Import from WhatsApp"
+        onPress={() => setOpen('import')}
+        style={{ marginTop: 10 }}
       />
       <ErrorLine text={error} />
 

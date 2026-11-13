@@ -873,6 +873,75 @@ textarea.input {
   line-height: 1.5;
 }
 
+/* ---- Import from WhatsApp ---------------------------------------------- */
+
+.fileInput {
+  display: none;
+}
+
+.importDone {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  line-height: 1.5;
+}
+
+.importList {
+  display: flex;
+  flex-direction: column;
+}
+
+.importRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--soft);
+  cursor: pointer;
+}
+
+.importRow:last-child {
+  border-bottom: 0;
+}
+
+.importRow .check {
+  flex: none;
+  margin-top: 2px;
+}
+
+.importMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.importName {
+  font-weight: 700;
+}
+
+.importContext {
+  color: var(--muted);
+  line-height: 1.45;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.importPost {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.importPost:hover {
+  text-decoration: underline;
+}
+
 /* ---- Pipeline board ---------------------------------------------------- */
 
 .board {

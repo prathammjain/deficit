@@ -167,6 +167,14 @@ export async function saveCreator(
   return data as Creator;
 }
 
+/** Many new creators in one request: the import from a WhatsApp chat. */
+export async function addCreators(rows: CreatorFields[]): Promise<Creator[]> {
+  if (!rows.length) return [];
+  const { data, error } = await db().from('crm_creators').insert(rows).select();
+  if (error) throw error;
+  return (data ?? []) as Creator[];
+}
+
 export async function deleteCreator(id: string): Promise<void> {
   const { error } = await db().from('crm_creators').delete().eq('id', id);
   if (error) throw error;

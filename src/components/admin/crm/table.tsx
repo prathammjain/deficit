@@ -226,7 +226,7 @@ export function CreatorsTable({
     document
       .getElementById(`crm-row-${id}`)
       ?.scrollIntoView({ block: 'nearest' });
-    if (open && open !== 'new') onOpen(id);
+    if (open && open !== 'new' && open !== 'import') onOpen(id);
   };
 
   // Keyboard: only when not typing, and never with a modifier held.
@@ -294,6 +294,9 @@ export function CreatorsTable({
               setCursor(0);
             }}
           />
+          <button className={css.btn} onClick={() => onOpen('import')}>
+            Import
+          </button>
           <button className={css.btn} onClick={exportCsv}>
             Export CSV
           </button>
