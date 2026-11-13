@@ -77,6 +77,7 @@ const SHORTCUTS: [string, string][] = [
   ['Esc', 'Close the panel'],
   ['/', 'Search'],
   ['N', 'New creator'],
+  ['R', 'Refresh'],
   ['X', 'Select the row'],
   ['1 to 7', 'Set the stage'],
   ['T', 'Follow up tomorrow'],
@@ -253,6 +254,7 @@ export function CreatorsTable({
         else if (checked.size) setChecked(new Set());
       } else if (e.key === '/') searchRef.current?.focus();
       else if (key === 'n') onOpen('new');
+      else if (key === 'r') window.location.reload();
       else if (key === 'x' && row) {
         const next = new Set(checked);
         if (next.has(row.creator.id)) next.delete(row.creator.id);
@@ -299,6 +301,13 @@ export function CreatorsTable({
               setCursor(0);
             }}
           />
+          <button
+            className={css.btn}
+            onClick={() => window.location.reload()}
+            title="Reload the CRM with the latest data and app version"
+          >
+            Refresh <Kbd>R</Kbd>
+          </button>
           <button className={css.btn} onClick={() => onOpen('import')}>
             Import
           </button>
