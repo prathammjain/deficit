@@ -3,9 +3,12 @@ import {
   importRows,
   linksIn,
   parseChat,
+  planTelegramMessage,
   profileFromUrl,
   rowToCreator,
   scanChat,
+  telegramReply,
+  type TelegramMessage,
 } from './links';
 
 const ANDROID = [
@@ -256,5 +259,80 @@ describe('chatText', () => {
 
   it('a zip with no chat in it is an error, not an empty import', async () => {
     await expect(chatText(bytes(PHOTO_ZIP))).rejects.toThrow('No chat text');
+  });
+});
+
+describe('the Telegram bot', () => {
+  const msg = (text: string, chat = 42): TelegramMessage => ({
+    message_id: 7,
+    date: 1794543000, // 13 Nov 2026, morning in India
+    chat: { id: chat },
+    from: { first_name: 'Aman' },
+    text,
+  });
+
+  it('adds each new profile as a prospect, with who shared it and when', () => {
+    const plan = planTelegramMessage(
+      msg('Powerlifter, Pune https://www.instagram.com/fit.rahul?igsh=x'),
+      ['42'],
+      [],
+    );
+    expect(plan.kind).toBe('add');
+    if (plan.kind !== 'add') return;
+    expect(plan.creators).toHaveLength(1);
+    expect(plan.creators[0].handle).toBe('@fit.rahul');
+    expect(plan.creators[0].stage).toBe('prospect');
+    expect(plan.creators[0].notes).toBe(
+      'From Telegram, shared by Aman on 13 Nov 2026: Powerlifter, Pune\nInstagram: https://www.instagram.com/fit.rahul/',
+    );
+    expect(telegramReply(plan)).toBe('Added to Waiting: @fit.rahul');
+  });
+
+  it('skips anyone already in the CRM and says so', () => {
+    const plan = planTelegramMessage(
+      msg('https://x.com/coachdev https://www.instagram.com/new.one'),
+      ['42'],
+      [{ handle: '@CoachDev' }],
+    );
+    expect(telegramReply(plan)).toBe(
+      'Added to Waiting: @new.one\nAlready in the CRM: @coachdev',
+    );
+  });
+
+  it('reads links hidden behind words', () => {
+    const plan = planTelegramMessage(
+      {
+        ...msg('this guy'),
+        entities: [
+          { type: 'text_link', url: 'https://www.youtube.com/@liftlab' },
+        ],
+      },
+      ['42'],
+      [],
+    );
+    expect(plan.kind === 'add' && plan.creators[0].handle).toBe('@liftlab');
+  });
+
+  it('only connected chats add anyone; others get their id back', () => {
+    const plan = planTelegramMessage(
+      msg('https://www.instagram.com/fit.rahul', 99),
+      ['42'],
+      [],
+    );
+    expect(plan).toEqual({ kind: 'unknown chat', chatId: '99' });
+    expect(telegramReply(plan)).toContain('99');
+  });
+
+  it('ordinary messages are left alone; reels get a pointer', () => {
+    expect(
+      telegramReply(planTelegramMessage(msg('ok thanks'), ['42'], [])),
+    ).toBeNull();
+    expect(
+      planTelegramMessage(
+        msg('https://www.instagram.com/reel/abc/'),
+        ['42'],
+        [],
+      ),
+    ).toEqual({ kind: 'posts only' });
   });
 });

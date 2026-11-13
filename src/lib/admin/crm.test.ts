@@ -240,3 +240,54 @@ describe('toCsv', () => {
     ).toBe('name,notes\r\nAsha,"likes ""RPE"", sets"\r\nB,');
   });
 });
+
+describe('waiting and the new sorts', () => {
+  it('waiting: a prospect nobody has started on', () => {
+    expect(inView('waiting', creator({}), TODAY)).toBe(true);
+    expect(inView('waiting', creator({}), TODAY, true)).toBe(false);
+    expect(
+      inView('waiting', creator({ next_follow_up: '2026-11-12' }), TODAY),
+    ).toBe(false);
+    expect(inView('waiting', creator({ stage: 'contacted' }), TODAY)).toBe(
+      false,
+    );
+  });
+
+  const rows = buildRows(
+    [
+      creator({
+        id: 'a',
+        name: 'Asha',
+        niche: 'Powerlifting',
+        created_at: '2026-11-03T09:00:00Z',
+      }),
+      creator({
+        id: 'b',
+        name: 'Bilal',
+        niche: null,
+        created_at: '2026-11-05T09:00:00Z',
+      }),
+      creator({
+        id: 'c',
+        name: 'Chetan',
+        niche: 'Bodybuilding',
+        created_at: '2026-11-01T09:00:00Z',
+      }),
+    ],
+    [],
+    [],
+    TODAY,
+  );
+  const names = (key: 'added' | 'niche', dir: 1 | -1) =>
+    sortRows(rows, key, dir).map((r) => r.creator.name);
+
+  it('by time added, newest or oldest first', () => {
+    expect(names('added', -1)).toEqual(['Bilal', 'Asha', 'Chetan']);
+    expect(names('added', 1)).toEqual(['Chetan', 'Asha', 'Bilal']);
+  });
+
+  it('by niche, with no niche last either way', () => {
+    expect(names('niche', 1)).toEqual(['Chetan', 'Asha', 'Bilal']);
+    expect(names('niche', -1)).toEqual(['Asha', 'Chetan', 'Bilal']);
+  });
+});

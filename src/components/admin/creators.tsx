@@ -16,6 +16,7 @@ import {
   type MetricRow,
   type Stage,
 } from '@/lib/admin/format';
+import { buildRows, sortRows, type SortKey } from '@/lib/admin/crm';
 import { shortDate } from '@/lib/date';
 import { todayKey } from '@/lib/log-store';
 import { listCreators, listMetrics, type Creator } from '@/lib/supabase/admin';
@@ -32,11 +33,21 @@ import {
   ui,
 } from './ui';
 
+/** Ways to order the list: the laptop's sort menu, cut to what fits. */
+const PHONE_SORTS = [
+  { value: 'urgency:1', label: 'Needs you' },
+  { value: 'added:-1', label: 'Newest' },
+  { value: 'followers:-1', label: 'Most followers' },
+  { value: 'niche:1', label: 'Niche' },
+  { value: 'name:1', label: 'Name' },
+];
+
 export function CreatorsView({ adminId }: { adminId: string }) {
   const [creators, setCreators] = useState<Creator[] | null>(null);
   const [metrics, setMetrics] = useState<MetricRow[]>([]);
   const [stage, setStage] = useState<Stage | 'all'>('all');
   const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<string>('urgency:1');
   const [open, setOpen] = useState<Creator | 'new' | 'import' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -108,9 +119,19 @@ export function CreatorsView({ adminId }: { adminId: string }) {
       return f === 'overdue' || f === 'today';
     })
     .sort((a, b) => a.next_follow_up!.localeCompare(b.next_follow_up!));
-  const shown = creators.filter(
-    (c) => (stage === 'all' || c.stage === stage) && matches(c),
-  );
+  const [sortKey, sortDir] = sort.split(':') as [SortKey, string];
+  const shown = sortRows(
+    buildRows(
+      creators.filter(
+        (c) => (stage === 'all' || c.stage === stage) && matches(c),
+      ),
+      metrics,
+      [],
+      today,
+    ),
+    sortKey,
+    sortDir === '1' ? 1 : -1,
+  ).map((r) => r.creator);
 
   return (
     <View>
@@ -157,6 +178,7 @@ export function CreatorsView({ adminId }: { adminId: string }) {
           value={stage}
           onChange={setStage}
         />
+        <Chips options={PHONE_SORTS} value={sort} onChange={setSort} />
         <Field
           placeholder="Search name, handle, niche or city"
           value={query}

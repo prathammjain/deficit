@@ -91,6 +91,7 @@ export function engagement(rows: MetricRow[]): number | null {
 
 export const VIEWS = [
   { value: 'action', label: 'Needs action' },
+  { value: 'waiting', label: 'Waiting' },
   { value: 'all', label: 'All' },
   { value: 'roster', label: 'Roster' },
   { value: 'prospects', label: 'Prospects' },
@@ -111,10 +112,27 @@ export function needsAction(c: CreatorLike, today: string): boolean {
   return c.stage === 'replied' && !c.next_follow_up;
 }
 
-export function inView(view: View, c: CreatorLike, today: string): boolean {
+/**
+ * Waiting: a prospect nobody has started on yet. No touch logged and no
+ * follow up set, which is how links from Telegram and imports arrive. Any
+ * touch, follow up or stage change moves them on.
+ */
+export function isWaiting(c: CreatorLike, touched: boolean): boolean {
+  return c.stage === 'prospect' && !c.next_follow_up && !touched;
+}
+
+export function inView(
+  view: View,
+  c: CreatorLike,
+  today: string,
+  /** Whether any touch is logged for them (only Waiting needs it). */
+  touched = false,
+): boolean {
   switch (view) {
     case 'action':
       return needsAction(c, today);
+    case 'waiting':
+      return isWaiting(c, touched);
     case 'all':
       return c.stage !== 'declined';
     case 'roster':
@@ -186,7 +204,25 @@ export type SortKey =
   | 'growth'
   | 'engagement'
   | 'lastTouch'
-  | 'followUp';
+  | 'followUp'
+  | 'added'
+  | 'niche';
+
+/** The sort menu: every way the table can be ordered, in plain words. */
+export const SORTS: { key: SortKey; dir: 1 | -1; label: string }[] = [
+  { key: 'urgency', dir: 1, label: 'Needs you first' },
+  { key: 'added', dir: -1, label: 'Newest added' },
+  { key: 'added', dir: 1, label: 'Oldest added' },
+  { key: 'followers', dir: -1, label: 'Most followers' },
+  { key: 'followers', dir: 1, label: 'Fewest followers' },
+  { key: 'growth', dir: -1, label: 'Fastest growing' },
+  { key: 'engagement', dir: -1, label: 'Best engagement' },
+  { key: 'niche', dir: 1, label: 'Niche, A to Z' },
+  { key: 'name', dir: 1, label: 'Name, A to Z' },
+  { key: 'stage', dir: 1, label: 'Stage' },
+  { key: 'lastTouch', dir: -1, label: 'Contacted most recently' },
+  { key: 'followUp', dir: 1, label: 'Next follow up' },
+];
 
 /** Missing values always sort last, whichever way the column runs. */
 function compareMaybe<T>(
@@ -225,6 +261,9 @@ export function sortRows<C extends CreatorLike>(
         text,
         dir,
       ),
+    added: (a, b) => text(a.creator.created_at, b.creator.created_at) * dir,
+    niche: (a, b) =>
+      compareMaybe(a.creator.niche || null, b.creator.niche || null, text, dir),
   };
   // Ties fall back to the biggest audience, then the name.
   return [...rows].sort(

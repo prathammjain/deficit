@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useWindowDimensions } from 'react-native';
 
 import {
+  SORTS,
   VIEWS,
   buildRows,
   funnel,
@@ -60,7 +61,7 @@ const COLUMNS: {
 }[] = [
   { key: 'name', label: 'Creator' },
   { key: 'stage', label: 'Stage' },
-  { key: null, label: 'Niche', wide: true, fit: 'fit2' },
+  { key: 'niche', label: 'Niche', wide: true, fit: 'fit2' },
   { key: null, label: 'City', wide: true, fit: 'fit1' },
   { key: 'followers', label: 'Followers', num: true },
   { key: 'growth', label: 'Growth', num: true, wide: true, fit: 'fit2' },
@@ -129,7 +130,9 @@ export function CreatorsTable({
     () =>
       sortRows(
         all.filter(
-          (r) => inView(view, r.creator, today) && matches(r.creator, q),
+          (r) =>
+            inView(view, r.creator, today, r.lastTouch != null) &&
+            matches(r.creator, q),
         ),
         sort.key,
         sort.dir,
@@ -151,7 +154,9 @@ export function CreatorsTable({
       views: Object.fromEntries(
         VIEWS.map((v) => [
           v.value,
-          creators.filter((c) => inView(v.value, c, today)).length,
+          all.filter((r) =>
+            inView(v.value, r.creator, today, r.lastTouch != null),
+          ).length,
         ]),
       ) as Record<View, number>,
     };
@@ -415,9 +420,33 @@ export function CreatorsTable({
             </button>
           </div>
         ) : (
-          <button className={css.hint} onClick={() => setHelp(true)}>
-            Keyboard shortcuts <Kbd>?</Kbd>
-          </button>
+          <>
+            <select
+              className={css.sortSelect}
+              aria-label="Sort"
+              value={
+                SORTS.findIndex(
+                  (s) => s.key === sort.key && s.dir === sort.dir,
+                ) + ''
+              }
+              onChange={(e) => {
+                const s = SORTS[Number(e.target.value)];
+                if (s) setSort({ key: s.key, dir: s.dir });
+              }}
+            >
+              <option value="-1" hidden>
+                Sorted by column
+              </option>
+              {SORTS.map((s, i) => (
+                <option key={s.label} value={i}>
+                  Sort: {s.label}
+                </option>
+              ))}
+            </select>
+            <button className={css.hint} onClick={() => setHelp(true)}>
+              Keyboard shortcuts <Kbd>?</Kbd>
+            </button>
+          </>
         )}
       </div>
 
@@ -430,7 +459,9 @@ export function CreatorsTable({
               ? 'No creators yet. Press N to add the first one you are reaching out to.'
               : view === 'action' && !q
                 ? 'Nothing needs you right now. Every follow up is in the future.'
-                : 'No one matches.'}
+                : view === 'waiting' && !q
+                  ? 'Nothing waiting. Links sent to the Telegram bot and imports land here.'
+                  : 'No one matches.'}
           </div>
         ) : (
           <table className={cx(css.table, compactCols && css.compact)}>

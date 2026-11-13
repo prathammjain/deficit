@@ -696,3 +696,25 @@ apart to open by hand.
 
 The chat is read in the browser, zip included, with no library and no
 upload: only the creators added are saved.
+
+### A Telegram bot that files creators, and sorting the CRM
+
+Importing a chat is for the backlog. For new finds, the CRM has a Telegram
+bot: send a profile link to the chat it's in and the creator lands in the
+CRM within seconds, with who shared it and when in their notes. The bot
+replies "Added to Waiting: @handle", or says they're already in. Links in
+messages without a handle (reels, videos) get a pointer to open them by
+hand.
+
+Telegram, not WhatsApp, because cost was the rule: Telegram's Bot API is
+free and can sit in any group. WhatsApp's Cloud API needs its own business
+number and a Meta business app, and even then it can't read a personal
+chat or a group you already use. The bot is one Supabase edge function,
+the same link reader the import uses, guarded by Telegram's webhook secret
+and a list of allowed chat ids.
+
+The CRM gained a Waiting view: prospects nobody has touched or planned a
+follow up for, which is where imports and the bot put new creators. It also
+sorts on anything: newest or oldest added, most or fewest followers, growth,
+engagement, niche, name, stage, last contact, next follow up. The niche
+column sorts too, and the phone has the five sorts that matter most.

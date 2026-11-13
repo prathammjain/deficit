@@ -75,7 +75,9 @@ export function CreatorImport({
 
   const add = async () => {
     if (!found || busy) return;
-    const rows = found.rows.filter((r) => chosen.has(r.key)).map(rowToCreator);
+    const rows = found.rows
+      .filter((r) => chosen.has(r.key))
+      .map((r) => rowToCreator(r));
     if (!rows.length) return;
     setBusy(true);
     try {
