@@ -352,6 +352,13 @@
       count: true,
     },
     {
+      n: 'Chocolate ice cream',
+      a: ['chocolate ice cream', 'ice cream', 'icecream', 'chocolate icecream'],
+      m: [216, 3.8, 28.2, 11],
+      scoop: 66,
+      def: 66,
+    },
+    {
       n: 'Gulab jamun',
       a: ['gulab jamun', 'gulab jamuns'],
       s: ['1 piece', 150, 2, 25, 5],
@@ -536,14 +543,16 @@
       grams == null &&
       (!unit || /^(slices?|pieces?|pcs?)$/.test(unit))
         ? `${n} ${(food.pn ?? ['piece', 'pieces'])[n === 1 ? 0 : 1]}, `
-        : spoon || scoop
-          ? `${n} ${unit
-              .replace(/(oons?|s)$/, '')
-              .replace(/^tablesp$/, 'tbsp')
-              .replace(/^teasp$/, 'tsp')}, `
-          : unit && unit in MEASURES
-            ? `${n} ${unit.replace(/(e?s)$/, '')}, `
-            : '';
+        : scoop
+          ? `${n} ${n === 1 ? 'scoop' : 'scoops'}, `
+          : spoon
+            ? `${n} ${unit
+                .replace(/(oons?|s)$/, '')
+                .replace(/^tablesp$/, 'tbsp')
+                .replace(/^teasp$/, 'tsp')}, `
+            : unit && unit in MEASURES
+              ? `${n} ${unit.replace(/(e?s)$/, '')}, `
+              : '';
     return {
       name: food.n,
       sub: `${what}${fmt(g)} ${food.ml ? 'ml' : 'g'}${assumed ? ', amount assumed' : ''}`,
@@ -669,7 +678,7 @@
       ['Chicken biryani', '1 plate chicken biryani'],
     ],
     late: [
-      ['2 gulab jamun', '2 gulab jamun'],
+      ['Chocolate ice cream', '2 scoops chocolate ice cream'],
       ['Khichdi', '1 bowl khichdi'],
       ['Peanut butter toast', '2 bread, 2 tbsp peanut butter'],
     ],

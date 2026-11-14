@@ -849,10 +849,11 @@ site, it went.
 
 - The hero phone keeps the visitor's clock. The status bar shows their time,
   the "Try one" meals follow the hour (breakfast, lunch, chai and samosa,
-  2 am gulab jamun), and after midnight the phone shows the app's real
+  2 am chocolate ice cream), and after midnight the phone shows the app's real
   "Past midnight? Log it to Saturday" hint, which works.
 - GrainAI roasts in the demo now, using the visitor's real time: "logging
-  gulab jamun at 1:10 am is honest. eating it at 1:10 am is a choice."
+  chocolate ice cream at 1:10 am is honest. eating it at 1:10 am is a
+  choice."
   Aimed at the hour and the food, never the body, same as the app.
 - Numbers settle like a kitchen scale instead of counting up from zero:
   they jump past the reading, swing back and steady, last digits only. The
