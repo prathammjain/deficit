@@ -838,3 +838,40 @@ a missed day, so it now shows what changed:
 - The home screen tile now says Grain works on any phone: exact taps on an
   iPhone, one tap from Instagram to Safari or Chrome.
 - Search title and description mention GrainAI and filling in missed days.
+
+## 2026-11-15
+
+### The landing page moves, quietly
+
+The rule: every animation has to show something true about Grain, play once,
+and never touch the words. If it would look the same on any other startup's
+site, it went.
+
+- The hero phone keeps the visitor's clock. The status bar shows their time,
+  the "Try one" meals follow the hour (breakfast, lunch, chai and samosa,
+  2 am gulab jamun), and after midnight the phone shows the app's real
+  "Past midnight? Log it to Saturday" hint, which works.
+- GrainAI roasts in the demo now, using the visitor's real time: "logging
+  gulab jamun at 1:10 am is honest. eating it at 1:10 am is a choice."
+  Aimed at the hour and the food, never the body, same as the app.
+- Numbers settle like a kitchen scale instead of counting up from zero:
+  they jump past the reading, swing back and steady, last digits only. The
+  deficit total, the learned maintenance and the two rice scales.
+- In "The engine behind every number" each typed phrase flies from the box
+  into its own row, and the used words dim. Words turning into numbers is
+  the whole pitch, now it can be watched.
+- A floating bar appears once the hero is behind you: the logo and Open
+  Grain. The logo's 17 dots light up one by one as you read; the last
+  lights at the end, where the bar steps aside for the closing card.
+- The headline's full stop is an orange grain that drops in a beat after
+  load.
+- The closing card has the signature moment: 17 rice shaped grains pour
+  into the dot matrix g, bottom row first like a measuring cup, and round
+  into dots as they land. Grains become Grain.
+- Smaller: a missed day stays an empty gap while the bars around it grow,
+  Friday's ring thickens into a full day, the proof card names its sources
+  (USDA, IFCT) on hover or tap, and buttons press like a hardware key.
+
+With reduced motion on, all of it shows its finished state. Left out on
+purpose: parallax, scroll jacking, custom cursors, a spinning phone, and a
+background that changes per section (the page is plain white by design).

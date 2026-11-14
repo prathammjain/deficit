@@ -633,6 +633,112 @@
     check: '<em class="p-warn">check amount</em>',
   };
 
+  // ---------------------------------------------------------------- The time
+
+  // The phone keeps the visitor's own clock: the status bar, what it suggests
+  // eating, GrainAI's line, and the past midnight hint all follow it.
+  const now = () => new Date();
+  const hour = () => now().getHours();
+  const shortTime = (d = now()) =>
+    `${d.getHours() % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const spokenTime = (d = now()) =>
+    `${shortTime(d)} ${d.getHours() < 12 ? 'am' : 'pm'}`;
+
+  const clockEl = $('[data-p-now]');
+  const tickClock = () => {
+    clockEl.textContent = shortTime();
+  };
+  tickClock();
+  setInterval(tickClock, 15000);
+
+  // [label, what it types], by the hour it is for the visitor.
+  const MEALS = {
+    morning: [
+      ['3 eggs, toast', '3 eggs, 2 toast, 1 tbsp butter'],
+      ['Aloo paratha, curd', '2 aloo paratha, 1 katori curd'],
+      ['Idli, chai', '3 idli, 1 cup masala chai'],
+    ],
+    midday: [
+      ['Chicken and rice', '200 g chicken breast, 150 g rice, 1 tbsp ghee'],
+      ['Roti, dal, curd', '3 roti, 1 katori dal tadka, 1 katori curd'],
+      ['Rajma chawal', '1 katori rajma, 1 plate rice'],
+    ],
+    evening: [
+      ['Samosa, chai', '1 samosa, 1 cup masala chai'],
+      ['Paneer, naan', '1 katori paneer butter masala, 2 naan'],
+      ['Chicken biryani', '1 plate chicken biryani'],
+    ],
+    late: [
+      ['2 gulab jamun', '2 gulab jamun'],
+      ['Khichdi', '1 bowl khichdi'],
+      ['Peanut butter toast', '2 bread, 2 tbsp peanut butter'],
+    ],
+  };
+  const period = (h = hour()) =>
+    h >= 5 && h < 11
+      ? 'morning'
+      : h >= 11 && h < 16
+        ? 'midday'
+        : h >= 16 && h < 21
+          ? 'evening'
+          : 'late';
+
+  function paintSuggestions() {
+    const label = suggest.querySelector('.p-label');
+    suggest.innerHTML = '';
+    suggest.append(label);
+    for (const [name, meal] of MEALS[period()]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'p-chip';
+      b.dataset.pTry = meal;
+      b.textContent = name;
+      suggest.append(b);
+    }
+  }
+  paintSuggestions();
+
+  // GrainAI's line: the app's roast voice, aimed at the hour and the food,
+  // never at the body.
+  function roastLine(food) {
+    const t = spokenTime();
+    const f = food.toLowerCase();
+    const h = hour();
+    if (h < 5)
+      return `logging ${f} at ${t} is honest. eating it at ${t} is a choice.`;
+    if (h < 11)
+      return 'an actual breakfast before 11. who are you and what did you do with the snooze button.';
+    if (h < 16)
+      return `${f} at lunch. solid. don't undo it at 5 with chai and four biscuits.`;
+    if (h < 21)
+      return `${f} at ${t}. respectable. the 11 pm snack is already watching.`;
+    return `${t}. this is usually where the plan dies. ${f} says not tonight.`;
+  }
+
+  // Between midnight and 4 the day before is one tap away, as in the app.
+  const lateBtn = $('[data-p-late]');
+  const dayLabel = $('[data-p-day]');
+  let onYesterday = false;
+  const yesterdayName = () => {
+    const d = now();
+    d.setDate(d.getDate() - 1);
+    return d.toLocaleDateString('en-GB', { weekday: 'long' });
+  };
+  function paintLate() {
+    const late = hour() < 4;
+    lateBtn.hidden = !late;
+    if (!late) onYesterday = false;
+    lateBtn.textContent = onYesterday
+      ? 'Filling in yesterday. Back to today'
+      : `Past midnight? Log it to ${yesterdayName()}`;
+    dayLabel.textContent = onYesterday ? 'Yesterday' : 'Today';
+  }
+  paintLate();
+  lateBtn.addEventListener('click', () => {
+    onYesterday = !onYesterday;
+    paintLate();
+  });
+
   function showResults(items) {
     current = items.filter((i) => !i.miss);
     const misses = items.filter((i) => i.miss);
@@ -641,6 +747,9 @@
       { kcal: 0, p: 0 },
     );
     results.innerHTML =
+      (current.length
+        ? `<div class="p-roast"><span>GrainAI</span><p>${esc(roastLine(current.reduce((a, b) => (b.kcal > a.kcal ? b : a)).name))}</p></div>`
+        : '') +
       current
         .slice(0, 4)
         .map(

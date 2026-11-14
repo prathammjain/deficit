@@ -47,11 +47,26 @@
     match.classList.remove('is-pressed');
     card.classList.remove('is-typing');
 
+    // Each phrase lifts out of the box and lands as its own row, so the
+    // step from words to numbers is something you can watch.
     steps[1].classList.add('is-on');
-    for (const row of card.querySelectorAll('.ui-row, .ui-total')) {
-      await wait(260);
-      row.classList.add('is-on');
+    const phrases = full.split(/,\s*/);
+    const rows = [...card.querySelectorAll('.ui-row')];
+    text.innerHTML = phrases
+      .map((p) => `<span class="fly-src">${p}</span>`)
+      .join(', ');
+    const srcs = text.querySelectorAll('.fly-src');
+    for (let i = 0; i < rows.length; i++) {
+      await wait(i ? 300 : 160);
+      if (srcs[i] && rows.length === phrases.length) {
+        flyTo(srcs[i], rows[i].querySelector('b'), phrases[i]);
+        await wait(420);
+      }
+      rows[i].classList.add('is-on');
     }
+    await wait(260);
+    card.querySelector('.ui-total').classList.add('is-on');
+    text.textContent = full;
 
     await wait(400);
     steps[2].classList.add('is-on');
@@ -61,6 +76,33 @@
     card.querySelector('.ui-chips').classList.add('is-on');
     await wait(400);
     delete card.dataset.playing;
+  }
+
+  // A copy of the phrase travels from where it was typed to where its row
+  // lands, and the original dims to show it has been used.
+  function flyTo(from, to, label) {
+    const a = from.getBoundingClientRect();
+    const b = to.getBoundingClientRect();
+    const ghost = document.createElement('span');
+    ghost.className = 'fly-ghost';
+    ghost.textContent = label;
+    const cs = getComputedStyle(from);
+    ghost.style.cssText = `left:${a.left}px;top:${a.top}px;font:${cs.fontWeight} ${cs.fontSize}/${a.height}px ${cs.fontFamily}`;
+    document.body.append(ghost);
+    from.classList.add('is-used');
+    ghost
+      .animate(
+        [
+          { transform: 'translate(0, 0)', opacity: 1 },
+          { opacity: 1, offset: 0.7 },
+          {
+            transform: `translate(${b.left - a.left}px, ${b.top - a.top}px)`,
+            opacity: 0,
+          },
+        ],
+        { duration: 560, easing: 'cubic-bezier(0.5, 0, 0.2, 1)' },
+      )
+      .finished.then(() => ghost.remove());
   }
 
   // ---- Calendar: step through a few past days ----
@@ -164,12 +206,18 @@
     if (el.matches('[data-flow]')) playFlow(el);
     if (el.matches('[data-catch]')) playCatch(el);
     if (el.matches('.feat-deficit')) {
+      // Settles once the bars have grown, the way a total is read last.
       const n = el.querySelector('[data-count-to]');
-      countTo(n, 0, Number(n.dataset.countTo), 1400);
+      n.textContent = '0';
+      await wait(900);
+      window.GrainMotion?.settle(n, Number(n.dataset.countTo), { rise: true });
     }
     if (el.matches('.feat-target')) {
       await wait(2000);
       el.classList.add('is-learned');
+      const n = el.querySelector('[data-settle]');
+      await wait(250);
+      window.GrainMotion?.settle(n, Number(n.dataset.settle), { swing: 0.01 });
     }
     if (el.matches('.feat-home')) {
       const add = el.querySelector('.home-add');

@@ -18,6 +18,21 @@
       el.textContent = fmt(el, to);
       return;
     }
+    // A scale doesn't count; it jumps past the reading and steadies.
+    if (el.closest('.scale') && window.GrainMotion) {
+      el.textContent = fmt(el, 0);
+      setTimeout(
+        () =>
+          window.GrainMotion.settle(el, to, {
+            suffix: el.dataset.suffix,
+            swing: 0.06,
+            rise: true,
+            step: 95,
+          }),
+        delay,
+      );
+      return;
+    }
     el.textContent = fmt(el, 0);
     setTimeout(() => {
       const start = performance.now();

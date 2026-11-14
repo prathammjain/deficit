@@ -104,6 +104,37 @@
       </a>
     </header>
 
+    <div class="pill" data-pill>
+      <a class="pill-mark" href="#" aria-label="Back to the top">
+        <svg viewBox="0 0 5 7" aria-hidden="true">
+          <circle cx="1.5" cy="0.5" r="0.4"/>
+          <circle cx="2.5" cy="0.5" r="0.4"/>
+          <circle cx="3.5" cy="0.5" r="0.4"/>
+          <circle cx="0.5" cy="1.5" r="0.4"/>
+          <circle cx="4.5" cy="1.5" r="0.4"/>
+          <circle cx="0.5" cy="2.5" r="0.4"/>
+          <circle cx="4.5" cy="2.5" r="0.4"/>
+          <circle cx="1.5" cy="3.5" r="0.4"/>
+          <circle cx="2.5" cy="3.5" r="0.4"/>
+          <circle cx="3.5" cy="3.5" r="0.4"/>
+          <circle cx="4.5" cy="3.5" r="0.4"/>
+          <circle cx="4.5" cy="4.5" r="0.4"/>
+          <circle cx="0.5" cy="5.5" r="0.4"/>
+          <circle cx="4.5" cy="5.5" r="0.4"/>
+          <circle cx="1.5" cy="6.5" r="0.4"/>
+          <circle cx="2.5" cy="6.5" r="0.4"/>
+          <circle cx="3.5" cy="6.5" r="0.4"/>
+        </svg>
+        Grain
+      </a>
+      <a class="cta cta-small" href="https://app.getgrain.fit">
+        <span class="cta-label">Open Grain</span>
+        <span class="cta-arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M9 6l6 6l-6 6" /></svg>
+        </span>
+      </a>
+    </div>
+
     <main>
       <section class="hero wrap">
         <div class="hint hint-left hint-hero" aria-hidden="true"></div>
@@ -122,7 +153,7 @@
           </a>
           <h1>
             <span class="tone">Food tracking for people who give a f***</span>
-            about every gram.
+            about every gram<span class="h1-stop">.</span>
           </h1>
           <p class="lede">
             A photo can't see the oil in the pan or the chicken under the rice.
@@ -148,7 +179,8 @@
             >
               <span class="glare" aria-hidden="true"></span>
               <div class="status">
-                <span>9:41</span><span class="island" aria-hidden="true"></span
+                <span data-p-now>9:41</span
+                ><span class="island" aria-hidden="true"></span
                 ><span class="status-icons"
                   ><svg viewBox="0 0 18 12" width="17" height="11">
                     <rect x="0" y="8" width="3" height="4" rx="1" />
@@ -187,8 +219,9 @@
               </div>
 
               <div class="p-panel" data-p-log role="tabpanel" aria-label="Log">
-                <div class="app-label">Today</div>
+                <div class="app-label" data-p-day>Today</div>
                 <div class="app-title">Daily log</div>
+                <button type="button" class="p-late" data-p-late hidden></button>
 
                 <div class="app-card summary">
                   <div class="summary-top">
@@ -842,14 +875,17 @@
           <div class="m-row">
             <div>
               <b>Chicken breast</b><span class="badge ok">✓ good match</span>
-              <em>200 g cooked</em>
+              <em>200 g cooked <span class="src">USDA</span></em>
             </div>
             <strong>330</strong>
           </div>
           <div class="m-row m-open">
             <div>
               <b>Paneer</b><span class="badge warn">check this</span>
-              <em>150 g <span class="change">change</span></em>
+              <em
+                >150 g <span class="change">change</span>
+                <span class="src">IFCT</span></em
+              >
             </div>
             <strong class="swap"
               ><span class="was">398</span><span class="now">270</span></strong
@@ -858,10 +894,12 @@
           <div class="m-alts">
             <p>Database 398 kcal vs AI estimate ~280 kcal.</p>
             <div class="alt">
-              <span>Paneer, full fat</span><em>100 g</em><b>265</b>
+              <span>Paneer, full fat</span><em>100 g</em
+              ><i class="src">IFCT</i><b>265</b>
             </div>
             <div class="alt alt-pick">
-              <span>Paneer, low fat</span><em>100 g</em><b>180</b>
+              <span>Paneer, low fat</span><em>100 g</em
+              ><i class="src">USDA</i><b>180</b>
             </div>
           </div>
           <div class="m-total">
@@ -1060,7 +1098,9 @@
               </div>
               <div class="target-learned">
                 <p class="ui-caption">Your real maintenance</p>
-                <p class="ui-big">2,740<small>kcal</small></p>
+                <p class="ui-big">
+                  <span data-settle="2740">2,740</span><small>kcal</small>
+                </p>
                 <div class="ui-stats">
                   <span><b>↓ 0.4 kg</b> a week</span>
                   <span><b>+140</b> vs formula</span>
@@ -1499,6 +1539,25 @@
               <span class="tone">the way you'd describe it.</span>
             </p>
           </div>
+          <svg class="pour" data-pour viewBox="0 0 5 7" aria-hidden="true">
+            <circle cx="1.5" cy="0.5" r="0.4"/>
+            <circle cx="2.5" cy="0.5" r="0.4"/>
+            <circle cx="3.5" cy="0.5" r="0.4"/>
+            <circle cx="0.5" cy="1.5" r="0.4"/>
+            <circle cx="4.5" cy="1.5" r="0.4"/>
+            <circle cx="0.5" cy="2.5" r="0.4"/>
+            <circle cx="4.5" cy="2.5" r="0.4"/>
+            <circle cx="1.5" cy="3.5" r="0.4"/>
+            <circle cx="2.5" cy="3.5" r="0.4"/>
+            <circle cx="3.5" cy="3.5" r="0.4"/>
+            <circle cx="4.5" cy="3.5" r="0.4"/>
+            <circle cx="4.5" cy="4.5" r="0.4"/>
+            <circle cx="0.5" cy="5.5" r="0.4"/>
+            <circle cx="4.5" cy="5.5" r="0.4"/>
+            <circle cx="1.5" cy="6.5" r="0.4"/>
+            <circle cx="2.5" cy="6.5" r="0.4"/>
+            <circle cx="3.5" cy="6.5" r="0.4"/>
+          </svg>
           <a class="cta" href="https://app.getgrain.fit">
             <span class="cta-label">Open Grain</span>
             <span class="cta-arrow" aria-hidden="true">
@@ -1519,6 +1578,7 @@
       >
     </footer>
 
+    <script src="delight.js" defer></script>
     <script src="proto.js" defer></script>
     <script src="tiles.js" defer></script>
     <script src="custom.js" defer></script>
