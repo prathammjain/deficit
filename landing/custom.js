@@ -11,7 +11,7 @@
   // list, so the loop picks up after them and each entry has left the list by
   // the time it comes round again.
   const foods = [
-    ["Mom's rajma, worked out once", 320, 14],
+    ["Mom's lasagna, worked out once", 420, 24],
     ['Cafe chicken wrap, from the menu', 480, 36],
     ['Protein bar, from the label', 210, 20],
     ['Greek yogurt cup, from the pack', 120, 10],

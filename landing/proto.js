@@ -664,22 +664,25 @@
   const MEALS = {
     morning: [
       ['3 eggs, toast', '3 eggs, 2 toast, 1 tbsp butter'],
-      ['Aloo paratha, curd', '2 aloo paratha, 1 katori curd'],
-      ['Idli, chai', '3 idli, 1 cup masala chai'],
+      ['Greek yogurt, banana', '200 g greek yogurt, 1 banana, 1 tsp honey'],
+      ['Avocado toast', '2 bread, 1 avocado, 2 eggs'],
     ],
     midday: [
-      ['Chicken and rice', '200 g chicken breast, 150 g rice, 1 tbsp ghee'],
-      ['Roti, dal, curd', '3 roti, 1 katori dal tadka, 1 katori curd'],
-      ['Rajma chawal', '1 katori rajma, 1 plate rice'],
+      [
+        'Chicken and rice',
+        '200 g chicken breast, 150 g rice, 1 tbsp olive oil',
+      ],
+      ['Pasta and chicken', '150 g pasta, 150 g chicken breast'],
+      ['Tuna sandwich', '100 g tuna, 2 bread, 1 tbsp butter'],
     ],
     evening: [
-      ['Samosa, chai', '1 samosa, 1 cup masala chai'],
-      ['Paneer, naan', '1 katori paneer butter masala, 2 naan'],
-      ['Chicken biryani', '1 plate chicken biryani'],
+      ['Apple and peanut butter', '1 apple, 2 tbsp peanut butter'],
+      ['Salmon and rice', '150 g salmon, 1 cup rice'],
+      ['Protein shake', '1 scoop whey, 1 cup milk, 1 banana'],
     ],
     late: [
       ['Chocolate ice cream', '2 scoops chocolate ice cream'],
-      ['Khichdi', '1 bowl khichdi'],
+      ['Leftover pasta', '1 plate pasta'],
       ['Peanut butter toast', '2 bread, 2 tbsp peanut butter'],
     ],
   };
@@ -718,7 +721,7 @@
     if (h < 11)
       return 'an actual breakfast before 11. who are you and what did you do with the snooze button.';
     if (h < 16)
-      return `${f} at lunch. solid. don't undo it at 5 with chai and four biscuits.`;
+      return `${f} at lunch. solid. don't undo it at 5 with a coffee and four cookies.`;
     if (h < 21)
       return `${f} at ${t}. respectable. the 11 pm snack is already watching.`;
     return `${t}. this is usually where the plan dies. ${f} says not tonight.`;
@@ -748,6 +751,10 @@
     paintLate();
   });
 
+  // A suggestion is roasted by its own name ("tuna sandwich"); a typed meal
+  // by its biggest item.
+  let mealName = null;
+
   function showResults(items) {
     current = items.filter((i) => !i.miss);
     const misses = items.filter((i) => i.miss);
@@ -757,7 +764,7 @@
     );
     results.innerHTML =
       (current.length
-        ? `<div class="p-roast"><span>GrainAI</span><p>${esc(roastLine(current.reduce((a, b) => (b.kcal > a.kcal ? b : a)).name))}</p></div>`
+        ? `<div class="p-roast"><span>GrainAI</span><p>${esc(roastLine(mealName ?? current.reduce((a, b) => (b.kcal > a.kcal ? b : a)).name))}</p></div>`
         : '') +
       current
         .slice(0, 4)
@@ -780,6 +787,7 @@
   }
 
   function clearLog() {
+    mealName = null;
     current = [];
     results.innerHTML = '';
     log.classList.remove('is-matched');
@@ -831,6 +839,7 @@
     }
   });
   input.addEventListener('input', () => {
+    mealName = null;
     if (log.classList.contains('is-matched')) clearLog();
   });
   log.addEventListener('click', (e) => {
@@ -843,6 +852,7 @@
       input.focus();
     }
     if (t.matches('[data-p-try]')) {
+      mealName = t.textContent.trim();
       input.value = t.dataset.pTry;
       match();
     }
@@ -1175,7 +1185,7 @@
     root.classList.remove('is-demo');
   }
 
-  const MEAL = '2 roti, 1 katori dal, 150 g paneer';
+  const MEAL = '150 g salmon, rice, 1 tbsp olive oil';
   const tick = (i) => $(`[data-p-tick="${i}"]`, train);
 
   // Each step: where it happens, what it shows, and what it does. `act`
@@ -1191,7 +1201,7 @@
     {
       chapter: 'Log',
       title: 'Type what you ate',
-      text: 'Plain words, like a text to a friend. Pieces, katoris, spoons, cups and grams all work.',
+      text: 'Plain words, like a text to a friend. Pieces, slices, spoons, cups and grams all work.',
       tab: 'log',
       spot: () => $('.p-describe', log),
       act: (t, fast) => type(MEAL, t, fast),

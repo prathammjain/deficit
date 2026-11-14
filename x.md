@@ -876,3 +876,18 @@ site, it went.
 With reduced motion on, all of it shows its finished state. Left out on
 purpose: parallax, scroll jacking, custom cursors, a spinning phone, and a
 background that changes per section (the page is plain white by design).
+
+### Meals from everywhere on the landing page
+
+Grain is going global, and the landing page still read as an Indian food
+app: idli and sambar, roti and dal, paneer, rajma, "11 pm maggi". Every
+example is now a meal anyone recognises: eggs and toast, Greek yogurt,
+avocado toast, chicken and rice, a tuna sandwich, salmon, a protein shake,
+chocolate ice cream at 1 am. The engine card uses olive oil instead of
+ghee (644 kcal now, not 642), the proof card's "check this" food is Greek
+yogurt (whole milk matched, nonfat picked), the coach's meal plan has
+salmon and potatoes, and the share card image says olive oil and 644.
+
+The demo still knows the Indian dishes if someone types them; they are just
+not the examples any more. GrainAI roasts a tapped suggestion by its own
+name ("tuna sandwich at lunch"), not by its biggest ingredient.

@@ -71,7 +71,7 @@
     await wait(400);
     steps[2].classList.add('is-on');
     card.querySelector('.ui-bar').classList.add('is-on');
-    countTo(left, 2600, 1958, 900);
+    countTo(left, 2600, 1956, 900);
     await wait(500);
     card.querySelector('.ui-chips').classList.add('is-on');
     await wait(400);
