@@ -10,10 +10,10 @@
     />
     <!-- Search: what people type to find a tracker. The headline leads shared
          links through og:title below. -->
-    <title>Grain: calorie and macro tracker. Describe what you ate.</title>
+    <title>Grain: calorie and macro tracker. Tell GrainAI what you ate.</title>
     <meta
       name="description"
-      content="Track calories and macros by typing what you ate, and log your training set by set. Grain matches each food to measured nutrition data. Built for lifters and athletes, Indian food included."
+      content="Track calories and macros by telling GrainAI what you ate, typed or spoken, and log your training set by set. GrainAI matches each food to measured nutrition data. Missed a day? Fill it in later. Built for lifters and athletes, Indian food included."
     />
     <meta name="theme-color" content="#FFFFFF" />
 
@@ -108,15 +108,27 @@
       <section class="hero wrap">
         <div class="hint hint-left hint-hero" aria-hidden="true"></div>
         <div class="hero-copy">
+          <a class="news" href="#catch-up">
+            <span class="news-tag">New</span>
+            <svg class="spark" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M10 2.5c.7 4.6 2.9 6.8 7.5 7.5-4.6.7-6.8 2.9-7.5 7.5-.7-4.6-2.9-6.8-7.5-7.5 4.6-.7 6.8-2.9 7.5-7.5Z"
+              />
+              <path
+                d="M18.5 14c.4 2.1 1.4 3.1 3.5 3.5-2.1.4-3.1 1.4-3.5 3.5-.4-2.1-1.4-3.1-3.5-3.5 2.1-.4 3.1-1.4 3.5-3.5Z"
+              />
+            </svg>
+            <span>Meet GrainAI, and catch up on any day</span>
+          </a>
           <h1>
             <span class="tone">Food tracking for people who give a f***</span>
             about every gram.
           </h1>
           <p class="lede">
             A photo can't see the oil in the pan or the chicken under the rice.
-            You can. Type what you ate in plain English, and Grain works out the
-            calories and macros from real nutrition data. Your training logs
-            right beside it.
+            You can. Tell GrainAI what you ate in plain words, typed or spoken,
+            and it works out the calories and macros from real nutrition data.
+            Your training logs right beside it.
           </p>
           <a class="cta" href="https://app.getgrain.fit">
             <span class="cta-label">Open Grain</span>
@@ -220,7 +232,7 @@
                     class="p-input"
                     data-p-input
                     rows="2"
-                    placeholder="Type what you ate"
+                    placeholder="Tell GrainAI what you ate"
                     aria-label="What you ate"
                     enterkeyhint="go"
                     autocomplete="off"
@@ -228,11 +240,16 @@
                     spellcheck="false"
                   ></textarea>
                   <div class="describe-foot">
-                    <span class="describe-hint"
-                      >We match each item, then you log.</span
-                    >
+                    <span class="describe-hint">Matched, then you log.</span>
                     <button type="button" class="app-btn" data-p-match>
-                      Match
+                      <svg class="spark" viewBox="0 0 24 24" aria-hidden="true">
+                        <path
+                          d="M10 2.5c.7 4.6 2.9 6.8 7.5 7.5-4.6.7-6.8 2.9-7.5 7.5-.7-4.6-2.9-6.8-7.5-7.5 4.6-.7 6.8-2.9 7.5-7.5Z"
+                        />
+                        <path
+                          d="M18.5 14c.4 2.1 1.4 3.1 3.5 3.5-2.1.4-3.1 1.4-3.5 3.5-.4-2.1-1.4-3.1-3.5-3.5 2.1-.4 3.1-1.4 3.5-3.5Z"
+                        /></svg
+                      >Ask GrainAI
                     </button>
                   </div>
                   <div
@@ -723,28 +740,47 @@
 
       <section class="does wrap" aria-labelledby="does-title">
         <div class="section-head" data-reveal>
-          <h2 id="does-title">What Grain does</h2>
+          <p class="eyebrow">
+            <svg class="spark" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M10 2.5c.7 4.6 2.9 6.8 7.5 7.5-4.6.7-6.8 2.9-7.5 7.5-.7-4.6-2.9-6.8-7.5-7.5 4.6-.7 6.8-2.9 7.5-7.5Z"
+              />
+              <path
+                d="M18.5 14c.4 2.1 1.4 3.1 3.5 3.5-2.1.4-3.1 1.4-3.5 3.5-.4-2.1-1.4-3.1-3.5-3.5 2.1-.4 3.1-1.4 3.5-3.5Z"
+              /></svg
+            >GrainAI
+          </p>
+          <h2 id="does-title">The engine behind every number.</h2>
           <p class="section-lede">
-            You write what you ate. Grain matches each food to measured
+            You tell GrainAI what you ate. It matches each food to measured
             nutrition data and does the maths. If something's unclear, it tells
-            you instead of guessing.
+            you instead of guessing. And it has opinions about your 11 pm maggi.
           </p>
         </div>
         <div class="glass does-card" data-flow data-reveal aria-hidden="true">
           <div class="flow">
             <div class="step" data-step="1">
-              <p class="step-label"><b>1</b>Describe</p>
+              <p class="step-label"><b>1</b>Tell GrainAI</p>
               <div class="ui ui-describe">
                 <p class="ui-input">
                   <span data-flow-text
                     >200 g chicken breast, 150 g rice, 1 tbsp ghee</span
                   ><i class="caret"></i>
                 </p>
-                <span class="ui-match">Match</span>
+                <span class="ui-match"
+                  ><svg class="spark" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      d="M10 2.5c.7 4.6 2.9 6.8 7.5 7.5-4.6.7-6.8 2.9-7.5 7.5-.7-4.6-2.9-6.8-7.5-7.5 4.6-.7 6.8-2.9 7.5-7.5Z"
+                    />
+                    <path
+                      d="M18.5 14c.4 2.1 1.4 3.1 3.5 3.5-2.1.4-3.1 1.4-3.5 3.5-.4-2.1-1.4-3.1-3.5-3.5 2.1-.4 3.1-1.4 3.5-3.5Z"
+                    /></svg
+                  >Ask GrainAI</span
+                >
               </div>
             </div>
             <div class="step" data-step="2">
-              <p class="step-label"><b>2</b>Match</p>
+              <p class="step-label"><b>2</b>It matches</p>
               <div class="ui ui-rows">
                 <div class="ui-row">
                   <div>
@@ -1052,12 +1088,13 @@
                   ><img src="logo.svg" alt="" /><em>Grain</em></span
                 >
               </div>
-              <span class="home-add">Add to Home Screen</span>
+              <span class="home-add">Show me how</span>
             </div>
-            <h3>On your home screen</h3>
+            <h3>On your home screen, any phone</h3>
             <p>
-              Add Grain to your home screen and it opens like any other app,
-              full screen, one tap from your next meal.
+              It opens like any other app, full screen. On an iPhone, Grain
+              shows you the exact taps. Opened from Instagram? One tap moves it
+              to Safari or Chrome.
             </p>
           </article>
         </div>
@@ -1102,6 +1139,90 @@
             Three days weren't logged. They add nothing, so the total is what
             you really did.
           </p>
+        </div>
+      </section>
+
+      <section
+        class="split split-flip catch wrap"
+        id="catch-up"
+        aria-labelledby="grainai-title"
+      >
+        <div class="split-copy" data-reveal>
+          <div class="hint hint-mid hint-honest" aria-hidden="true"></div>
+          <p class="new-tag">New in Grain</p>
+          <h2 id="grainai-title">Missed a day? Fill it in.</h2>
+          <p class="section-lede">
+            Forgot dinner. Logged in bed. Went quiet for a week. Step back to
+            any day and tell GrainAI the whole thing in one go. Strict with the
+            numbers, easy on you.
+          </p>
+          <ul class="catch-points">
+            <li>
+              <b>Any past day.</b> Two arrows on Log, or tap a day in History.
+            </li>
+            <li>
+              <b>The morning after.</b> If yesterday slipped, Home offers to
+              finish it. No streak shaming.
+            </li>
+            <li>
+              <b>Past midnight?</b> That dinner goes to the night before in one
+              tap.
+            </li>
+            <li>
+              <b>Nothing guessed.</b> A day counts once you tell GrainAI what
+              you really ate.
+            </li>
+          </ul>
+        </div>
+
+        <div class="glass catch-card" data-catch data-reveal>
+          <div class="c-scene c-slip">
+            <p class="c-eyebrow">Yesterday · Fri 13 Nov</p>
+            <p class="c-title">
+              Yesterday looks unfinished<span class="c-chev">›</span>
+            </p>
+            <p class="c-body">
+              400 kcal logged. Add what's missing and it counts.
+            </p>
+          </div>
+
+          <div class="ui c-scene c-fill" aria-hidden="true">
+            <div class="c-day">
+              <b>Yesterday</b><span>Filling in an earlier day</span>
+            </div>
+            <p class="ui-input c-input">
+              <span data-c-text
+                >2 paratha in the morning, dal rice at lunch, 200 g chicken at
+                night</span
+              ><i class="caret"></i>
+            </p>
+            <span class="ui-match c-btn"
+              ><svg class="spark" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M10 2.5c.7 4.6 2.9 6.8 7.5 7.5-4.6.7-6.8 2.9-7.5 7.5-.7-4.6-2.9-6.8-7.5-7.5 4.6-.7 6.8-2.9 7.5-7.5Z"
+                />
+                <path
+                  d="M18.5 14c.4 2.1 1.4 3.1 3.5 3.5-2.1.4-3.1 1.4-3.5 3.5-.4-2.1-1.4-3.1-3.5-3.5 2.1-.4 3.1-1.4 3.5-3.5Z"
+                /></svg
+              >Log 4 items to Yesterday</span
+            >
+          </div>
+
+          <div class="c-scene c-week" aria-hidden="true">
+            <div class="c-week-head">
+              <p class="ui-caption">This week</p>
+              <p class="c-count"><b data-c-days>5</b> of 7 full days</p>
+            </div>
+            <div class="c-dots">
+              <span><i></i>M</span><span><i></i>T</span><span><i></i>W</span
+              ><span class="off"><i></i>T</span
+              ><span class="half" data-c-yday><i></i>F</span
+              ><span><i></i>S</span><span class="today"><i></i>S</span>
+            </div>
+            <p class="c-note" data-c-note>
+              Friday is under half your target, so it isn't counted yet.
+            </p>
+          </div>
         </div>
       </section>
 

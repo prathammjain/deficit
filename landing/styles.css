@@ -4556,3 +4556,333 @@ html:not(.js) .step-label b {
     margin-top: 8px;
   }
 }
+
+/* ---------- GrainAI: the sparkle, the news pill, the eyebrow ---------- */
+
+.spark {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  fill: currentColor;
+  overflow: visible;
+}
+
+.spark path {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: spark-breathe 2.4s ease-in-out infinite;
+}
+
+.spark path:nth-of-type(2) {
+  animation: spark-twinkle 2.4s ease-in-out -1.2s infinite;
+}
+
+@keyframes spark-breathe {
+  50% {
+    opacity: 0.8;
+    transform: scale(0.86);
+  }
+}
+
+@keyframes spark-twinkle {
+  50% {
+    opacity: 0.15;
+    transform: scale(0.45);
+  }
+}
+
+.news {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 22px;
+  padding: 5px 14px 5px 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(17, 19, 24, 0.08);
+  box-shadow:
+    0 1px 2px rgba(17, 19, 24, 0.04),
+    0 8px 20px -14px rgba(244, 81, 30, 0.5);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: none;
+  transition: transform 0.2s ease;
+}
+
+.news:hover {
+  transform: translateY(-1px);
+}
+
+.news .spark {
+  color: var(--accent);
+}
+
+.news-tag {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.ui-match,
+.app-btn {
+  gap: 6px;
+}
+
+.ui-match {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ---------- Catch up: missed a day, fill it in ---------- */
+
+.catch-points {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ink-soft);
+  font-size: 15.5px;
+}
+
+.catch-points li {
+  position: relative;
+  padding-left: 18px;
+}
+
+.catch-points li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.catch-points b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.catch-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  --field:
+    radial-gradient(40% 30% at 92% 6%, rgba(244, 81, 30, 0.16), transparent),
+    radial-gradient(36% 30% at 6% 96%, rgba(242, 178, 76, 0.24), transparent);
+}
+
+.c-scene {
+  position: relative;
+  z-index: 1;
+  transition:
+    opacity 0.45s ease,
+    transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.c-slip {
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: #fff;
+  border: 1px solid rgba(17, 19, 24, 0.06);
+  box-shadow: 0 1px 2px rgba(17, 19, 24, 0.04);
+  font-family: var(--app);
+}
+
+.c-eyebrow {
+  margin: 0;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.c-title {
+  display: flex;
+  justify-content: space-between;
+  margin: 6px 0 2px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.c-chev {
+  color: var(--ink-faint);
+  font-weight: 400;
+}
+
+.c-body {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+.c-slip.is-pressed {
+  transform: scale(0.97);
+}
+
+.c-fill {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.c-day {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.c-day b {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.c-day span {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.c-input {
+  min-height: 66px;
+}
+
+.c-input .caret {
+  opacity: 0;
+}
+
+.catch-card.is-typing .c-input .caret {
+  opacity: 1;
+}
+
+.c-btn {
+  align-self: stretch;
+  justify-content: center;
+  text-align: center;
+}
+
+.c-btn.is-pressed {
+  transform: scale(0.96);
+}
+
+.c-week {
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: #fff;
+  border: 1px solid rgba(17, 19, 24, 0.06);
+  font-family: var(--app);
+}
+
+.c-week-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.c-count {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.c-count b {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.c-dots {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin: 14px 0 10px;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-faint);
+}
+
+.c-dots span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.c-dots i {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #2f8f5b;
+  transition:
+    background 0.4s ease,
+    box-shadow 0.4s ease,
+    transform 0.5s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.c-dots .off i {
+  background: rgba(17, 19, 24, 0.08);
+}
+
+.c-dots .half i {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.c-dots .today i {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px rgba(17, 19, 24, 0.14);
+}
+
+.c-dots .is-filled i {
+  background: #2f8f5b;
+  box-shadow: none;
+  transform: scale(1.15);
+}
+
+.c-note {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+/* Before the card plays, only the slipped day shows clearly. */
+.js .catch-card:not(.is-done) .c-fill,
+.js .catch-card:not(.is-done) .c-week {
+  opacity: 0.35;
+}
+
+.js .catch-card.is-filling .c-fill,
+.js .catch-card.is-filling .c-week {
+  opacity: 1;
+}
+
+.js .catch-card.is-filling:not(.is-done) .c-slip {
+  opacity: 0.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spark path {
+    animation: none;
+  }
+}

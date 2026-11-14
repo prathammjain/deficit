@@ -101,11 +101,68 @@
     }).observe(card);
   }
 
+  // ---- Missed a day: tap the card, tell GrainAI, the day fills in ----
+  async function playCatch(card) {
+    if (card.dataset.playing) return;
+    card.dataset.playing = '1';
+    const text = card.querySelector('[data-c-text]');
+    const full =
+      text.dataset.full ||
+      (text.dataset.full = text.textContent.replace(/\s+/g, ' ').trim());
+    const yday = card.querySelector('[data-c-yday]');
+    const days = card.querySelector('[data-c-days]');
+    const note = card.querySelector('[data-c-note]');
+    const noteText =
+      note.dataset.full || (note.dataset.full = note.textContent);
+
+    card.classList.remove('is-filling', 'is-done');
+    yday.classList.remove('is-filled');
+    days.textContent = '5';
+    note.textContent = noteText;
+    text.textContent = '';
+    const title = card.querySelector('.c-title');
+    const titleHtml =
+      title.dataset.full || (title.dataset.full = title.innerHTML);
+    title.innerHTML = titleHtml;
+    const body = card.querySelector('.c-body');
+    const bodyText =
+      body.dataset.full || (body.dataset.full = body.textContent);
+    body.textContent = bodyText;
+
+    await wait(600);
+    const slip = card.querySelector('.c-slip');
+    slip.classList.add('is-pressed');
+    await wait(180);
+    slip.classList.remove('is-pressed');
+    card.classList.add('is-filling', 'is-typing');
+    for (const ch of full) {
+      text.textContent += ch;
+      await wait(22);
+    }
+    await wait(350);
+    const btn = card.querySelector('.c-btn');
+    btn.classList.add('is-pressed');
+    await wait(160);
+    btn.classList.remove('is-pressed');
+    card.classList.remove('is-typing');
+    await wait(300);
+    yday.classList.add('is-filled');
+    days.textContent = '6';
+    note.textContent =
+      'Friday counts now: 2,140 kcal, told to GrainAI the morning after.';
+    title.innerHTML = 'Yesterday counts now<span class="c-chev">✓</span>';
+    body.textContent = '2,140 kcal, filled in the morning after.';
+    card.classList.add('is-done');
+    await wait(400);
+    delete card.dataset.playing;
+  }
+
   // ---- What happens when each block first comes into view ----
   async function onReveal(el) {
     el.classList.add('is-in');
     if (reduced) return;
     if (el.matches('[data-flow]')) playFlow(el);
+    if (el.matches('[data-catch]')) playCatch(el);
     if (el.matches('.feat-deficit')) {
       const n = el.querySelector('[data-count-to]');
       countTo(n, 0, Number(n.dataset.countTo), 1400);
@@ -134,6 +191,9 @@
       .querySelectorAll('.feat-home')
       .forEach((el) => el.classList.add('is-placed'));
     document
+      .querySelectorAll('[data-catch]')
+      .forEach((el) => el.classList.add('is-filling', 'is-done'));
+    document
       .querySelectorAll(
         '[data-flow] .ui-row, [data-flow] .ui-total, [data-flow] .ui-chips, [data-flow] .ui-bar, [data-flow] .step',
       )
@@ -154,6 +214,12 @@
   blocks.forEach((el) => seen.observe(el));
 
   document.querySelectorAll('.feat-calendar').forEach(runCalendar);
+
+  document.querySelectorAll('[data-catch]').forEach((card) => {
+    card.addEventListener('pointerenter', () => {
+      if (card.classList.contains('is-done')) playCatch(card);
+    });
+  });
 
   // The flow plays again when someone points at it once it has finished.
   document.querySelectorAll('[data-flow]').forEach((card) => {

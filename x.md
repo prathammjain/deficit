@@ -818,3 +818,23 @@ Considered and left out: lowering the five day bar for the weekly
 prediction (people who skip days skip the heavy ones, so it would flatter),
 a streak that forgives a missed day (catching up repairs it honestly), and
 one tap "ate about maintenance" days (a guess). 445 tests pass.
+
+### The landing page catches up
+
+The site still sold "Describe" and "Match" and said nothing about filling in
+a missed day, so it now shows what changed:
+
+- A "New" pill above the headline: "Meet GrainAI, and catch up on any day",
+  jumping to the new section.
+- The hero, the phone demo and "What Grain does" call the engine GrainAI:
+  "Tell GrainAI what you ate", an "Ask GrainAI" button with the same
+  twinkling sparkle as the app. The section is now "The engine behind every
+  number", with a nod to the roasts.
+- A new section, "Missed a day? Fill it in.", placed straight after
+  "Numbers that don't flatter you" on purpose: strict with the numbers, easy
+  on you. Its card plays the real flow: the "Yesterday looks unfinished"
+  card is tapped, the whole day is told to GrainAI, and Friday turns from an
+  orange ring to a full green day.
+- The home screen tile now says Grain works on any phone: exact taps on an
+  iPhone, one tap from Instagram to Safari or Chrome.
+- Search title and description mention GrainAI and filling in missed days.
