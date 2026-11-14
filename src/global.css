@@ -73,3 +73,32 @@ textarea:focus-visible {
 * {
   font-variant-numeric: tabular-nums;
 }
+
+/* GrainAI's sparkle (the Sparkle component): the big star breathes and the
+   small one twinkles, out of step. Still for anyone who asked for less
+   motion. */
+@keyframes grain-breathe {
+  50% {
+    opacity: 0.8;
+    transform: scale(0.86);
+  }
+}
+@keyframes grain-twinkle {
+  50% {
+    opacity: 0.15;
+    transform: scale(0.45);
+  }
+}
+[data-sparkle] path {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: grain-breathe 2.4s ease-in-out infinite;
+}
+[data-sparkle] path:nth-of-type(2) {
+  animation: grain-twinkle 2.4s ease-in-out -1.2s infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-sparkle] path {
+    animation: none;
+  }
+}

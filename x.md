@@ -718,3 +718,103 @@ follow up for, which is where imports and the bot put new creators. It also
 sorts on anything: newest or oldest added, most or fewest followers, growth,
 engagement, niche, name, stage, last contact, next follow up. The niche
 column sorts too, and the phone has the five sorts that matter most.
+
+## 2026-11-14
+
+### The black box on iPhones
+
+People who added Grain to an iPhone home screen got a plain black square for
+an icon. Android was fine. The cause was not a setting: the iPhone icon file
+itself was an empty dark square with no g in it, and so were the 192 pixel
+icon, the browser tab icon and the landing page's iPhone icon. Android never
+showed it because it reads the 512 pixel file, which was drawn correctly.
+
+Fix: all four are redrawn from the 1024 master by scripts/make-icons.py, which
+refuses to save an icon that comes out without the orange g. The iPhone icon
+is cut closer to the g, since an iPhone shows the whole square while Android
+crops to a circle. Icon addresses moved to v=3 so phones fetch the new files.
+
+One limit: an icon already on an iPhone home screen never updates. Those
+people remove it and add it again.
+
+### Asking iPhone users to install, properly
+
+An iPhone gives a website no way to open an install prompt. Android can do it
+in one tap; on an iPhone the person has to do it by hand, and since iOS 26 the
+Share button hides behind three dots in Safari. The only help was one line of
+grey text at the bottom of Profile, and it pointed at a Share button that is
+no longer there.
+
+Now Home shows a card, "Add Grain to your home screen", to anyone who has not
+installed yet. On Android the button opens the real install prompt. On an
+iPhone it opens a sheet with the exact taps for the browser in use: Safari 26
+(three dots, Share, Add to Home Screen, Add), older Safari, or Chrome. The
+card goes away for good once installed or closed, and never shows when Grain
+is already running from the home screen. Profile keeps a real button for it.
+
+Trade off: this is the ceiling for a web app. The only thing better is a
+native app in the App Store, which is 99 dollars a year and a review queue.
+
+### A way out of Instagram's browser
+
+Most people meet Grain through a link in Instagram, which opens in
+Instagram's own browser. Google usually refuses to sign anyone in there, and
+nothing can be added to a home screen from it, so those people hit a dead
+end before the app even opens.
+
+On an iPhone, the sign in screen and the install sheet now notice an in app
+browser (it is the only kind that leaves the Safari token out of its user
+agent) and offer two buttons: Open in Safari and Open in Chrome, at the same
+address. Neither can be confirmed from a page: Safari's needs iOS 17,
+Chrome's needs Chrome installed, and some apps block both. So the manual
+route (three dots, Open in browser) is always written underneath. The Google
+button stays, in case it works.
+
+Chrome on an iPhone also has its own install steps now, since its Share
+button lives in the address bar. Not done: Android in app browsers, which
+need a different trick.
+
+### GrainAI, by name
+
+The engine is the moat and the tab that led to it was called "Describe",
+which sells nothing. It is now "GrainAI" everywhere a person meets it: the
+tab on Log with a small sparkle that twinkles, the button ("Ask GrainAI"
+instead of "Match"), the box ("Tell GrainAI what you ate"), onboarding, sign
+in, the offline notice and the Roasts setting. One name for the engine and
+the voice that roasts.
+
+"Describe a workout" keeps its name: it is a plain parser on the phone, not
+the engine, and calling it GrainAI would be a lie.
+
+### Catching up on a day that slipped
+
+Food could only be logged for today. Forget last night's dinner and the day
+stayed "unfinished" for good, out of every total, with no honest way to fix
+it. For anyone who logs late or in bursts, that is the app punishing them.
+Training already allowed any earlier day; food now does too.
+
+- Log has two arrows beside the day. Step back to yesterday or any earlier
+  day, and add, change or remove meals there. The log button says where it
+  is going ("Log 3 items to Yesterday"), and the box suggests telling
+  GrainAI the whole day in one go.
+- Leaving the tab always returns it to today with an empty box, so a meal
+  typed in a hurry can't land on an old day.
+- Between midnight and 4 am Log offers the day before in one tap, for the
+  dinner logged in bed.
+- Home says so the morning after: "Yesterday looks unfinished" for a day
+  started and left under half the target, "Yesterday is blank" for the
+  first day missed after a full one. One tap opens that day. A quiet
+  stretch gets no daily card: that would nag exactly the people who log
+  now and then, and after three days the away card takes over.
+- The away cards and every day in the History calendar link to the same
+  place: "Or fill in a day you missed", "Add what you ate", "Add what's
+  missing", "Add or fix meals".
+
+What did not change: only full days count, and nothing is ever guessed. A
+day filled in later is the person's own account of what they ate, so it
+counts like any other. No limit on how far back, same as training.
+
+Considered and left out: lowering the five day bar for the weekly
+prediction (people who skip days skip the heavy ones, so it would flatter),
+a streak that forgives a missed day (catching up repairs it honestly), and
+one tap "ate about maintenance" days (a guess). 445 tests pass.

@@ -3,12 +3,14 @@
  * Premium, minimal: one button.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+import { OpenInBrowser } from '@/components/add-to-home-screen';
 import { Screen } from '@/components/ui/primitives';
 import { palette, radius, space, type as typo } from '@/constants/palette';
+import { inAppBrowser } from '@/lib/install-prompt';
 import { useAuth } from '@/lib/supabase/auth';
 import { rememberProgramLink } from '@/lib/supabase/programs';
 
@@ -16,6 +18,12 @@ export function SignInScreen() {
   const { signInWithGoogle } = useAuth();
   const [googleBusy, setGoogleBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Known only in the browser: false in the static page, read on hydration.
+  const inApp = useSyncExternalStore(
+    () => () => {},
+    inAppBrowser,
+    () => false,
+  );
 
   // A program link opened while signed out opens again after signing in.
   useEffect(() => {
@@ -44,11 +52,21 @@ export function SignInScreen() {
           Calorie tracking that does not lie to you.
         </Text>
         <Text style={st.pitch}>
-          A hybrid engine checks AI against real food data, so every number is
-          one you can trust, not one it made up.
+          GrainAI checks itself against real food data, so every number is one
+          you can trust, not one it made up.
         </Text>
 
         <Text style={st.title}>Sign in</Text>
+        {inApp ? (
+          <View style={st.inApp}>
+            <Text style={st.inAppTitle}>Open Grain in your browser first</Text>
+            <Text style={st.inAppBody}>
+              You’re inside another app’s browser. Google usually refuses to
+              sign people in here.
+            </Text>
+            <OpenInBrowser />
+          </View>
+        ) : null}
         <Pressable
           onPress={google}
           disabled={googleBusy}
@@ -122,6 +140,21 @@ const st = StyleSheet.create({
     paddingBottom: space.lg,
   },
   title: { ...typo.title, color: palette.text },
+  inApp: {
+    marginTop: space.xl,
+    padding: space.lg,
+    borderRadius: radius.md,
+    backgroundColor: palette.accentSoft,
+    borderWidth: 1,
+    borderColor: palette.accentBorder,
+  },
+  inAppTitle: { ...typo.value, color: palette.text },
+  inAppBody: {
+    color: palette.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: space.xs,
+  },
   googleBtn: {
     flexDirection: 'row',
     alignItems: 'center',

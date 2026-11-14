@@ -103,3 +103,78 @@ export async function promptInstall(): Promise<
   sync();
   return outcome;
 }
+
+/**
+ * How this browser puts a site on the home screen by hand. Safari has no
+ * install prompt at all, so on an iPhone the steps are the only route, and
+ * they differ by browser and by version:
+ *
+ * - `ios-safari`: iPhone Safari 26 and later, where Share sits behind the
+ *   three dots button.
+ * - `ios-safari-old`: older iPhone Safari and every iPad, where the Share
+ *   button is in Safari's bar.
+ * - `ios-chrome`: Chrome on an iPhone or iPad.
+ * - `ios-other`: Edge or Firefox on an iPhone or iPad.
+ * - `ios-in-app`: a browser inside another app (Instagram, Facebook,
+ *   LinkedIn). It can't add to the home screen at all, so the only step is
+ *   opening the page in a real browser.
+ * - `other`: Android and desktop, which are offered the native prompt.
+ */
+export type InstallGuide =
+  | 'ios-safari'
+  | 'ios-safari-old'
+  | 'ios-chrome'
+  | 'ios-other'
+  | 'ios-in-app'
+  | 'other';
+
+/** `touch` tells an iPad from a Mac: both send a Macintosh user agent. */
+export function installGuide(ua: string, touch: boolean): InstallGuide {
+  const phone = /iPhone|iPod/.test(ua);
+  const tablet = /iPad/.test(ua) || (/Macintosh/.test(ua) && touch);
+  if (!phone && !tablet) return 'other';
+  if (/CriOS/.test(ua)) return 'ios-chrome';
+  if (/FxiOS|EdgiOS|OPiOS/.test(ua)) return 'ios-other';
+  // Every real browser on iOS ends its user agent with a Safari token. An
+  // app's own browser leaves it out. So does Grain opened from the home
+  // screen, which is why callers check isStandalone first.
+  if (!/Safari\//.test(ua)) return 'ios-in-app';
+  // Safari 26 freezes the iOS version in its user agent, so only the Version
+  // token says which Safari this is.
+  const version = Number(/Version\/(\d+)/.exec(ua)?.[1] ?? 0);
+  return phone && version >= 26 ? 'ios-safari' : 'ios-safari-old';
+}
+
+/** True when the page is running from the home screen icon, not a tab. */
+export function isStandalone(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    (navigator as { standalone?: boolean }).standalone === true ||
+    window.matchMedia?.('(display-mode: standalone)').matches === true
+  );
+}
+
+/**
+ * True inside another app's own browser on an iPhone or iPad. Google refuses
+ * to sign anyone in there, and nothing can be added to the home screen.
+ */
+export function inAppBrowser(): boolean {
+  if (typeof window === 'undefined' || isStandalone()) return false;
+  return (
+    installGuide(navigator.userAgent, 'ontouchend' in window) === 'ios-in-app'
+  );
+}
+
+/**
+ * The address that hands a page to a real browser on iOS. Safari's scheme
+ * needs iOS 17; Chrome's does nothing when Chrome isn't installed. Neither
+ * can be checked from a page, so the UI always says what to do by hand too.
+ */
+export function browserLink(
+  browser: 'safari' | 'chrome',
+  href: string,
+): string {
+  return browser === 'safari'
+    ? `x-safari-${href}`
+    : href.replace(/^http/, 'googlechrome');
+}

@@ -116,3 +116,13 @@ export function ShareIcon({ size = 16, color = palette.text }: Props) {
     </Svg>
   );
 }
+
+/** The square with a plus that iOS shows beside "Add to Home Screen". */
+export function AddBoxIcon({ size = 16, color = palette.text }: Props) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Rect x={4} y={4} width={16} height={16} rx={4} {...line(color)} />
+      <Path d="M12 8.5v7M8.5 12h7" {...line(color)} />
+    </Svg>
+  );
+}

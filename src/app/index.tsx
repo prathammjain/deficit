@@ -2,8 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
+import { InstallCard } from '@/components/add-to-home-screen';
 import { AdaptiveCard } from '@/components/dashboard/adaptive-card';
 import {
+  CatchUpCard,
   ComebackCard,
   DeficitSummary,
   useWeekShare,
@@ -38,6 +40,7 @@ import { gatherDailyRecords, toDailyData } from '@/lib/history';
 import {
   continuity,
   fullDaysOnly,
+  slipped,
   summarizeHistory,
   type DayRecord,
   type HistoryTargets,
@@ -222,6 +225,11 @@ export default function HomeScreen() {
   const flow = targets
     ? continuity(records, targets.targetKcal, complete, today)
     : null;
+  // A break has its own card; one slipped day gets a lighter one.
+  const slip =
+    targets && !flow?.away
+      ? slipped(records, targets.targetKcal, complete, today)
+      : null;
   const since = flow?.restart?.since ?? null;
   const shown = since
     ? records.filter((r) => r.date >= since)
@@ -245,8 +253,11 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
+      <InstallCard />
+
       {/* The three hooks: where you stand, this week, the total so far */}
       {flow ? <ComebackCard flow={flow} /> : null}
+      {slip ? <CatchUpCard slip={slip} /> : null}
 
       {report && everLogged && !flow?.away ? (
         <>

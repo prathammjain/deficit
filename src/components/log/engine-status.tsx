@@ -18,7 +18,7 @@ export function EngineStatus() {
     <View style={st.engineRow}>
       <View style={[st.engineDot, { backgroundColor: palette.warn }]} />
       <Text style={st.engineText}>
-        AI engine offline, matching from local foods
+        GrainAI is offline, matching from local foods
       </Text>
     </View>
   );

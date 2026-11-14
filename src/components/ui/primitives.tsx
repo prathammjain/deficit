@@ -159,11 +159,14 @@ export function PrimaryButton({
   onPress,
   disabled,
   style,
+  icon,
 }: {
   label: string;
   onPress: () => void;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  /** Drawn before the label. */
+  icon?: ReactNode;
 }) {
   return (
     <Pressable
@@ -176,6 +179,7 @@ export function PrimaryButton({
         style,
       ]}
     >
+      {icon}
       <Text style={[s.primaryBtnText, disabled && s.primaryBtnTextDisabled]}>
         {label}
       </Text>
@@ -258,6 +262,8 @@ const s = StyleSheet.create({
     borderRadius: radius.pill,
     paddingVertical: 14,
     paddingHorizontal: space.xl,
+    flexDirection: 'row',
+    gap: space.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },

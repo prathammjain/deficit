@@ -209,12 +209,12 @@ export function OnboardingFlow({
                 Calorie tracking that does not lie to you
               </Text>
               <Text style={styles.hint}>
-                Log meals in plain language. A hybrid engine checks AI against
-                real food data, so every number is one you can trust, not one it
-                made up.
+                Log meals in plain language. GrainAI checks itself against real
+                food data, so every number is one you can trust, not one it made
+                up.
               </Text>
               <View style={styles.proofRow}>
-                <ProofLine text="Describe meals in your own words, or say them" />
+                <ProofLine text="Tell GrainAI what you ate, typed or spoken" />
                 <ProofLine text="Works for Indian home cooked meals" />
                 <ProofLine text="Takes about a minute to set up" />
               </View>

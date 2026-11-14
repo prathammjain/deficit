@@ -323,3 +323,39 @@ export function continuity(
 
   return { away, restart, breaks };
 }
+
+// Catching up
+
+/** Yesterday, when it is worth offering to fix. */
+export interface Slip {
+  date: string;
+  status: 'unfinished' | 'missing';
+  kcal: number;
+}
+
+/**
+ * Whether yesterday slipped, from a series ending today. A day started and
+ * left under half the target is almost always a forgotten dinner, so it is
+ * always offered. A blank day is offered only when the day before it was
+ * full: the first day missed, not every day of a quiet stretch, which would
+ * nag exactly the people who log now and then.
+ */
+export function slipped(
+  days: DayRecord[],
+  targetKcal: number,
+  complete: ReadonlySet<string> | undefined,
+  today: string,
+): Slip | null {
+  const i = days.findIndex((d) => d.date === today);
+  if (i < 1) return null;
+  const y = days[i - 1];
+  const status = dayStatus(y, targetKcal, complete);
+  if (status === 'counted') return null;
+  if (status === 'missing') {
+    const before = days[i - 2];
+    if (!before || dayStatus(before, targetKcal, complete) !== 'counted') {
+      return null;
+    }
+  }
+  return { date: y.date, status, kcal: y.kcal };
+}

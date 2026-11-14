@@ -9,9 +9,16 @@ import { Pressable, Text } from 'react-native';
 
 import { Card, GlassSurface, PrimaryButton } from '@/components/ui/primitives';
 import type { Continuity } from '@/lib/history-stats';
+import { todayKey } from '@/lib/log-store';
+import { addDays } from '@/lib/train/progress';
 import { formatWeekRange } from '@/lib/week-report';
 
 import { st } from './styles';
+
+/** Opens Log on a day other than today, to finish or fill it in. */
+export function openDay(date: string) {
+  router.navigate({ pathname: '/log', params: { date } });
+}
 
 /** "5 Nov". */
 export function shortDay(date: string): string {
@@ -45,6 +52,13 @@ export function AwayCard({ away }: { away: NonNullable<Continuity['away']> }) {
         label="Log today"
         onPress={() => router.navigate('/log')}
       />
+      <Pressable
+        onPress={() => openDay(addDays(todayKey(), -1))}
+        hitSlop={8}
+        style={st.flowLink}
+      >
+        <Text style={st.flowLinkText}>Or fill in a day you missed</Text>
+      </Pressable>
     </GlassSurface>
   );
 }

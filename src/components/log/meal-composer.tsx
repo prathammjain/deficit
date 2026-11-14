@@ -15,6 +15,7 @@ import {
   StopIcon,
 } from '@/components/ui/icons';
 import { Card, GlassSurface, PrimaryButton } from '@/components/ui/primitives';
+import { Sparkle } from '@/components/ui/sparkle';
 import { palette } from '@/constants/palette';
 import {
   foodProvider,
@@ -39,7 +40,7 @@ import { st } from './styles';
 
 type Mode = 'describe' | 'search' | 'custom';
 const MODES: { id: Mode; label: string }[] = [
-  { id: 'describe', label: 'Describe' },
+  { id: 'describe', label: 'GrainAI' },
   { id: 'search', label: 'Search' },
   { id: 'custom', label: 'Custom' },
 ];
@@ -51,12 +52,15 @@ export function MealComposer({
   onAdd,
   onAddMany,
   day,
+  pastDay,
 }: {
   onAdd: (e: Omit<LogEntry, 'id' | 'at'>) => void;
   onAddMany: (e: Omit<LogEntry, 'id' | 'at'>[]) => void;
   day: DaySoFar;
+  /** The name of the day being filled in ("Yesterday"), when it isn't today. */
+  pastDay?: string;
 }) {
-  // Describing the meal is the main way to log, so it is open by default.
+  // Telling GrainAI the meal is the main way to log, so it is open by default.
   const [mode, setMode] = useState<Mode>('describe');
   // GrainAI roasts every meal unless the user switched it off in Profile.
   const [roastOn, setRoastOn] = useState(false);
@@ -74,6 +78,12 @@ export function MealComposer({
             hitSlop={6}
             style={st.modeBtn}
           >
+            {m.id === 'describe' ? (
+              <Sparkle
+                size={14}
+                color={mode === m.id ? palette.accent : palette.textFaint}
+              />
+            ) : null}
             <Text style={[st.modeText, mode === m.id && st.modeTextActive]}>
               {m.label}
             </Text>
@@ -87,6 +97,7 @@ export function MealComposer({
           onLog={onAddMany}
           day={day}
           roastOn={roastOn && !!foodProvider.roast}
+          pastDay={pastDay}
         />
       ) : null}
       {mode === 'search' ? <SearchFood onAdd={onAdd} /> : null}
@@ -187,10 +198,12 @@ function DescribeMeal({
   onLog,
   day,
   roastOn,
+  pastDay,
 }: {
   onLog: (entries: Omit<LogEntry, 'id' | 'at'>[]) => void;
   day: DaySoFar;
   roastOn: boolean;
+  pastDay?: string;
 }) {
   const [text, setText] = useState('');
   const [items, setItems] = useState<ParsedItem[]>([]);
@@ -220,7 +233,8 @@ function DescribeMeal({
             kcal: Math.round(item.kcal * quantity),
             proteinG: Math.round(item.proteinG * quantity),
           })),
-          day: { ...day, hour: new Date().getHours() },
+          // A day being filled in later is over: roast it as a late meal.
+          day: { ...day, hour: pastDay ? 22 : new Date().getHours() },
         })
         .then(setRoast);
     }
@@ -283,7 +297,11 @@ function DescribeMeal({
     <Card style={st.describeCard}>
       <TextInput
         style={st.describeInput}
-        placeholder="2 roti, 1 katori dal, 200g chicken breast"
+        placeholder={
+          pastDay
+            ? 'Tell GrainAI the whole day in one go: 2 paratha in the morning, dal rice at lunch, 200g chicken at night'
+            : 'Tell GrainAI what you ate: 2 roti, 1 katori dal, 200g chicken breast'
+        }
         placeholderTextColor={palette.textDim}
         value={text}
         onChangeText={setText}
@@ -292,7 +310,17 @@ function DescribeMeal({
       <View style={st.describeFooter}>
         <VoiceButton onHeard={onHeard} />
         <PrimaryButton
-          label={busy ? 'Matching' : 'Match'}
+          label={busy ? 'Matching' : 'Ask GrainAI'}
+          icon={
+            <Sparkle
+              size={15}
+              color={
+                busy || text.trim().length === 0
+                  ? palette.textFaint
+                  : palette.accentText
+              }
+            />
+          }
           disabled={busy || text.trim().length === 0}
           style={st.calcBtn}
           onPress={calc}
@@ -382,7 +410,7 @@ function DescribeMeal({
                 </Text>
               </View>
               <PrimaryButton
-                label={`Log ${items.length} item${items.length > 1 ? 's' : ''}`}
+                label={`Log ${items.length} item${items.length > 1 ? 's' : ''}${pastDay ? ` to ${pastDay}` : ''}`}
                 onPress={() => {
                   if (runId) {
                     foodProvider.reportLogged?.(

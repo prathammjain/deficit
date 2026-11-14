@@ -125,3 +125,73 @@ describe('promptInstall', () => {
     await expect(promptInstall()).resolves.toBe('unavailable');
   });
 });
+
+describe('installGuide', () => {
+  const IOS = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) ';
+  const WEBKIT = 'AppleWebKit/605.1.15 (KHTML, like Gecko) ';
+
+  async function guide(ua: string, touch = true) {
+    const { installGuide } = await import('./install-prompt');
+    return installGuide(ua, touch);
+  }
+
+  it('sends iPhone Safari 26 through the three dots', async () => {
+    // Safari 26 still reports iOS 18_6: the Version token is the only tell.
+    const ua = IOS + WEBKIT + 'Version/26.0 Mobile/15E148 Safari/604.1';
+    expect(await guide(ua)).toBe('ios-safari');
+  });
+
+  it('sends older iPhone Safari straight to the Share button', async () => {
+    const ua = IOS + WEBKIT + 'Version/18.5 Mobile/15E148 Safari/604.1';
+    expect(await guide(ua)).toBe('ios-safari-old');
+  });
+
+  it('knows Chrome on an iPhone is not Safari', async () => {
+    const ua = IOS + WEBKIT + 'CriOS/138.0.7204.156 Mobile/15E148 Safari/604.1';
+    expect(await guide(ua)).toBe('ios-chrome');
+  });
+
+  it('knows Edge and Firefox on an iPhone', async () => {
+    const ua = IOS + WEBKIT + 'FxiOS/140.0 Mobile/15E148 Safari/605.1.15';
+    expect(await guide(ua)).toBe('ios-other');
+  });
+
+  it('spots a browser inside another app by its missing Safari token', async () => {
+    const instagram =
+      IOS +
+      WEBKIT +
+      'Mobile/21F90 Instagram 335.0.0.28.80 (iPhone15,2; iOS 17_5)';
+    const facebook = IOS + WEBKIT + 'Mobile/21F90 [FBAN/FBIOS;FBAV/470.0.0.37]';
+    expect(await guide(instagram)).toBe('ios-in-app');
+    expect(await guide(facebook)).toBe('ios-in-app');
+  });
+
+  it('tells an iPad from a Mac by touch', async () => {
+    const ua =
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ' +
+      WEBKIT +
+      'Version/26.0 Safari/605.1.15';
+    expect(await guide(ua, true)).toBe('ios-safari-old');
+    expect(await guide(ua, false)).toBe('other');
+  });
+
+  it('leaves Android to the native prompt', async () => {
+    const ua =
+      'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 ' +
+      '(KHTML, like Gecko) Chrome/138.0.0.0 Mobile Safari/537.36';
+    expect(await guide(ua)).toBe('other');
+  });
+});
+
+describe('browserLink', () => {
+  it('hands a page to Safari or Chrome, keeping the whole address', async () => {
+    const { browserLink } = await import('./install-prompt');
+    const href = 'https://app.getgrain.fit/program?code=abc';
+    expect(browserLink('safari', href)).toBe(
+      'x-safari-https://app.getgrain.fit/program?code=abc',
+    );
+    expect(browserLink('chrome', href)).toBe(
+      'googlechromes://app.getgrain.fit/program?code=abc',
+    );
+  });
+});

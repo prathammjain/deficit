@@ -237,7 +237,7 @@ export default function ProfileScreen() {
           <View style={s.roastText}>
             <Text style={s.planValue}>Roasts</Text>
             <Text style={s.roastSub}>
-              One brutal line about every meal you describe.
+              One brutal line from GrainAI about every meal.
             </Text>
           </View>
           <Text style={[s.roastState, roastOn && s.roastStateOn]}>

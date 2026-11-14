@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { MacroStat } from '@/components/log/meal-bits';
@@ -9,6 +9,8 @@ import { PlanMeals, planEntry } from '@/components/log/plan';
 import { st } from '@/components/log/styles';
 import { ArcGauge } from '@/components/charts';
 import { useFollowing } from '@/components/train/follow';
+import { tr } from '@/components/train/styles';
+import { ChevronIcon } from '@/components/ui/icons';
 import {
   Card,
   DotMatrix,
@@ -32,6 +34,28 @@ import {
 } from '@/lib/log-store';
 import { loadProfile } from '@/lib/profile-store';
 import { computeTargets, type Goal } from '@/lib/targets';
+import { addDays } from '@/lib/train/progress';
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Before this hour a late dinner most likely belongs to the day before. */
+const LATE_NIGHT_HOUR = 4;
+
+const localDay = (date: string) => {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
+/** "Today", "Yesterday", or the weekday and date of an earlier day. */
+function dayTitle(date: string, today: string): string {
+  if (date === today) return 'Today';
+  if (date === addDays(today, -1)) return 'Yesterday';
+  return localDay(date).toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+}
 
 export default function LogScreen() {
   const [loading, setLoading] = useState(true);
@@ -45,7 +69,46 @@ export default function LogScreen() {
   >([]);
   const [saveError, setSaveError] = useState<string | null>(null);
   const { following } = useFollowing();
-  const date = todayKey();
+  // The day being logged. Today unless the user steps back to catch up on an
+  // earlier one, or arrives from a "finish this day" link with ?date=.
+  const today = todayKey();
+  const [date, setDate] = useState(today);
+  const shown = useRef(today);
+  // Another day's meals are never shown under the new day's name while the
+  // new day loads.
+  const show = useCallback((day: string) => {
+    shown.current = day;
+    setMeals([]);
+    setDate(day);
+  }, []);
+  // Bumped to empty the composer, so a meal drafted for one day is never
+  // logged to another by the same button.
+  const [draft, setDraft] = useState(0);
+  const params = useLocalSearchParams<{ date?: string }>();
+  const arrived = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      const asked = params.date;
+      if (asked) {
+        if (DAY.test(asked) && asked <= todayKey()) show(asked);
+        // Used once: coming back to the tab later must not reopen that day.
+        arrived.current = true;
+        router.setParams({ date: undefined });
+        return;
+      }
+      // This run is only the param being cleared just above.
+      if (arrived.current) {
+        arrived.current = false;
+        return;
+      }
+      // Coming back to the tab always starts on today with an empty box, so
+      // the next meal typed in a hurry can't land on an old day by accident.
+      if (shown.current !== todayKey()) {
+        setDraft((n) => n + 1);
+        show(todayKey());
+      }
+    }, [params.date, show]),
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -151,10 +214,63 @@ export default function LogScreen() {
         })
       : null;
 
+  const past = date !== today;
+  const title = dayTitle(date, today);
+  const yesterday = addDays(today, -1);
+
   return (
     <Screen>
-      <Text style={st.dateLine}>{formatToday()}</Text>
-      <Title>Today</Title>
+      <View style={st.dayRow}>
+        <View>
+          <Text style={st.dateLine}>{formatToday(localDay(date))}</Text>
+          <Title>{title}</Title>
+        </View>
+        <View style={st.dayArrows}>
+          <Pressable
+            onPress={() => show(addDays(date, -1))}
+            hitSlop={8}
+            accessibilityLabel="A day earlier"
+            style={({ pressed }) => [
+              tr.iconBtn,
+              tr.iconBtnRing,
+              pressed && tr.pressed,
+            ]}
+          >
+            <ChevronIcon color={palette.text} />
+          </Pressable>
+          <Pressable
+            onPress={() => show(addDays(date, 1))}
+            disabled={!past}
+            hitSlop={8}
+            accessibilityLabel="A day later"
+            style={({ pressed }) => [
+              tr.iconBtn,
+              tr.iconBtnRing,
+              !past && tr.disabled,
+              pressed && tr.pressed,
+            ]}
+          >
+            <ChevronIcon color={palette.text} direction="right" />
+          </Pressable>
+        </View>
+      </View>
+      {past ? (
+        <Pressable onPress={() => show(today)} hitSlop={8}>
+          <Text style={st.dayLink}>
+            Filling in an earlier day. Back to today
+          </Text>
+        </Pressable>
+      ) : new Date().getHours() < LATE_NIGHT_HOUR ? (
+        <Pressable onPress={() => show(yesterday)} hitSlop={8}>
+          <Text style={st.dayLink}>
+            Past midnight. Still on{' '}
+            {localDay(yesterday).toLocaleDateString('en-GB', {
+              weekday: 'long',
+            })}
+            ? Log it there
+          </Text>
+        </Pressable>
+      ) : null}
 
       {budget == null ? (
         <Card style={st.noProfile}>
@@ -167,7 +283,7 @@ export default function LogScreen() {
           <View style={st.summaryTopRow}>
             <View>
               <Text style={st.remainingLabel}>
-                {budget.isOver ? 'Over by' : 'Left to eat'}
+                {budget.isOver ? 'Over by' : past ? 'Under by' : 'Left to eat'}
               </Text>
               <DotMatrix
                 style={[
@@ -205,6 +321,7 @@ export default function LogScreen() {
       {/* Meals: add and list on one screen */}
       <SectionLabel>Add a meal</SectionLabel>
       <MealComposer
+        key={draft}
         onAdd={onAddMeal}
         onAddMany={onAddMeals}
         day={{
@@ -214,6 +331,7 @@ export default function LogScreen() {
           proteinTargetG: proteinTarget ?? 0,
           goal,
         }}
+        pastDay={past ? title : undefined}
       />
 
       {unsaved.length ? (
@@ -262,7 +380,9 @@ export default function LogScreen() {
         ))}
         {meals.length === 0 ? (
           <Text style={st.empty}>
-            Nothing yet. Describe your first meal above.
+            {past
+              ? 'Nothing logged this day. Tell GrainAI what you ate above.'
+              : 'Nothing yet. Tell GrainAI what you ate above.'}
           </Text>
         ) : null}
       </View>

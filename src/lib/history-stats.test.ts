@@ -6,6 +6,7 @@ import {
   dayDeficit,
   dayStatus,
   fullDaysOnly,
+  slipped,
   summarizeHistory,
   type DayRecord,
   type HistoryTargets,
@@ -311,5 +312,45 @@ describe('summarizeHistory counts days on target by goal', () => {
       goal: 'maintain',
     });
     expect(s.daysOnTarget).toBe(3);
+  });
+});
+
+describe('slipped', () => {
+  const today = '2026-10-04';
+  const days = (a: number | null, b: number | null, y: number | null) => [
+    day('2026-10-01', a),
+    day('2026-10-02', b),
+    day('2026-10-03', y),
+    day(today, null),
+  ];
+
+  it('says nothing when yesterday was a full day', () => {
+    expect(slipped(days(1900, 1900, 1900), 2000, undefined, today)).toBeNull();
+  });
+
+  it('offers a yesterday that was started and never finished', () => {
+    expect(slipped(days(null, null, 300), 2000, undefined, today)).toEqual({
+      date: '2026-10-03',
+      status: 'unfinished',
+      kcal: 300,
+    });
+  });
+
+  it('leaves a low yesterday alone once it is confirmed as a full day', () => {
+    const marked = new Set(['2026-10-03']);
+    expect(slipped(days(1900, 1900, 300), 2000, marked, today)).toBeNull();
+  });
+
+  it('offers the first blank day after a full one', () => {
+    expect(slipped(days(1900, 1900, null), 2000, undefined, today)).toEqual({
+      date: '2026-10-03',
+      status: 'missing',
+      kcal: 0,
+    });
+  });
+
+  it('does not nag through a quiet stretch, or before anything was logged', () => {
+    expect(slipped(days(1900, null, null), 2000, undefined, today)).toBeNull();
+    expect(slipped(days(null, null, null), 2000, undefined, today)).toBeNull();
   });
 });

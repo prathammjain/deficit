@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { dayName } from '@/components/history/continuity';
+import { dayName, openDay } from '@/components/history/continuity';
 import { ChevronIcon } from '@/components/ui/icons';
 import {
   Card,
@@ -22,8 +22,11 @@ import {
   balanceNote,
   type Continuity,
   type HistorySummary,
+  type Slip,
 } from '@/lib/history-stats';
+import { todayKey } from '@/lib/log-store';
 import type { Goal } from '@/lib/targets';
+import { addDays } from '@/lib/train/progress';
 import { drawWeekCard, shareWeekCard } from '@/lib/week-card';
 import { formatWeekRange, type WeekReport } from '@/lib/week-report';
 
@@ -45,6 +48,13 @@ export function ComebackCard({ flow }: { flow: Continuity }) {
           onPress={() => router.navigate('/log')}
           style={hs.flowButton}
         />
+        <Pressable
+          onPress={() => openDay(addDays(todayKey(), -1))}
+          hitSlop={8}
+          style={hs.flowLink}
+        >
+          <Text style={hs.flowLinkText}>Or fill in a day you missed</Text>
+        </Pressable>
       </GlassSurface>
     );
   }
@@ -68,6 +78,36 @@ export function ComebackCard({ flow }: { flow: Continuity }) {
         <Text style={hs.flowBody}>
           Your numbers count from your return.{' '}
           {formatWeekRange(brk.from, brk.to)} counts as nothing either way.
+        </Text>
+      </Card>
+    </Pressable>
+  );
+}
+
+/** The morning after a day slipped: one tap to finish it, no telling off. */
+export function CatchUpCard({ slip }: { slip: Slip }) {
+  const unfinished = slip.status === 'unfinished';
+  return (
+    <Pressable
+      onPress={() => openDay(slip.date)}
+      style={({ pressed }) => pressed && hs.pressed}
+      accessibilityRole="button"
+      accessibilityLabel={`${unfinished ? 'Finish' : 'Fill in'} yesterday. Open Log.`}
+    >
+      <Card style={hs.flow}>
+        <Text style={hs.eyebrow}>
+          YESTERDAY · {dayName(slip.date).toUpperCase()}
+        </Text>
+        <View style={hs.row}>
+          <Text style={hs.flowTitle}>
+            {unfinished ? 'Yesterday looks unfinished' : 'Yesterday is blank'}
+          </Text>
+          <ChevronIcon direction="right" color={palette.textFaint} />
+        </View>
+        <Text style={hs.flowBody}>
+          {unfinished
+            ? `${slip.kcal.toLocaleString()} kcal logged. Add what’s missing and the day counts.`
+            : 'Still remember what you ate? Add it and the day counts.'}
         </Text>
       </Card>
     </Pressable>
@@ -246,6 +286,8 @@ const hs = StyleSheet.create({
   },
   flow: { marginTop: space.xl },
   flowButton: { marginTop: space.lg },
+  flowLink: { alignSelf: 'center', paddingTop: space.md },
+  flowLinkText: { color: palette.accent, fontSize: 14, fontWeight: '600' },
   eyebrow: { ...typo.eyebrow, fontSize: 10.5, color: palette.textFaint },
   accent: { color: palette.accent },
   flowTitle: {

@@ -246,6 +246,7 @@ export const st = StyleSheet.create({
     gap: space.sm,
   },
   calNoteText: { color: palette.textMuted, fontSize: 13, lineHeight: 19 },
+  calNoteRow: { flexDirection: 'row', gap: space.xl },
   calNoteBtn: { alignSelf: 'flex-start', paddingVertical: space.xs },
   calNoteBtnText: { color: palette.accent, fontSize: 13, fontWeight: '700' },
 });

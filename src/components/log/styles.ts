@@ -9,7 +9,12 @@ export const st = StyleSheet.create({
     gap: space.xl,
     marginBottom: space.md,
   },
-  modeBtn: { paddingVertical: space.xs },
+  modeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    paddingVertical: space.xs,
+  },
   roast: { paddingVertical: space.md, gap: space.xs },
   roastLabel: {
     color: palette.accent,
@@ -45,6 +50,18 @@ export const st = StyleSheet.create({
   flex1: { flex: 1 },
   pressed: { opacity: 0.7 },
   dateLine: { ...typo.label, color: palette.textFaint },
+  dayRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  dayArrows: { flexDirection: 'row', gap: space.sm },
+  dayLink: {
+    color: palette.accent,
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: space.sm,
+  },
 
   noProfile: { marginTop: space.lg },
   noProfileText: { color: palette.textMuted, fontSize: 15, lineHeight: 21 },

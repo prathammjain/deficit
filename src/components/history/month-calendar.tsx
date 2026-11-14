@@ -15,6 +15,7 @@ import {
 } from '@/lib/history-stats';
 import { todayKey } from '@/lib/log-store';
 
+import { openDay } from './continuity';
 import { st } from './styles';
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']; // Monday-first
@@ -200,6 +201,13 @@ function DaySummary({
       <View>
         <Text style={st.calSumDate}>{label}</Text>
         <Text style={st.calEmpty}>Nothing logged this day.</Text>
+        <Pressable
+          onPress={() => openDay(rec.date)}
+          hitSlop={6}
+          style={st.calNoteBtn}
+        >
+          <Text style={st.calNoteBtnText}>Add what you ate</Text>
+        </Pressable>
       </View>
     );
   }
@@ -274,19 +282,38 @@ function DaySummary({
           <Text style={st.calNoteText}>
             {confirmed
               ? 'You confirmed this was a full day, so it counts even though it’s under half your target.'
-              : 'This looks unfinished: under half your target, so it isn’t counted. If it really was everything you ate, confirm it.'}
+              : 'This looks unfinished: under half your target, so it isn’t counted. Add what’s missing, or confirm it really was everything you ate.'}
           </Text>
-          <Pressable
-            onPress={() => void toggle(!confirmed)}
-            disabled={busy}
-            hitSlop={6}
-            style={[st.calNoteBtn, busy && { opacity: 0.5 }]}
-          >
-            <Text style={st.calNoteBtnText}>
-              {confirmed ? 'Undo' : 'It was a full day'}
-            </Text>
-          </Pressable>
+          <View style={st.calNoteRow}>
+            {confirmed ? null : (
+              <Pressable
+                onPress={() => openDay(rec.date)}
+                hitSlop={6}
+                style={st.calNoteBtn}
+              >
+                <Text style={st.calNoteBtnText}>Add what’s missing</Text>
+              </Pressable>
+            )}
+            <Pressable
+              onPress={() => void toggle(!confirmed)}
+              disabled={busy}
+              hitSlop={6}
+              style={[st.calNoteBtn, busy && { opacity: 0.5 }]}
+            >
+              <Text style={st.calNoteBtnText}>
+                {confirmed ? 'Undo' : 'It was a full day'}
+              </Text>
+            </Pressable>
+          </View>
         </View>
+      ) : rec.date !== today ? (
+        <Pressable
+          onPress={() => openDay(rec.date)}
+          hitSlop={6}
+          style={st.calNoteBtn}
+        >
+          <Text style={st.calNoteBtnText}>Add or fix meals</Text>
+        </Pressable>
       ) : null}
     </View>
   );
