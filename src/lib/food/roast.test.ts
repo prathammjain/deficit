@@ -6,6 +6,9 @@
  */
 import {
   pickRoast,
+  ROAST_EXAMPLES,
+  roastReason,
+  roastSystem,
   roastUserMessage,
   tone,
   type RoastInput,
@@ -121,9 +124,9 @@ describe('the note GrainAI reads', () => {
   });
 });
 
-describe('picking a line', () => {
-  const first = () => 0;
+const first = () => 0;
 
+describe('picking a line', () => {
   it('never swears in praise, care or a welcome', () => {
     const lines = [
       'damn, chicken and rice again, elite',
@@ -172,5 +175,119 @@ describe('picking a line', () => {
     expect(
       pickRoast(['that belly needs a word'], first, { tone: 'roast' }),
     ).toBeNull();
+  });
+});
+
+const ate = (
+  items: RoastInput['items'],
+  day: Partial<RoastInput['day']> = {},
+  text = items.map((i) => i.name).join(', '),
+): RoastInput => ({ ...meal(0, 0, day), meal: text, items });
+
+describe('roast reasons: visibly slacking off', () => {
+  it('sweets and dessert are a sugar roast', () => {
+    const r = ate([
+      { name: 'Chocolate brownie', kcal: 380, proteinG: 4 },
+      { name: 'Ice cream', kcal: 200, proteinG: 3 },
+    ]);
+    expect(roastReason(r)).toBe('sugar');
+    expect(tone(r)).toBe('roast');
+  });
+
+  it('a small sweet on the side is not a binge', () => {
+    expect(roastReason(ate([{ name: 'Cookie', kcal: 80, proteinG: 1 }]))).toBe(
+      null,
+    );
+  });
+
+  it('an evening with almost no protein all day is a protein roast', () => {
+    const r = ate([{ name: 'White rice', kcal: 400, proteinG: 8 }], {
+      localHour: 19,
+      proteinGBefore: 30,
+      eatenKcalBefore: 1300,
+      targetKcal: 2200,
+    });
+    expect(roastReason(r)).toBe('protein');
+  });
+
+  it('the same meal at lunch is not a protein roast yet', () => {
+    const r = ate([{ name: 'White rice', kcal: 400, proteinG: 8 }], {
+      localHour: 13,
+      proteinGBefore: 30,
+      targetKcal: 2200,
+    });
+    expect(roastReason(r)).not.toBe('protein');
+  });
+
+  it('junk is a careless roast', () => {
+    expect(
+      roastReason(
+        ate([{ name: 'Pepperoni pizza', kcal: 800, proteinG: 34 }], {
+          targetKcal: 2200,
+        }),
+      ),
+    ).toBe('careless');
+  });
+
+  it('a decent meal that tips the day over is an over roast', () => {
+    expect(
+      roastReason(
+        ate([{ name: 'Chicken rice bowl', kcal: 600, proteinG: 50 }], {
+          eatenKcalBefore: 1900,
+          targetKcal: 2200,
+        }),
+      ),
+    ).toBe('over');
+  });
+
+  it('the note says why', () => {
+    const m = roastUserMessage(
+      ate([{ name: 'Chocolate cake', kcal: 450, proteinG: 5 }]),
+    );
+    expect(m).toContain('mode: roast');
+    expect(m).toContain('why: a sugar binge');
+  });
+});
+
+describe('the voice: raw, learned, not copied', () => {
+  it('a roast prompt carries a fresh handful of examples; other modes none', () => {
+    const roast = ate([{ name: 'Chocolate cake', kcal: 450, proteinG: 5 }]);
+    const sys = roastSystem(roast, () => 0.5);
+    expect(sys).toContain('never reuse their jokes');
+    const hype = meal(500, 50, { targetKcal: 2200 });
+    expect(roastSystem(hype)).not.toContain('never reuse their jokes');
+  });
+
+  it('crude sex jokes and swearing are allowed in a roast', () => {
+    const line =
+      "your ex is getting railed by someone with a meal plan. you're getting railed by a dominos coupon";
+    expect(pickRoast([line], first, { tone: 'roast' })).toBe(line);
+  });
+
+  it('never the body, never death, never a guessed gender', () => {
+    for (const line of [
+      'that pizza went straight to your waistline',
+      'eat like this and see you at the funeral',
+      'she left you for someone who meal preps',
+    ])
+      expect(pickRoast([line], first, { tone: 'roast' })).toBeNull();
+  });
+
+  it('every example passes the filter', () => {
+    for (const { line } of ROAST_EXAMPLES)
+      expect(pickRoast([line], first, { tone: 'roast' })).toBe(line);
+  });
+
+  it('a line lifted from the examples loses to an original one', () => {
+    expect(
+      pickRoast(
+        [
+          'every extra slice is another reason your ex will never text you first again',
+          'two large pizzas on a tuesday. your ex dodged a whole economy',
+        ],
+        first,
+        { tone: 'roast' },
+      ),
+    ).toBe('two large pizzas on a tuesday. your ex dodged a whole economy');
   });
 });

@@ -14,7 +14,7 @@ import {
   parseCandidates,
   pickRoast,
   roastUserMessage,
-  ROAST_SYSTEM,
+  roastSystem,
   tone,
   type RoastInput,
 } from './roast.ts';
@@ -28,6 +28,22 @@ const day = (eaten: number, protein: number, hour: number) => ({
 });
 
 const MEALS: RoastInput[] = [
+  {
+    meal: 'white rice and aloo sabzi',
+    items: [
+      { name: 'White rice', kcal: 390, proteinG: 8 },
+      { name: 'Aloo sabzi', kcal: 220, proteinG: 4 },
+    ],
+    day: day(1100, 25, 20),
+  },
+  {
+    meal: 'a chocolate cake slice and a milkshake',
+    items: [
+      { name: 'Chocolate cake', kcal: 420, proteinG: 5 },
+      { name: 'Chocolate milkshake', kcal: 380, proteinG: 9 },
+    ],
+    day: day(1300, 70, 17),
+  },
   {
     meal: '2 eggs and toast',
     items: [
@@ -142,7 +158,7 @@ async function main() {
           body: JSON.stringify({
             model,
             messages: [
-              { role: 'system', content: ROAST_SYSTEM },
+              { role: 'system', content: roastSystem(input) },
               { role: 'user', content: roastUserMessage(input) },
             ],
             temperature: 1,

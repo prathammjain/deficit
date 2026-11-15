@@ -951,3 +951,43 @@ body rule is unchanged.
 
 Needs a deploy of the food function. roast-try.ts prints each sample's
 tone with its lines; run it with the Groq key before deploying.
+
+### The roast gets raw
+
+The owner wrote over 100 roasts in the voice he wants: brutal, crude, built
+on the ex, the love life and the sex nobody is having. That voice now drives
+the roast, and the earlier no sex jokes rule is gone. Swearing and crude sex
+jokes are allowed in a roast.
+
+When it roasts: only when someone is visibly slacking, decided in code:
+
+- sugar: 150 kcal or more of sweets or dessert in one meal (by name, since
+  the food data has no sugar figure).
+- protein: evening, and the day so far, this meal included, has under 40%
+  of the protein target.
+- careless: junk (pizza, burgers, fries, maggi, alcohol and so on) of 400
+  kcal or more, a 900 kcal blowout, or a big meal with almost no protein.
+- over: the meal takes the day past its target.
+
+The model is told why. Every other meal still gets a tease, real praise,
+care or a welcome, as before.
+
+Learning, not copying: 57 examples live in roast.ts, each tagged with the
+reason it fits. Each roast request carries twelve, six for its reason and
+six others, shuffled, so the model sees the voice from a new angle every
+time. The prompt names the moves behind them (the ex's contrast in two
+sentences, the food as a character, excuses called out, escalation,
+wordplay on the meal) and says the examples are not templates. Any line
+sharing four words in a row with an example, or with GrainAI's last five
+lines to that person, loses to one that doesn't.
+
+Two lines it still doesn't cross: the user's own body or looks (weight,
+waist, abs, being soft, mirrors), and death or suicide. A calorie tracker
+that shames bodies over what was eaten pushes some users into disordered
+eating, which is the product failing, not the joke landing. The owner's
+lines that leaned on those were reworked or left out. The ex and their new
+partner are gender neutral, and a line that guesses anyone's gender is
+dropped: users are not all straight men.
+
+468 tests pass. Needs a deploy of the food function, and a run of
+roast-try.ts with the Groq key first to read real output.

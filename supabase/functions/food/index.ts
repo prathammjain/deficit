@@ -54,7 +54,7 @@ import {
   pickRoast,
   roastUserMessage,
   tone,
-  ROAST_SYSTEM,
+  roastSystem,
   type RoastInput,
 } from './roast.ts';
 import {
@@ -301,7 +301,7 @@ async function roastLine(
     body: JSON.stringify({
       model: Deno.env.get('ROAST_MODEL')?.trim() || ROAST_MODEL,
       messages: [
-        { role: 'system', content: ROAST_SYSTEM },
+        { role: 'system', content: roastSystem(input) },
         { role: 'user', content: roastUserMessage(input) },
       ],
       // Comedy, not arithmetic: let it swing.
