@@ -53,6 +53,7 @@ import {
   parseCandidates,
   pickRoast,
   roastUserMessage,
+  tone,
   ROAST_SYSTEM,
   type RoastInput,
 } from './roast.ts';
@@ -278,7 +279,8 @@ async function transcribe(audio: string, mime: string): Promise<string> {
 }
 
 // ---- GrainAI ----------------------------------------------------------------
-// One brutal line for every meal. Prompt and filter live in roast.ts. The
+// One line for every meal, in the tone the meal and the day call for. Prompt,
+// tone and filter live in roast.ts. The
 // roast runs on Qwen, which writes like a person (gpt-oss, the engine's model,
 // writes roasts like a bank statement). No fallback to gpt-oss: Groq limits
 // are per model, and the roast must never use up the engine's share. If Qwen
@@ -308,7 +310,11 @@ async function roastLine(
   });
   if (!res.ok) return null;
   const data = await res.json();
-  return pickRoast(parseCandidates(data?.choices?.[0]?.message?.content ?? ''));
+  return pickRoast(
+    parseCandidates(data?.choices?.[0]?.message?.content ?? ''),
+    Math.random,
+    { tone: tone(input), recent: input.recent },
+  );
 }
 
 // ---- Candidate sources ------------------------------------------------------
@@ -845,7 +851,13 @@ Deno.serve(async (req: Request) => {
             day?.goal === 'gain' || day?.goal === 'maintain'
               ? day.goal
               : 'lose',
+          mealsBefore: n(day?.mealsBefore),
+          catchingUp: day?.catchingUp === true,
+          quietDays: Math.min(3, n(day?.quietDays)),
         },
+        recent: (Array.isArray(body.value.recent) ? body.value.recent : [])
+          .slice(-5)
+          .map((l: unknown) => String(l ?? '').slice(0, 160)),
       };
       return json({ line: await roastLine(cfg, input) }, 200, origin);
     }

@@ -80,7 +80,15 @@ export interface RoastInput {
     hour: number;
     /** What the plan is for, so GrainAI doesn't roast a gainer for eating. */
     goal?: Goal;
+    /** Meals already logged on this day. */
+    mealsBefore?: number;
+    /** Filling in an earlier day, so the hour says nothing about the meal. */
+    catchingUp?: boolean;
+    /** Empty days in a row just before this day, up to 3. */
+    quietDays?: number;
   };
+  /** GrainAI's last few lines on this phone, so its jokes don't repeat. */
+  recent?: string[];
 }
 
 export interface FoodProvider {

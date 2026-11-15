@@ -237,7 +237,8 @@ export default function ProfileScreen() {
           <View style={s.roastText}>
             <Text style={s.planValue}>Roasts</Text>
             <Text style={s.roastSub}>
-              One brutal line from GrainAI about every meal.
+              GrainAI answers every meal: a roast when it’s earned, respect when
+              it isn’t.
             </Text>
           </View>
           <Text style={[s.roastState, roastOn && s.roastStateOn]}>

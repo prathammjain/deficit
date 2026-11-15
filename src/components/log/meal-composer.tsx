@@ -24,6 +24,7 @@ import {
   type ParsedItem,
   type RoastInput,
 } from '@/lib/food';
+import { deviceKey, getJSON, localStore, setJSON } from '@/lib/kv';
 import { portionedEntry, type LogEntry } from '@/lib/log-store';
 import { isWeighed, stepperLabel, stepQuantity } from '@/lib/quantity';
 import { loadRoastMode } from '@/lib/roast-setting';
@@ -46,7 +47,14 @@ const MODES: { id: Mode; label: string }[] = [
 ];
 
 /** The day so far, which GrainAI roasts against. */
-type DaySoFar = Omit<RoastInput['day'], 'hour'>;
+type DaySoFar = Omit<RoastInput['day'], 'hour' | 'catchingUp'>;
+
+/** GrainAI's last lines on this phone, sent along so its jokes don't repeat. */
+const recentKey = () => deviceKey('grainai.recent.v1');
+const loadRecent = async () =>
+  ((await getJSON<string[]>(localStore, recentKey())) ?? []).slice(-5);
+const keepRecent = async (line: string) =>
+  setJSON(localStore, recentKey(), [...(await loadRecent()), line].slice(-5));
 
 export function MealComposer({
   onAdd,
@@ -225,18 +233,28 @@ function DescribeMeal({
     // GrainAI's line arrives a moment after the numbers; it never holds
     // them up.
     if (roastOn) {
-      foodProvider
-        .roast?.({
-          meal: text,
-          items: parsed.items.map(({ item, quantity }) => ({
-            name: item.name,
-            kcal: Math.round(item.kcal * quantity),
-            proteinG: Math.round(item.proteinG * quantity),
-          })),
-          // A day being filled in later is over: roast it as a late meal.
-          day: { ...day, hour: pastDay ? 22 : new Date().getHours() },
-        })
-        .then(setRoast);
+      void loadRecent()
+        .catch(() => [] as string[])
+        .then((recent) =>
+          foodProvider.roast?.({
+            meal: text,
+            items: parsed.items.map(({ item, quantity }) => ({
+              name: item.name,
+              kcal: Math.round(item.kcal * quantity),
+              proteinG: Math.round(item.proteinG * quantity),
+            })),
+            day: {
+              ...day,
+              hour: new Date().getHours(),
+              catchingUp: !!pastDay,
+            },
+            recent,
+          }),
+        )
+        .then((line) => {
+          setRoast(line ?? null);
+          if (line) void keepRecent(line).catch(() => {});
+        });
     }
     setItems(parsed.items);
     setOrigins(parsed.items.map((_, i) => i));

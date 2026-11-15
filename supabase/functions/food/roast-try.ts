@@ -15,6 +15,7 @@ import {
   pickRoast,
   roastUserMessage,
   ROAST_SYSTEM,
+  tone,
   type RoastInput,
 } from './roast.ts';
 
@@ -27,6 +28,22 @@ const day = (eaten: number, protein: number, hour: number) => ({
 });
 
 const MEALS: RoastInput[] = [
+  {
+    meal: '2 eggs and toast',
+    items: [
+      { name: 'Egg', kcal: 156, proteinG: 13 },
+      { name: 'Bread', kcal: 160, proteinG: 6 },
+    ],
+    day: { ...day(0, 0, 9), quietDays: 3, mealsBefore: 0 },
+  },
+  {
+    meal: 'pasta with chicken, yesterday dinner',
+    items: [
+      { name: 'Pasta', kcal: 330, proteinG: 12 },
+      { name: 'Chicken breast', kcal: 250, proteinG: 46 },
+    ],
+    day: { ...day(1300, 90, 8), catchingUp: true },
+  },
   {
     meal: '1 large double cheese pizza with choco brownie',
     items: [
@@ -143,9 +160,11 @@ async function main() {
       const candidates = parseCandidates(
         data?.choices?.[0]?.message?.content ?? '',
       );
-      console.log(`\n${input.meal}  (${ms} ms)`);
+      console.log(`\n${input.meal}  [${tone(input)}]  (${ms} ms)`);
       for (const c of candidates) console.log(`  . ${c}`);
-      console.log(`  >> ${pickRoast(candidates) ?? '(nothing safe)'}`);
+      console.log(
+        `  >> ${pickRoast(candidates, Math.random, { tone: tone(input) }) ?? '(nothing safe)'}`,
+      );
     }
   }
 }

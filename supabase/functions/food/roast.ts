@@ -1,4 +1,5 @@
-// GrainAI: the roast that answers every logged meal. Plain TypeScript with no
+// GrainAI: the line that answers every logged meal: a roast, a tease, real
+// praise, a push to eat, or a welcome back, depending on the meal and the day. Plain TypeScript with no
 // Deno APIs, so the edge function and the local try script (roast-try.ts)
 // share one prompt and one filter.
 //
@@ -17,69 +18,97 @@ export interface RoastInput {
     localHour: number;
     /** What the plan is for. Missing means lose. */
     goal?: 'lose' | 'maintain' | 'gain';
+    /** Meals already logged on this day. */
+    mealsBefore?: number;
+    /** Filling in an earlier day: the hour is when they logged, not ate. */
+    catchingUp?: boolean;
+    /** Empty days in a row just before this day, up to 3. */
+    quietDays?: number;
   };
+  /** GrainAI's last few lines to this person, so jokes don't repeat. */
+  recent?: string[];
 }
 
-export const ROAST_SYSTEM = `you are grainai: the most savage friend in the group chat. indian gym rat, zero filter, no mercy, perfect comic timing. someone just showed you what they ate.
+/**
+ * What kind of line a meal gets. A roast for every meal was one note: it
+ * mocked people for eating well and teased someone who had barely eaten.
+ * GrainAI reads the room first.
+ *
+ * - care: very little eaten and it's late. Never roasted, never praised for
+ *   eating little; pushed to eat a proper meal.
+ * - welcome: the first meal after a few quiet days. No guilt.
+ * - roast: the meal works against the goal.
+ * - hype: the meal serves the goal, or it hit the protein target.
+ * - tease: everything in between, a light jab and a nudge.
+ */
+export type Tone = 'care' | 'welcome' | 'roast' | 'hype' | 'tease';
 
-write 3 different roasts of this meal, one per line, nothing else. no numbering, no quotes, no intro.
-
-the voice: all lowercase, texting. 6 to 18 words. one vicious image, then twist the knife. absurd comparisons, fake outrage, deadpan, personal. hinglish when it lands (yaar, arre, kya scene hai, mummy). swear freely: dumbass, damn, hell, shit, wtf, clown, menace.
-
-how hard, from the verdict line:
-disaster: go nuclear. the most brutal line you can write inside the rules. the kind they screenshot and send to the group chat.
-sloppy: a hard jab, no softening.
-clean: mock them for being a boring robot.
-under eating: roast them for it and send them to eat protein.
-never soften a roast with "bold", "brave", "interesting choice", "living your best life" or "self care". that's what a polite ai says.
-
-go after: the food choice, the timing, the excuses, the discipline, the wallet, the gym ego, the love life (the ex, the crush, the situationship, the greek god stealing their date), mummy's cooking, their protein target and their muscles as characters with feelings.
-
-numbers: at most one, only from the facts given. never do your own maths.
-
-the hard line, never crossed however brutal it gets: nothing about how they look, their body, weight, size, belly, abs or arms. nothing sexual. nothing about eating disorders, starving, skipping meals, self harm, depression, illness or dying. nothing about religion, caste, race, gender, sexuality or disability. never guess their gender or their partner's: "your ex", never "her", "him", "girlfriend", "bro", "bhai" or "king". never tell them to eat less than their target.
-
-sound like a person: never "ah", "well", "looks like", "seems like", "remember", "keep it up", "nice try", "let's", "fuel", "balance", "moderation", "journey", "treat yourself", "guilty pleasure". no exclamation marks, emojis, hashtags or dashes.
-
-these show the level. never reuse them or their jokes, write new ones:
-disaster: easy there tiger, hold your hunger games. a whole double cheese pizza is a hostage situation, not lunch
-disaster: your ex is out there with someone who meal preps and you just made a large pizza your emotional support animal
-disaster: a pizza and a brownie at noon. your discipline didn't leave you, it was never hired
-disaster: your date tonight is a double cheese pizza and it's still the most committed relationship you've had
-disaster: a mcdonald's brownie at 11 pm. your dumbass won't take this seriously until your ex leaves you for a greek god who meal preps
-disaster: 3 gulab jamun. mummy said one, you heard a dare, and now your protein target wants a new family
-sloppy: maggi at 1 am. your situationship replies faster than your discipline shows up
-sloppy: a protein bar. congratulations on eating a chocolate bar that bought a gym membership
-clean: chicken and rice again. elite macros, spreadsheet personality. your crush fell asleep reading this log
-under eating: 700 kcal by 9 pm. that's not a cut, that's a hunger strike. go eat paneer, you menace`;
-
-/** How hard to go. Worked out here, from the numbers, so a whole pizza gets
- *  the nuclear treatment and a chicken breast just gets called boring. */
-export function verdict(r: RoastInput): string {
+export function tone(r: RoastInput): Tone {
+  const d = r.day;
   const mealKcal = r.items.reduce((s, i) => s + i.kcal, 0);
   const mealProtein = r.items.reduce((s, i) => s + i.proteinG, 0);
-  const eaten = r.day.eatenKcalBefore + mealKcal;
-  const late = r.day.localHour >= 20 || r.day.localHour < 4;
+  const eaten = d.eatenKcalBefore + mealKcal;
+  // A day filled in later has no meaningful hour.
+  const late = !d.catchingUp && (d.localHour >= 20 || d.localHour < 4);
   const proteinShare = mealKcal ? (mealProtein * 4) / mealKcal : 0;
   // Building muscle, a big plate is the plan: falling behind is the sin, and
   // only going well past the surplus target counts as a blowout.
-  const gain = r.day.goal === 'gain';
-  if (
-    r.day.targetKcal &&
-    late &&
-    eaten < r.day.targetKcal * (gain ? 0.75 : 0.5)
-  )
-    return 'under eating';
-  if (!r.items.length) return 'sloppy';
+  const gain = d.goal === 'gain';
+  if (d.targetKcal && late && eaten < d.targetKcal * (gain ? 0.75 : 0.5))
+    return 'care';
+  if ((d.quietDays ?? 0) >= 3) return 'welcome';
+  if (!r.items.length) return 'tease';
   if (
     (!gain && mealKcal >= 900) ||
-    (r.day.targetKcal && eaten > r.day.targetKcal * (gain ? 1.1 : 1)) ||
+    (d.targetKcal && eaten > d.targetKcal * (gain ? 1.1 : 1)) ||
     (mealKcal >= 400 && proteinShare < 0.12)
   )
-    return 'disaster';
-  if (proteinShare >= 0.3) return 'clean';
-  return 'sloppy';
+    return 'roast';
+  const proteinHit =
+    d.proteinTargetG > 0 &&
+    d.proteinGBefore < d.proteinTargetG &&
+    d.proteinGBefore + mealProtein >= d.proteinTargetG;
+  if (proteinHit || proteinShare >= 0.3) return 'hype';
+  return 'tease';
 }
+
+export const ROAST_SYSTEM = `you are grainai, the voice of grain, a food tracker for people who lift and train. you are the funniest person in their group chat who also knows nutrition: sharp, observant, quick, and you read the room. someone just logged a meal. answer it.
+
+write 4 different lines, one per line, nothing else. no numbering, no quotes, no intro.
+
+the mode line says what kind of line to write:
+roast: the meal works against their goal. roast it hard and clever. find the one absurd, specific thing about this exact meal (the combination, the portion, the time, the gap between this and their goal) and land it. mild swearing is fine here.
+tease: a so so meal. an affectionate jab with a wink, then point at what would fix the day (usually protein).
+hype: the meal serves their goal. real respect, said like a friend: deadpan approval, a dry compliment, a little swagger. no swearing, no backhanded insult, nothing cheesy.
+care: they have eaten very little and it is late. do not roast. warm and a bit funny, get them to eat a proper meal with protein. never praise eating little.
+welcome: the first meal they have logged in a few days, or ever. no guilt, no "where were you", no "welcome back" (they may be new). glad they are here, keep it light, roast the food gently at most.
+
+what makes a line good:
+it is about this meal and this moment. a line that could answer any meal is a bad line.
+wit beats insults. a sharp observation is funnier than a rude word. no childish name calling: never menace, demon, goblin, gremlin, clown, dumbass.
+one idea, 6 to 20 words, all lowercase, like a text from a friend.
+if their meal is written in hinglish you can answer with a little hinglish. otherwise plain english.
+love life jokes (the ex, the crush) only rarely, never as the default punchline.
+if they are filling in an earlier day, never joke about the time of day.
+never repeat a joke, image or sentence shape from their recent lines.
+
+numbers: at most one, only from the facts given. never do your own maths.
+
+the hard line, never crossed in any mode: nothing about how they look, their body, weight, size, belly, abs or arms. nothing sexual. nothing about eating disorders, starving, skipping meals, self harm, depression, illness or dying. nothing about religion, caste, race, gender, sexuality or disability. never guess their gender or their partner's: "your ex", never "her", "him", "girlfriend", "bro", "bhai" or "king". never tell them to eat less than their target.
+
+sound like a person: never "ah", "well", "looks like", "seems like", "remember", "keep it up", "great job", "nice try", "let's", "fuel", "balance", "moderation", "journey", "treat yourself", "guilty pleasure", "bold", "brave". no exclamation marks, emojis, hashtags or dashes.
+
+these show the level. never reuse them or their jokes:
+roast: a large pizza and a brownie at noon. that's not lunch, that's a group order for one
+roast: three donuts at 11 pm. your protein target just filed a missing person report
+tease: a protein bar for dinner. technically food. add something that once had a face or a farm
+tease: pasta again. fine, now go find 40 g of protein before bed
+hype: 200 g chicken and rice. boring in the best way, your macros just exhaled
+hype: protein target done before dinner. the rest of today is a victory lap
+care: 600 kcal by 9 pm isn't a cut, it's a fast nobody signed you up for. eat something real
+care: running on fumes at this hour. eggs, rice, anything with protein, then sleep
+welcome: eggs and toast to open the account. no speeches, good to see you
+welcome: first log in a few days and it's a burger. honestly, showing up is the hard part`;
 
 const hour12 = (h: number) =>
   h === 0 ? '12 am' : h < 12 ? `${h} am` : h === 12 ? '12 pm' : `${h - 12} pm`;
@@ -87,6 +116,7 @@ const hour12 = (h: number) =>
 /** The facts, worked out here so the model never does the maths, written as
  *  a short note because structured input pulls out formal language. */
 export function roastUserMessage(r: RoastInput): string {
+  const d = r.day;
   const mealKcal = r.items.reduce((s, i) => s + i.kcal, 0);
   const mealProtein = r.items.reduce((s, i) => s + i.proteinG, 0);
   const lines = [
@@ -96,29 +126,43 @@ export function roastUserMessage(r: RoastInput): string {
           .map((i) => i.name.toLowerCase())
           .join(', ')})`
       : 'this meal: not in our food data',
-    `time: ${hour12(r.day.localHour)}`,
-    `verdict: ${verdict(r)}`,
+    d.catchingUp
+      ? 'they are filling in an earlier day they forgot to log, so the time of day is unknown'
+      : `time: ${hour12(d.localHour)}`,
+    `mode: ${tone(r)}`,
   ];
-  if (r.day.goal === 'gain')
+  if (d.goal === 'gain')
     lines.push('goal: building muscle, eating over maintenance on purpose');
-  if (r.day.goal === 'maintain')
+  if (d.goal === 'maintain')
     lines.push('goal: holding their weight at maintenance');
-  if (r.day.targetKcal) {
-    const left = r.day.targetKcal - r.day.eatenKcalBefore - mealKcal;
+  if ((d.quietDays ?? 0) >= 3)
+    lines.push('first meal they have logged in a few days, maybe ever');
+  else if (d.mealsBefore === 0 && !d.catchingUp)
+    lines.push('first meal of their day');
+  if (d.targetKcal) {
+    const left = d.targetKcal - d.eatenKcalBefore - mealKcal;
     lines.push(
       left >= 0
-        ? `calories left for today: ${left}`
-        : `over today's calories by: ${-left}`,
+        ? `calories left for the day: ${left}`
+        : `over the day's calories by: ${-left}`,
     );
   }
-  if (r.day.proteinTargetG) {
-    const need = r.day.proteinTargetG - r.day.proteinGBefore - mealProtein;
+  if (d.proteinTargetG) {
+    const before = d.proteinGBefore;
+    const need = d.proteinTargetG - before - mealProtein;
     lines.push(
       need > 0
-        ? `protein still needed today: ${need} g`
-        : 'protein target: already hit today',
+        ? `protein still needed for the day: ${need} g`
+        : before < d.proteinTargetG
+          ? 'this meal just hit their protein target for the day'
+          : 'protein target: already hit',
     );
   }
+  const recent = (r.recent ?? []).filter(Boolean).slice(-5);
+  if (recent.length)
+    lines.push(
+      `their recent lines, never repeat these jokes:\n${recent.map((l) => `- ${l}`).join('\n')}`,
+    );
   return lines.join('\n');
 }
 
@@ -165,14 +209,43 @@ export function parseCandidates(text: string): string[] {
 const soundsLikeABot = (c: string) =>
   AI_TELLS.test(c) || (c.match(/\d+/g) ?? []).length > 2 || c.length > 130;
 
-/** A random safe candidate, preferring ones that sound like a person. Null
- *  when every candidate crossed the line. */
+/** Playground insults: they read as a child trying to be rude. */
+const CHILDISH =
+  /\b(menace|demon|goblin|gremlin|clown|dumbass|idiot|loser|stupid)\b/i;
+
+/** Swearing belongs to a roast, never to praise, care or a welcome back. */
+const SWEARING = /\b(shit\w*|damn\w*|hell|wtf|fuck\w*|crap|ass|bastard)\b/i;
+
+/** Word runs of four, to spot a joke repeated from a recent line. */
+const runs = (c: string) => {
+  const w = c.toLowerCase().match(/[a-z0-9']+/g) ?? [];
+  const out = new Set<string>();
+  for (let i = 0; i + 4 <= w.length; i++) out.add(w.slice(i, i + 4).join(' '));
+  return out;
+};
+
+/**
+ * A random safe candidate, preferring ones that sound like a person, aren't
+ * childish and don't repeat a recent line. Null when every candidate crossed
+ * the line, or swore where the tone doesn't allow it.
+ */
 export function pickRoast(
   candidates: string[],
   random: () => number = Math.random,
+  opts: { tone?: Tone; recent?: string[] } = {},
 ): string | null {
-  const safe = candidates.filter((c) => !BANNED.test(c));
-  const human = safe.filter((c) => !soundsLikeABot(c));
-  const pool = human.length ? human : safe;
+  const gentle = opts.tone && opts.tone !== 'roast' && opts.tone !== 'tease';
+  const safe = candidates.filter(
+    (c) => !BANNED.test(c) && !(gentle && SWEARING.test(c)),
+  );
+  const seen = new Set((opts.recent ?? []).flatMap((l) => [...runs(l)]));
+  const fresh = (c: string) => ![...runs(c)].some((r) => seen.has(r));
+  const tiers = [
+    safe.filter((c) => !soundsLikeABot(c) && !CHILDISH.test(c) && fresh(c)),
+    safe.filter((c) => !soundsLikeABot(c) && fresh(c)),
+    safe.filter((c) => !soundsLikeABot(c)),
+    safe,
+  ];
+  const pool = tiers.find((t) => t.length) ?? [];
   return pool.length ? pool[Math.floor(random() * pool.length)] : null;
 }

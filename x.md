@@ -916,3 +916,38 @@ Ranking for "calorie tracker" is out of reach for a new domain: app stores
 own it. What moves a new site is being indexed, then links from places
 Google trusts (Product Hunt, BetaList, creators' bios) and long tail
 searches the FAQ answers.
+
+### GrainAI reads the room
+
+Feedback on the roast: one directional and childish. It roasted every meal
+the same way, mocked people for eating well ("boring robot"), and treated a
+day filled in the next morning as a late night meal. A friend with good
+timing knows when to roast and when to say "respect".
+
+Now the code decides the tone before the model writes, from the meal and
+the day:
+
+- roast: the meal works against the goal (the old disaster rules).
+- tease: a so so meal, a light jab and a nudge, usually toward protein.
+- hype: the meal serves the goal, or it just hit the protein target. Real
+  respect, dry and a bit swaggering, never cheesy, never backhanded.
+- care: barely eaten and it's late. No roast, a warm push to eat a proper
+  meal. It used to roast under eating.
+- welcome: the first meal after three or more empty days, or a new
+  account's first. No guilt, no "welcome back".
+
+The model also hears: the first meal of the day, a protein target just hit,
+and when someone is filling in an earlier day (the hour is dropped, so no
+"late night" jokes about yesterday's lunch). The phone remembers GrainAI's
+last five lines and sends them along, and the server prefers lines that
+share no four word run with them, so jokes stop repeating.
+
+The prompt now asks for wit over insults: the one absurd, specific thing
+about this exact meal. Playground words (menace, demon, clown, dumbass)
+lose to any other line. Swearing is allowed in a roast or tease only; in
+praise, care or a welcome it drops the line. Hinglish only when the meal
+was written in Hinglish. Love life jokes rarely, not as the default. The
+body rule is unchanged.
+
+Needs a deploy of the food function. roast-try.ts prints each sample's
+tone with its lines; run it with the Groq key before deploying.

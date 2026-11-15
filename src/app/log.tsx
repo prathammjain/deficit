@@ -26,6 +26,7 @@ import { probeProvider } from '@/lib/food';
 import {
   addEntry,
   loadDay,
+  loadDays,
   removeEntry,
   summarize,
   todayKey,
@@ -68,6 +69,9 @@ export default function LogScreen() {
     { date: string; entry: Omit<LogEntry, 'id' | 'at'> }[]
   >([]);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Empty days just before this one (up to 3), so GrainAI can welcome
+  // someone back instead of roasting them.
+  const [quietDays, setQuietDays] = useState(0);
   const { following } = useFollowing();
   // The day being logged. Today unless the user steps back to catch up on an
   // earlier one, or arrives from a "finish this day" link with ?date=.
@@ -115,9 +119,11 @@ export default function LogScreen() {
       let alive = true;
       void probeProvider(); // refresh the "is the AI engine live?" signal
       (async () => {
-        const [profile, day] = await Promise.all([
+        const before = [1, 2, 3].map((n) => addDays(date, -n));
+        const [profile, day, prior] = await Promise.all([
           loadProfile(),
           loadDay(date),
+          loadDays(before).catch(() => [[1], [1], [1]] as unknown[][]),
         ]);
         if (!alive) return;
         if (profile) {
@@ -130,6 +136,8 @@ export default function LogScreen() {
           setProteinTarget(null);
         }
         setMeals(day);
+        const quiet = prior.findIndex((d) => d.length > 0);
+        setQuietDays(quiet === -1 ? 3 : quiet);
         setLoading(false);
       })();
       return () => {
@@ -330,6 +338,8 @@ export default function LogScreen() {
           proteinG: sum.proteinG,
           proteinTargetG: proteinTarget ?? 0,
           goal,
+          mealsBefore: meals.length,
+          quietDays,
         }}
         pastDay={past ? title : undefined}
       />
