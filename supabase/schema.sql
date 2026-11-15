@@ -205,52 +205,8 @@ exception when others then
 end;
 $$;
 
--- The admin user list: account details and activity counts, never meals.
--- `search` matches part of an email, or a whole user id.
-create or replace function public.admin_users(search text default null)
-returns table (
-  user_id         uuid,
-  email           text,
-  joined_at       timestamptz,
-  last_active_at  timestamptz,
-  days_logged     integer,
-  meals_logged    integer,
-  premium_source  text,
-  premium_ends_at timestamptz
-)
-language plpgsql
-stable
-security definer
-set search_path = ''
-as $$
-#variable_conflict use_column
-begin
-  if not public.is_admin() then
-    raise exception 'admins only' using errcode = '42501';
-  end if;
-  return query
-  select u.id, u.email::text, u.created_at,
-         k.last_active_at, coalesce(k.days_logged, 0), coalesce(k.meals_logged, 0),
-         p.source, p.ends_at
-  from auth.users u
-  left join lateral (
-    select max(kv.updated_at) as last_active_at,
-           (count(*) filter (
-              where kv.key like 'deficit.log.v1.%'
-                and public.log_entry_count(kv.value) > 0))::integer as days_logged,
-           (coalesce(sum(public.log_entry_count(kv.value)) filter (
-              where kv.key like 'deficit.log.v1.%'), 0))::integer as meals_logged
-    from public.user_kv kv
-    where kv.user_id = u.id
-  ) k on true
-  left join public.premium_access p on p.user_id = u.id
-  where search is null or search = ''
-     or u.email ilike '%' || search || '%'
-     or u.id::text = search
-  order by u.created_at desc
-  limit 500;
-end;
-$$;
+-- admin_users() lives in the GrainAI access section at the end, since it
+-- reports GrainAI access too.
 
 -- The numbers behind the admin Stats screen. Aggregates only. Days are
 -- counted in India time; a meal log counts on the user's own date for it.
@@ -662,3 +618,203 @@ grant execute on function public.follow_program(text, boolean, text) to authenti
 grant execute on function public.update_follow(uuid, boolean, text, jsonb) to authenticated;
 grant execute on function public.unfollow(uuid) to authenticated;
 grant execute on function public.my_program_followers() to authenticated;
+
+-- ---- GrainAI access and daily limits (added 2026-11-15) ---------------------
+-- Run this whole section once in the SQL editor, BEFORE deploying the food
+-- function that checks it. Safe to run again.
+--
+-- GrainAI (meal matching, voice notes, roasts) is invite only while the
+-- switch is on: only people in ai_access, plus admins, can use it. Everyone
+-- with access gets ai_daily_limit uses of each kind a day; one person can be
+-- given their own limit. The food function asks ai_spend() before every
+-- call, so the app can't get around either rule.
+
+alter table public.app_settings
+  add column if not exists ai_invite_only boolean not null default true;
+alter table public.app_settings
+  add column if not exists ai_daily_limit integer not null default 12;
+
+-- Who has been let in. daily_limit null means the app wide default.
+create table if not exists public.ai_access (
+  user_id     uuid        primary key references auth.users (id) on delete cascade,
+  daily_limit integer     check (daily_limit is null or daily_limit between 0 and 1000),
+  note        text,
+  granted_by  uuid        references auth.users (id) on delete set null,
+  granted_at  timestamptz not null default now()
+);
+alter table public.ai_access enable row level security;
+
+drop policy if exists "own row select" on public.ai_access;
+create policy "own row select" on public.ai_access
+  for select to authenticated using ((select auth.uid()) = user_id);
+
+drop policy if exists "admin all" on public.ai_access;
+create policy "admin all" on public.ai_access
+  for all to authenticated
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+
+-- Uses per person, per day (their own calendar day), per kind.
+create table if not exists public.ai_usage (
+  user_id uuid    not null references auth.users (id) on delete cascade,
+  day     date    not null,
+  kind    text    not null check (kind in ('meal', 'voice', 'roast')),
+  used    integer not null default 0,
+  primary key (user_id, day, kind)
+);
+alter table public.ai_usage enable row level security;
+
+drop policy if exists "own select" on public.ai_usage;
+create policy "own select" on public.ai_usage
+  for select to authenticated using ((select auth.uid()) = user_id);
+
+drop policy if exists "admin select" on public.ai_usage;
+create policy "admin select" on public.ai_usage
+  for select to authenticated using ((select public.is_admin()));
+
+-- Whether a user may use GrainAI, and their limit. Shared by the two below.
+create or replace function public.ai_rule(p_user uuid)
+returns table (allowed boolean, daily_limit integer)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select
+    (not s.ai_invite_only) or a.user_id is not null or ad.user_id is not null,
+    case when ad.user_id is not null then 1000
+         else coalesce(a.daily_limit, s.ai_daily_limit) end
+  from public.app_settings s
+  left join public.ai_access a on a.user_id = p_user
+  left join public.admins ad on ad.user_id = p_user
+  where s.id = 1;
+$$;
+
+-- Called by the food function (service role) before every GrainAI call.
+-- Counts the use only when it is allowed, in one atomic step.
+create or replace function public.ai_spend(p_user uuid, p_kind text, p_day date)
+returns json
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_allowed boolean;
+  v_limit   integer;
+  v_used    integer;
+begin
+  select r.allowed, r.daily_limit into v_allowed, v_limit
+  from public.ai_rule(p_user) r;
+  if not coalesce(v_allowed, false) then
+    return json_build_object('allowed', false, 'reason', 'invite_only');
+  end if;
+  insert into public.ai_usage (user_id, day, kind)
+  values (p_user, p_day, p_kind)
+  on conflict do nothing;
+  update public.ai_usage
+     set used = used + 1
+   where user_id = p_user and day = p_day and kind = p_kind and used < v_limit
+  returning used into v_used;
+  if v_used is null then
+    return json_build_object('allowed', false, 'reason', 'daily_limit',
+                             'limit', v_limit, 'used', v_limit);
+  end if;
+  return json_build_object('allowed', true, 'limit', v_limit, 'used', v_used);
+end;
+$$;
+
+-- Gives back a use when the call it paid for failed.
+create or replace function public.ai_refund(p_user uuid, p_kind text, p_day date)
+returns void
+language sql
+security definer
+set search_path = ''
+as $$
+  update public.ai_usage set used = greatest(used - 1, 0)
+  where user_id = p_user and day = p_day and kind = p_kind;
+$$;
+
+revoke execute on function public.ai_rule(uuid) from public, anon, authenticated;
+revoke execute on function public.ai_spend(uuid, text, date) from public, anon, authenticated;
+revoke execute on function public.ai_refund(uuid, text, date) from public, anon, authenticated;
+grant execute on function public.ai_spend(uuid, text, date) to service_role;
+grant execute on function public.ai_refund(uuid, text, date) to service_role;
+
+-- For the app: whether the signed in user has GrainAI, and today's meals.
+create or replace function public.my_ai(p_day date)
+returns json
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select json_build_object(
+    'allowed', r.allowed,
+    'limit', r.daily_limit,
+    'used', coalesce((select u.used from public.ai_usage u
+                      where u.user_id = auth.uid() and u.day = p_day
+                        and u.kind = 'meal'), 0)
+  )
+  from public.ai_rule(auth.uid()) r;
+$$;
+revoke execute on function public.my_ai(date) from public, anon;
+grant execute on function public.my_ai(date) to authenticated;
+
+-- The admin user list: account details and activity counts, never meals.
+-- `search` matches part of an email, or a whole user id. Reports GrainAI
+-- access and the meals matched on the latest day used.
+drop function if exists public.admin_users(text);
+create or replace function public.admin_users(search text default null)
+returns table (
+  user_id         uuid,
+  email           text,
+  joined_at       timestamptz,
+  last_active_at  timestamptz,
+  days_logged     integer,
+  meals_logged    integer,
+  premium_source  text,
+  premium_ends_at timestamptz,
+  ai_invited      boolean,
+  ai_daily_limit  integer,
+  ai_last_day     date,
+  ai_last_used    integer
+)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+#variable_conflict use_column
+begin
+  if not public.is_admin() then
+    raise exception 'admins only' using errcode = '42501';
+  end if;
+  return query
+  select u.id, u.email::text, u.created_at,
+         k.last_active_at, coalesce(k.days_logged, 0), coalesce(k.meals_logged, 0),
+         p.source, p.ends_at,
+         a.user_id is not null, a.daily_limit, g.day, g.used
+  from auth.users u
+  left join lateral (
+    select max(kv.updated_at) as last_active_at,
+           (count(*) filter (
+              where kv.key like 'deficit.log.v1.%'
+                and public.log_entry_count(kv.value) > 0))::integer as days_logged,
+           (coalesce(sum(public.log_entry_count(kv.value)) filter (
+              where kv.key like 'deficit.log.v1.%'), 0))::integer as meals_logged
+    from public.user_kv kv
+    where kv.user_id = u.id
+  ) k on true
+  left join public.premium_access p on p.user_id = u.id
+  left join public.ai_access a on a.user_id = u.id
+  left join lateral (
+    select au.day, au.used from public.ai_usage au
+    where au.user_id = u.id and au.kind = 'meal'
+    order by au.day desc limit 1
+  ) g on true
+  where search is null or search = ''
+     or u.email ilike '%' || search || '%'
+     or u.id::text = search
+  order by u.created_at desc
+  limit 500;
+end;
+$$;

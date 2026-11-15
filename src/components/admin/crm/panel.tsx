@@ -26,6 +26,8 @@ import { shortDate } from '@/lib/date';
 import { todayKey } from '@/lib/log-store';
 import {
   giftPremium,
+  grantAi,
+  revokeAi,
   removeGift,
   type AdminUser,
   type Creator,
@@ -769,6 +771,26 @@ function Account({
               </button>
             </div>
           )}
+          <div className={css.row}>
+            <span>{user.ai_invited ? 'In GrainAI' : 'Not in GrainAI yet'}</span>
+            <button
+              className={cx(
+                css.btn,
+                css.small,
+                !user.ai_invited && css.primary,
+              )}
+              disabled={busy}
+              onClick={() =>
+                run(async () => {
+                  if (user.ai_invited) await revokeAi(user.user_id);
+                  else await grantAi(user.user_id, adminId);
+                  await crm.refreshUsers();
+                })
+              }
+            >
+              {user.ai_invited ? 'Remove GrainAI access' : 'Let into GrainAI'}
+            </button>
+          </div>
           <button
             className={css.linkBtn}
             onClick={() =>

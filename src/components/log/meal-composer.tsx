@@ -27,7 +27,9 @@ import {
 import { deviceKey, getJSON, localStore, setJSON } from '@/lib/kv';
 import { portionedEntry, type LogEntry } from '@/lib/log-store';
 import { isWeighed, stepperLabel, stepQuantity } from '@/lib/quantity';
+import { aiLeft, useAiAccess } from '@/lib/food/ai-access';
 import { loadRoastMode } from '@/lib/roast-setting';
+import { refreshAiAccess } from '@/lib/supabase/access';
 import {
   canRecord,
   MAX_SECONDS,
@@ -70,6 +72,15 @@ export function MealComposer({
 }) {
   // Telling GrainAI the meal is the main way to log, so it is open by default.
   const [mode, setMode] = useState<Mode>('describe');
+  const ai = useAiAccess();
+  const picked = useRef(false);
+  useEffect(() => {
+    void refreshAiAccess();
+  }, []);
+  // Without an invite, open on Search instead, unless they chose a tab.
+  useEffect(() => {
+    if (!ai.allowed && !picked.current) setMode('search');
+  }, [ai.allowed]);
   // GrainAI roasts every meal unless the user switched it off in Profile.
   const [roastOn, setRoastOn] = useState(false);
   useEffect(() => {
@@ -82,7 +93,10 @@ export function MealComposer({
         {MODES.map((m) => (
           <Pressable
             key={m.id}
-            onPress={() => setMode(m.id)}
+            onPress={() => {
+              picked.current = true;
+              setMode(m.id);
+            }}
             hitSlop={6}
             style={st.modeBtn}
           >
@@ -100,7 +114,8 @@ export function MealComposer({
       </View>
       <EngineStatus />
 
-      {mode === 'describe' ? (
+      {mode === 'describe' && !ai.allowed ? <InviteOnly /> : null}
+      {mode === 'describe' && ai.allowed ? (
         <DescribeMeal
           onLog={onAddMany}
           day={day}
@@ -111,6 +126,22 @@ export function MealComposer({
       {mode === 'search' ? <SearchFood onAdd={onAdd} /> : null}
       {mode === 'custom' ? <CustomMeal onAdd={onAdd} /> : null}
     </View>
+  );
+}
+
+/** GrainAI before an invite: what it is, and that the rest of logging works. */
+function InviteOnly() {
+  return (
+    <Card style={st.describeCard}>
+      <View style={st.gateHead}>
+        <Sparkle size={16} />
+        <Text style={st.gateTitle}>GrainAI is invite only for now</Text>
+      </View>
+      <Text style={st.gateBody}>
+        It’s opening to a few people at a time while it gets sharper. Search and
+        Custom work as normal in the meantime.
+      </Text>
+    </Card>
   );
 }
 
@@ -224,12 +255,22 @@ function DescribeMeal({
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [roast, setRoast] = useState<string | null>(null);
+  const ai = useAiAccess();
+  const left = aiLeft(ai);
+  const [trouble, setTrouble] = useState(false);
 
   const calc = async () => {
     if (!text.trim() || !foodProvider.parseMeal) return;
     setBusy(true);
     setRoast(null);
+    setTrouble(false);
     const parsed = await foodProvider.parseMeal(text);
+    // Refused: the store already knows why, and the screen follows it.
+    if (parsed.gate) {
+      setTrouble(parsed.gate === 'unavailable');
+      setBusy(false);
+      return;
+    }
     // GrainAI's line arrives a moment after the numbers; it never holds
     // them up.
     if (roastOn) {
@@ -311,6 +352,22 @@ function DescribeMeal({
     { kcal: 0, proteinG: 0 },
   );
 
+  if (left === 0) {
+    return (
+      <Card style={st.describeCard}>
+        <View style={st.gateHead}>
+          <Sparkle size={16} color={palette.textFaint} />
+          <Text style={st.gateTitle}>
+            That’s today’s {ai.limit} GrainAI meals
+          </Text>
+        </View>
+        <Text style={st.gateBody}>
+          Search and Custom still work, and GrainAI is back tomorrow.
+        </Text>
+      </Card>
+    );
+  }
+
   return (
     <Card style={st.describeCard}>
       <TextInput
@@ -344,6 +401,15 @@ function DescribeMeal({
           onPress={calc}
         />
       </View>
+      {trouble ? (
+        <Text style={st.breakdownNote}>
+          GrainAI couldn’t start just now. Try again in a moment.
+        </Text>
+      ) : left != null && left <= 3 ? (
+        <Text style={st.gateLeft}>
+          {left} GrainAI {left === 1 ? 'meal' : 'meals'} left today
+        </Text>
+      ) : null}
 
       {calculated ? (
         <View style={st.breakdown}>
@@ -477,6 +543,7 @@ export function VoiceButton({
   const [state, setState] = useState<'idle' | 'recording' | 'working'>('idle');
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const ai = useAiAccess();
   const recording = useRef<Recording | null>(null);
   const limit = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -511,7 +578,7 @@ export function VoiceButton({
     [],
   );
 
-  if (!foodProvider.transcribe || !canRecord())
+  if (!foodProvider.transcribe || !canRecord() || !ai.allowed)
     return <View style={st.flex1} />;
 
   const start = async () => {

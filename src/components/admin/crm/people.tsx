@@ -1,6 +1,7 @@
 /**
  * people.tsx: everyone with a Grain account, as a laptop table. How active
- * they are, premium gifted in two clicks, and the paywall switch. Account
+ * they are, GrainAI let in with one click, premium gifted in two, the
+ * GrainAI invite switch and daily limit, and the paywall switch. Account
  * details and counts only, never anyone's meals.
  */
 
@@ -8,12 +9,18 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { GIFT_LENGTHS, giftEndsAt } from '@/lib/admin/format';
 import { shortDate } from '@/lib/date';
+import { todayKey } from '@/lib/log-store';
 import {
+  fetchAiSettings,
   fetchUsers,
   giftPremium,
+  grantAi,
   removeGift,
+  revokeAi,
+  saveAiSettings,
   setPaywall,
   type AdminUser,
+  type AiSettings,
 } from '@/lib/supabase/admin';
 
 import { message } from '../ui';
@@ -40,11 +47,33 @@ export function PeopleTable({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [ai, setAi] = useState<AiSettings | null>(null);
+  const [limitText, setLimitText] = useState('');
+
   const load = () => fetchUsers('').then(setUsers, (e) => setError(message(e)));
 
   useEffect(() => {
     fetchUsers('').then(setUsers, (e) => setError(message(e)));
+    fetchAiSettings().then(
+      (s) => {
+        setAi(s);
+        setLimitText(String(s.dailyLimit));
+      },
+      (e) => setError(message(e)),
+    );
   }, []);
+
+  const saveLimit = () => {
+    const n = Math.round(Number(limitText));
+    if (!ai || !Number.isFinite(n) || n < 0 || n > 500 || n === ai.dailyLimit) {
+      setLimitText(String(ai?.dailyLimit ?? ''));
+      return;
+    }
+    void run(async () => {
+      await saveAiSettings({ ...ai, dailyLimit: n });
+      setAi({ ...ai, dailyLimit: n });
+    });
+  };
 
   const run = async (fn: () => Promise<unknown>) => {
     setBusy(true);
@@ -66,6 +95,7 @@ export function PeopleTable({
   const gifted = (users ?? []).filter(
     (u) => live(u) && u.premium_source === 'gift',
   );
+  const invited = (users ?? []).filter((u) => u.ai_invited);
 
   return (
     <div>
@@ -78,6 +108,42 @@ export function PeopleTable({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+          {ai ? (
+            <>
+              <button
+                className={cx(css.btn, ai.inviteOnly && css.primary)}
+                disabled={busy}
+                onClick={() =>
+                  run(async () => {
+                    await saveAiSettings({ ...ai, inviteOnly: !ai.inviteOnly });
+                    setAi({ ...ai, inviteOnly: !ai.inviteOnly });
+                  })
+                }
+                title="On: only people you invite (and admins) can use GrainAI. Off: everyone can."
+              >
+                GrainAI invite only {ai.inviteOnly ? 'on' : 'off'}
+              </button>
+              <label
+                className={css.muted}
+                title="GrainAI meals per person per day. Voice notes and roasts get the same number each."
+              >
+                <input
+                  className={css.input}
+                  style={{ width: 56, textAlign: 'right' }}
+                  inputMode="numeric"
+                  value={limitText}
+                  onChange={(e) =>
+                    setLimitText(e.target.value.replace(/\D/g, ''))
+                  }
+                  onBlur={saveLimit}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveLimit();
+                  }}
+                />{' '}
+                a day
+              </label>
+            </>
+          ) : null}
           <button
             className={cx(css.btn, paywall && css.primary)}
             disabled={busy}
@@ -96,7 +162,7 @@ export function PeopleTable({
 
       <div
         className={css.kpis}
-        style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}
+        style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}
       >
         <div className={css.kpi}>
           <span className={css.kpiLabel}>Accounts</span>
@@ -106,6 +172,17 @@ export function PeopleTable({
           <span className={css.kpiLabel}>Logged at least once</span>
           <span className={css.kpiValue}>
             {users ? users.filter((u) => u.meals_logged > 0).length : ''}
+          </span>
+        </div>
+        <div className={css.kpi}>
+          <span className={css.kpiLabel}>In GrainAI</span>
+          <span className={css.kpiValue}>{users ? invited.length : ''}</span>
+          <span className={css.kpiSub}>
+            {ai
+              ? ai.inviteOnly
+                ? `Invite only, ${ai.dailyLimit} meals a day`
+                : `Open to everyone, ${ai.dailyLimit} a day`
+              : ''}
           </span>
         </div>
         <div className={css.kpi}>
@@ -144,6 +221,7 @@ export function PeopleTable({
                 <th>Last active</th>
                 <th className={css.num}>Days logged</th>
                 <th className={css.num}>Meals</th>
+                <th>GrainAI</th>
                 <th>Premium</th>
                 <th />
               </tr>
@@ -170,6 +248,13 @@ export function PeopleTable({
                     )
                   }
                   onRemove={() => run(() => removeGift(u.user_id))}
+                  onAi={() =>
+                    run(() =>
+                      u.ai_invited
+                        ? revokeAi(u.user_id)
+                        : grantAi(u.user_id, adminId),
+                    )
+                  }
                 />
               ))}
             </tbody>
@@ -191,6 +276,7 @@ function UserRow({
   busy,
   onGift,
   onRemove,
+  onAi,
 }: {
   user: AdminUser;
   open: boolean;
@@ -202,8 +288,10 @@ function UserRow({
   busy: boolean;
   onGift: () => void;
   onRemove: () => void;
+  onAi: () => void;
 }) {
   const isLive = live(u);
+  const today = u.ai_last_day === todayKey() ? (u.ai_last_used ?? 0) : 0;
   return (
     <>
       <tr onClick={onToggle} className={open ? css.rowOpen : undefined}>
@@ -214,6 +302,19 @@ function UserRow({
         </td>
         <td className={css.num}>{u.days_logged || ''}</td>
         <td className={css.num}>{u.meals_logged || ''}</td>
+        <td onClick={(e) => e.stopPropagation()}>
+          <button
+            className={cx(css.btn, css.small, !u.ai_invited && css.primary)}
+            disabled={busy}
+            onClick={onAi}
+            title={u.ai_invited ? 'Remove GrainAI access' : 'Let into GrainAI'}
+          >
+            {u.ai_invited ? 'Invited' : 'Invite'}
+          </button>
+          {u.ai_invited && today ? (
+            <span className={css.faint}> {today} today</span>
+          ) : null}
+        </td>
         <td>
           {isLive ? (
             <span className={css.badge} style={{ marginLeft: 0 }}>
@@ -238,7 +339,7 @@ function UserRow({
       </tr>
       {open ? (
         <tr className={css.rowOpen}>
-          <td colSpan={7} onClick={(e) => e.stopPropagation()}>
+          <td colSpan={8} onClick={(e) => e.stopPropagation()}>
             {isLive && u.premium_source === 'gift' ? (
               <div className={css.row}>
                 <span>

@@ -991,3 +991,44 @@ dropped: users are not all straight men.
 
 468 tests pass. Needs a deploy of the food function, and a run of
 roast-try.ts with the Groq key first to read real output.
+
+### GrainAI goes invite only, with a daily limit
+
+Outreach has started, and every GrainAI call costs model time on a free
+tier that tops out around 15 to 20 daily users. So GrainAI (meal matching,
+voice notes, roasts) is now invite only, with a daily limit for everyone
+who has it. Search and Custom stay open to every account.
+
+How it works:
+
+- The database decides. ai_spend() checks the invite and today's count and
+  adds one in the same atomic step; the food function asks it before every
+  GrainAI call, so the app can't get around either rule. A call that fails
+  gives its use back (ai_refund). If the check itself can't run, the call
+  is refused: an outage must not become free, unlimited model calls.
+- Default limit: 12 a day, counted separately for meals, voice notes and
+  roasts, on the person's own calendar day (the app sends its date; one
+  more than a day off is treated as today in UTC). One person can be given
+  their own limit. Admins are effectively unlimited. Every match counts,
+  cached or not, so "12 a day" means what it says.
+- Admin: Users on a laptop has an Invite button per person, the GrainAI
+  invite only switch, the daily limit, and how many each person matched
+  today. The phone admin and a creator's page (once their Grain account is
+  linked) can let someone in too. The switch can open GrainAI to everyone
+  later without touching the list.
+- In the app: without an invite, Log opens on Search and the GrainAI tab
+  explains it's opening to a few people at a time; the mic is hidden. With
+  three or fewer left, a quiet "2 GrainAI meals left today" sits under the
+  box. At the limit, the box gives way to "That's today's 12 GrainAI meals.
+  Search and Custom still work, and GrainAI is back tomorrow." A refusal
+  never falls back to the local table, which would hand out what the
+  invite holds back.
+
+Checked against a real Postgres 16 with stand ins for Supabase's auth:
+strangers refused, the cap stops at the limit, a personal limit wins,
+voice counts apart, a new day resets, refunds work, admins pass, only
+admins can list users, and clients can't call the spend function. The
+food function passes deno check. 473 tests pass.
+
+Order to ship: run the new SQL section first, then push, then deploy the
+food function. Existing users lose GrainAI until they are invited.

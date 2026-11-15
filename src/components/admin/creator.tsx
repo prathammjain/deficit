@@ -44,7 +44,7 @@ import {
   type Touch,
 } from '@/lib/supabase/admin';
 
-import { PremiumControls } from './users';
+import { AiControls, PremiumControls } from './users';
 import {
   Chips,
   DayPicker,
@@ -749,6 +749,7 @@ function Account({
                   : 'no meals yet'}
               </Text>
             </View>
+            <AiControls user={user} adminId={adminId} onChanged={load} />
             <PremiumControls user={user} adminId={adminId} onChanged={load} />
             <QuietButton
               label="Unlink this account"

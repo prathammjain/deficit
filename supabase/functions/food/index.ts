@@ -726,6 +726,75 @@ async function pickEngine(
   return cfg ? { arm: 'beta', cfg } : live;
 }
 
+// ---- GrainAI access -----------------------------------------------------------
+// Invite only, with a daily limit per kind of call. The database decides
+// (ai_spend in schema.sql) and counts the use in the same step, so the app
+// can't get around either. If the check can't run, nothing is spent and the
+// call is refused: an outage must not become free, unlimited model calls.
+
+type AiKind = 'meal' | 'voice' | 'roast';
+type AiGate =
+  | { allowed: true; limit: number; used: number }
+  | {
+      allowed: false;
+      reason: 'invite_only' | 'daily_limit' | 'unavailable';
+      limit?: number;
+      used?: number;
+    };
+
+/** The user's own calendar day, as the app sends it. Anything missing, or
+ *  more than a day from today in UTC, counts as today in UTC. */
+function usageDay(local: unknown): string {
+  const today = new Date().toISOString().slice(0, 10);
+  if (typeof local !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(local))
+    return today;
+  const gap = Math.abs(
+    Date.parse(`${local}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`),
+  );
+  return gap <= 86_400_000 ? local : today;
+}
+
+async function spendAi(
+  userId: string,
+  kind: AiKind,
+  day: string,
+): Promise<AiGate> {
+  try {
+    const res = await rest('rpc/ai_spend', {
+      method: 'POST',
+      body: JSON.stringify({ p_user: userId, p_kind: kind, p_day: day }),
+    });
+    if (!res.ok) return { allowed: false, reason: 'unavailable' };
+    const gate = await res.json();
+    return typeof gate?.allowed === 'boolean'
+      ? (gate as AiGate)
+      : { allowed: false, reason: 'unavailable' };
+  } catch {
+    return { allowed: false, reason: 'unavailable' };
+  }
+}
+
+/** Gives a use back when the call it paid for failed. */
+function refundAi(userId: string, kind: AiKind, day: string): void {
+  background(
+    rest('rpc/ai_refund', {
+      method: 'POST',
+      body: JSON.stringify({ p_user: userId, p_kind: kind, p_day: day }),
+    }),
+  );
+}
+
+const refused = (gate: AiGate, origin: string | null) =>
+  json(
+    {
+      error: gate.allowed ? 'unavailable' : gate.reason,
+      limit: gate.limit ?? null,
+      used: gate.used ?? null,
+    },
+    !gate.allowed && gate.reason === 'daily_limit' ? 429 : 403,
+    origin,
+  );
+
 /** Lets work finish after the response has gone. */
 function background(work: Promise<unknown>): void {
   const settled = work.catch(() => {});
@@ -829,10 +898,14 @@ Deno.serve(async (req: Request) => {
 
     const { action, text, runId, logged, audio, mime, meal, items, day } =
       body.value;
+    const aiDay = usageDay(body.value.localDate);
 
     if (action === 'roast') {
       const cfg = getLLMConfig();
       if (!cfg) return json({ line: null }, 200, origin);
+      // No access or no roasts left: the meal simply gets no line.
+      const gate = await spendAi(userId, 'roast', aiDay);
+      if (!gate.allowed) return json({ line: null }, 200, origin);
       const n = (v: unknown) => Math.round(Number(v) || 0);
       const input: RoastInput = {
         meal: String(meal ?? '').slice(0, 300),
@@ -859,7 +932,9 @@ Deno.serve(async (req: Request) => {
           .slice(-5)
           .map((l: unknown) => String(l ?? '').slice(0, 160)),
       };
-      return json({ line: await roastLine(cfg, input) }, 200, origin);
+      const line = await roastLine(cfg, input).catch(() => null);
+      if (line == null) refundAi(userId, 'roast', aiDay);
+      return json({ line }, 200, origin);
     }
 
     if (action === 'transcribe') {
@@ -869,7 +944,11 @@ Deno.serve(async (req: Request) => {
         audio.length <= MAX_AUDIO_BASE64 &&
         mime === 'audio/wav';
       if (!valid) return json({ error: 'bad audio' }, 400, origin);
-      return json({ text: await transcribe(audio, mime) }, 200, origin);
+      const gate = await spendAi(userId, 'voice', aiDay);
+      if (!gate.allowed) return refused(gate, origin);
+      const heard = await transcribe(audio, mime).catch(() => null);
+      if (!heard) refundAi(userId, 'voice', aiDay);
+      return json({ text: heard }, 200, origin);
     }
 
     if (action === 'health') {
@@ -915,10 +994,16 @@ Deno.serve(async (req: Request) => {
 
     if (action === 'parse') {
       const mealText = String(text ?? '');
+      const gate = await spendAi(userId, 'meal', aiDay);
+      if (!gate.allowed) return refused(gate, origin);
+      const usage = { used: gate.used, limit: gate.limit };
       const started = Date.now();
       const ref = await userRef(userId);
       const { arm, cfg } = await pickEngine(userId, ref);
-      if (!cfg) throw new Error('No LLM API key configured');
+      if (!cfg) {
+        refundAi(userId, 'meal', aiDay);
+        throw new Error('No LLM API key configured');
+      }
       const id = crypto.randomUUID();
       const run = {
         id,
@@ -937,7 +1022,7 @@ Deno.serve(async (req: Request) => {
           cached: true,
           latency_ms: Date.now() - started,
         });
-        return json({ ...hit, cached: true, runId: id }, 200, origin);
+        return json({ ...hit, cached: true, runId: id, usage }, 200, origin);
       }
 
       const trace = {
@@ -947,11 +1032,15 @@ Deno.serve(async (req: Request) => {
       };
       try {
         return json(
-          await parseUncached(cfg, mealText, key, run, trace, started),
+          {
+            ...(await parseUncached(cfg, mealText, key, run, trace, started)),
+            usage,
+          },
           200,
           origin,
         );
       } catch (e) {
+        refundAi(userId, 'meal', aiDay);
         saveRun({
           ...run,
           trace,

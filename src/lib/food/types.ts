@@ -52,6 +52,11 @@ export interface ParsedMeal {
   /** The engine's id for this run, so what the user logs can be sent back
    *  as a correction. Absent for the offline parser. */
   runId?: string;
+  /** Today's GrainAI meals after this one, as the server counted them. */
+  usage?: { used: number; limit: number };
+  /** Set when GrainAI refused: no invite, today's limit used, or the check
+   *  couldn't run. Nothing is matched then, and nothing falls back. */
+  gate?: 'invite_only' | 'daily_limit' | 'unavailable';
 }
 
 /** One item as the user finally logged it from a parsed meal. */

@@ -37,6 +37,18 @@ export interface AdminUser {
   meals_logged: number;
   premium_source: 'gift' | 'subscription' | null;
   premium_ends_at: string | null;
+  /** Let into GrainAI while it's invite only. */
+  ai_invited: boolean;
+  /** Their own daily limit; null means the app wide one. */
+  ai_daily_limit: number | null;
+  /** The last day they matched meals, and how many. */
+  ai_last_day: string | null;
+  ai_last_used: number | null;
+}
+
+export interface AiSettings {
+  inviteOnly: boolean;
+  dailyLimit: number;
 }
 
 export interface Creator {
@@ -123,6 +135,53 @@ export async function removeGift(userId: string): Promise<void> {
     .delete()
     .eq('user_id', userId)
     .eq('source', 'gift');
+  if (error) throw error;
+}
+
+// ---- GrainAI access -----------------------------------------------------------
+
+export async function fetchAiSettings(): Promise<AiSettings> {
+  const { data, error } = await db()
+    .from('app_settings')
+    .select('ai_invite_only, ai_daily_limit')
+    .eq('id', 1)
+    .single();
+  if (error) throw error;
+  return { inviteOnly: data.ai_invite_only, dailyLimit: data.ai_daily_limit };
+}
+
+export async function saveAiSettings(s: AiSettings): Promise<void> {
+  const { error } = await db()
+    .from('app_settings')
+    .update({
+      ai_invite_only: s.inviteOnly,
+      ai_daily_limit: s.dailyLimit,
+      updated_at: now(),
+    })
+    .eq('id', 1);
+  if (error) throw error;
+}
+
+/** Lets someone into GrainAI, optionally with their own daily limit. */
+export async function grantAi(
+  userId: string,
+  grantedBy: string,
+  dailyLimit: number | null = null,
+): Promise<void> {
+  const { error } = await db().from('ai_access').upsert(
+    {
+      user_id: userId,
+      granted_by: grantedBy,
+      daily_limit: dailyLimit,
+      granted_at: now(),
+    },
+    { onConflict: 'user_id' },
+  );
+  if (error) throw error;
+}
+
+export async function revokeAi(userId: string): Promise<void> {
+  const { error } = await db().from('ai_access').delete().eq('user_id', userId);
   if (error) throw error;
 }
 

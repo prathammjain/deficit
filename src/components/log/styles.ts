@@ -145,6 +145,10 @@ export const st = StyleSheet.create({
   },
 
   describeCard: { gap: space.lg },
+  gateHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  gateTitle: { color: palette.text, fontSize: 16, fontWeight: '700' },
+  gateBody: { color: palette.textMuted, fontSize: 14, lineHeight: 20 },
+  gateLeft: { color: palette.textFaint, fontSize: 12, textAlign: 'right' },
   describeInput: {
     color: palette.text,
     fontSize: 17,

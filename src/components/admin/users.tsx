@@ -10,11 +10,16 @@ import { Card, Hairline, PrimaryButton } from '@/components/ui/primitives';
 import { GIFT_LENGTHS, giftEndsAt } from '@/lib/admin/format';
 import { shortDate } from '@/lib/date';
 import {
+  fetchAiSettings,
   fetchUsers,
   giftPremium,
+  grantAi,
   removeGift,
+  revokeAi,
+  saveAiSettings,
   setPaywall,
   type AdminUser,
+  type AiSettings,
 } from '@/lib/supabase/admin';
 
 import {
@@ -40,6 +45,22 @@ export function UsersView({
   const [paywall, setPaywallOn] = useState(initialPaywall);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [ai, setAi] = useState<AiSettings | null>(null);
+  useEffect(() => {
+    fetchAiSettings().then(setAi, (e) => setError(message(e)));
+  }, []);
+  const saveAi = async (next: AiSettings) => {
+    setSaving(true);
+    try {
+      await saveAiSettings(next);
+      setAi(next);
+      setError(null);
+    } catch (e) {
+      setError(message(e));
+    }
+    setSaving(false);
+  };
 
   const load = useCallback(async (q: string) => {
     try {
@@ -96,6 +117,44 @@ export function UsersView({
         </Text>
       </Card>
 
+      {ai ? (
+        <Card style={[ui.card, { marginTop: 16 }]}>
+          <Pressable
+            onPress={() => void saveAi({ ...ai, inviteOnly: !ai.inviteOnly })}
+            disabled={saving}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: ai.inviteOnly }}
+            style={ui.row}
+          >
+            <View style={ui.rowText}>
+              <Text style={ui.rowTitle}>GrainAI invite only</Text>
+              <Text style={ui.sub}>
+                {ai.inviteOnly
+                  ? 'On. Only people you let in, and admins, can use it.'
+                  : 'Off. Everyone can use it.'}
+              </Text>
+            </View>
+            <Text style={[ui.rowTitle, ai.inviteOnly && ui.badge]}>
+              {ai.inviteOnly ? 'On' : 'Off'}
+            </Text>
+          </Pressable>
+          <Text style={[ui.sub, { marginTop: 12 }]}>
+            GrainAI meals per person, per day
+          </Text>
+          <Chips
+            options={[6, 12, 20, 30].map((n) => ({
+              value: n,
+              label: String(n),
+            }))}
+            value={ai.dailyLimit}
+            onChange={(n) => n != null && void saveAi({ ...ai, dailyLimit: n })}
+          />
+          <Text style={ui.caption}>
+            Voice notes and roasts get the same number each.
+          </Text>
+        </Card>
+      ) : null}
+
       <Field
         style={{ marginTop: 24 }}
         placeholder="Search by email"
@@ -130,7 +189,12 @@ export function UsersView({
                   <Text style={ui.badge}>{badge(u)}</Text>
                 </Pressable>
                 {open === u.user_id ? (
-                  <View style={{ paddingBottom: 16 }}>
+                  <View style={{ paddingBottom: 16, gap: 16 }}>
+                    <AiControls
+                      user={u}
+                      adminId={adminId}
+                      onChanged={() => load(search)}
+                    />
                     <PremiumControls
                       user={u}
                       adminId={adminId}
@@ -143,6 +207,53 @@ export function UsersView({
           ))}
         </Card>
       )}
+    </View>
+  );
+}
+
+/** Let someone into GrainAI, or take it away. Also on a creator's page. */
+export function AiControls({
+  user,
+  adminId,
+  onChanged,
+}: {
+  user: Pick<AdminUser, 'user_id' | 'ai_invited'>;
+  adminId: string;
+  onChanged: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      if (user.ai_invited) await revokeAi(user.user_id);
+      else await grantAi(user.user_id, adminId);
+      setError(null);
+      onChanged();
+    } catch (e) {
+      setError(message(e));
+    }
+    setBusy(false);
+  };
+  return (
+    <View style={{ gap: 8 }}>
+      <Text style={ui.line}>
+        {user.ai_invited ? 'In GrainAI.' : 'Not in GrainAI yet.'}
+      </Text>
+      {user.ai_invited ? (
+        <QuietButton
+          label={busy ? 'Removing' : 'Remove GrainAI access'}
+          disabled={busy}
+          onPress={() => void toggle()}
+        />
+      ) : (
+        <PrimaryButton
+          label={busy ? 'Letting in' : 'Let into GrainAI'}
+          disabled={busy}
+          onPress={() => void toggle()}
+        />
+      )}
+      <ErrorLine text={error} />
     </View>
   );
 }
@@ -162,8 +273,11 @@ const isLive = (endsAt: string | null) =>
   endsAt == null || new Date(endsAt) > new Date();
 
 function badge(u: AdminUser): string {
-  if (!u.premium_source || !isLive(u.premium_ends_at)) return '';
-  return u.premium_source === 'gift' ? 'Gift' : 'Paid';
+  const tags = [];
+  if (u.ai_invited) tags.push('AI');
+  if (u.premium_source && isLive(u.premium_ends_at))
+    tags.push(u.premium_source === 'gift' ? 'Gift' : 'Paid');
+  return tags.join(' · ');
 }
 
 /**

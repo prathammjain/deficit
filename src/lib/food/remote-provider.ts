@@ -8,7 +8,10 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { todayKey } from '../log-store';
+import { noteAiGate, noteAiUsage, type AiGateReason } from './ai-access';
 import { setProviderStatus } from './provider-status';
+
 import type {
   FoodItem,
   FoodProvider,
@@ -16,6 +19,29 @@ import type {
   ParsedMeal,
   RoastInput,
 } from './types';
+
+const EMPTY_TOTAL = { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 };
+const GATES: AiGateReason[] = ['invite_only', 'daily_limit', 'unavailable'];
+
+/** The refusal behind a failed call, when it was GrainAI saying no. */
+async function gateOf(
+  error: unknown,
+): Promise<{ reason: AiGateReason; limit: number | null } | null> {
+  const res = (error as { context?: Response } | null)?.context;
+  if (!res || typeof res.json !== 'function') return null;
+  if (res.status !== 403 && res.status !== 429) return null;
+  try {
+    const body = await res.clone().json();
+    return GATES.includes(body?.error)
+      ? {
+          reason: body.error,
+          limit: typeof body.limit === 'number' ? body.limit : null,
+        }
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 export class RemoteFoodProvider implements FoodProvider {
   readonly name = 'remote';
@@ -50,25 +76,40 @@ export class RemoteFoodProvider implements FoodProvider {
   async parseMeal(text: string): Promise<ParsedMeal> {
     try {
       const { data, error } = await this.client.functions.invoke('food', {
-        body: { action: 'parse', text },
+        body: { action: 'parse', text, localDate: todayKey() },
       });
+      // GrainAI said no: show why. Falling back to the local table here
+      // would hand out what the invite and the limit hold back.
+      const gate = error ? await gateOf(error) : null;
+      if (gate) {
+        noteAiGate(gate.reason, gate.limit);
+        return { items: [], total: EMPTY_TOTAL, gate: gate.reason };
+      }
       if (error || !data?.items) throw error ?? new Error('no data');
       setProviderStatus('online');
+      if (data.usage) noteAiUsage(data.usage);
       return data as ParsedMeal;
     } catch {
       setProviderStatus('offline');
       // Local heuristic parse is a reasonable degraded experience.
       return this.fallback.parseMeal
         ? this.fallback.parseMeal(text)
-        : { items: [], total: { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 } };
+        : { items: [], total: EMPTY_TOTAL };
     }
   }
 
   async transcribe(wavBase64: string): Promise<string | null> {
     try {
       const { data, error } = await this.client.functions.invoke('food', {
-        body: { action: 'transcribe', audio: wavBase64, mime: 'audio/wav' },
+        body: {
+          action: 'transcribe',
+          audio: wavBase64,
+          mime: 'audio/wav',
+          localDate: todayKey(),
+        },
       });
+      const gate = error ? await gateOf(error) : null;
+      if (gate) noteAiGate(gate.reason, gate.limit);
       if (error || typeof data?.text !== 'string') return null;
       return data.text;
     } catch {
@@ -79,7 +120,7 @@ export class RemoteFoodProvider implements FoodProvider {
   async roast(input: RoastInput): Promise<string | null> {
     try {
       const { data, error } = await this.client.functions.invoke('food', {
-        body: { action: 'roast', ...input },
+        body: { action: 'roast', ...input, localDate: todayKey() },
       });
       if (error || typeof data?.line !== 'string') return null;
       return data.line;
