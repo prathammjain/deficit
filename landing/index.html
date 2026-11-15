@@ -66,7 +66,103 @@
               "price": "0",
               "priceCurrency": "USD"
             },
-            "publisher": { "@id": "https://getgrain.fit/#org" }
+            "publisher": { "@id": "https://getgrain.fit/#org" },
+            "screenshot": "https://getgrain.fit/og-card.png",
+            "featureList": [
+              "Log meals by typing or saying what you ate",
+              "Every food matched to measured nutrition data",
+              "Fill in missed days later",
+              "Goals for losing fat, maintaining or building muscle",
+              "Workout logging with records and a rest timer",
+              "Import from Strong, Hevy or CSV",
+              "Training programs and meal plans shared by code"
+            ]
+          },
+          {
+            "@type": "FAQPage",
+            "@id": "https://getgrain.fit/#faq",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Is Grain free?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes, Grain is free right now. A paid plan will come later; anything you log stays yours either way."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "How does Grain count calories?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Tell GrainAI what you ate in plain words, typed or spoken, like \"200 g chicken breast, a bowl of rice, a spoon of olive oil\". It matches each food to measured nutrition data, works out the calories, protein, carbs and fat, and tags every food as a good match, an estimate, or an amount to check."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can Grain count calories from a photo?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "No, on purpose. A photo can't see the oil in the pan, the chicken under the rice, or how much is really on the plate. Saying what you ate is faster for anyone who already knows, and far more accurate."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Does Grain work on iPhone and Android?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. Grain runs in your phone's browser at app.getgrain.fit, and you can add it to your home screen so it opens like any other app. On an iPhone, Grain shows you the exact taps."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What if I forget to log a day?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Step back to that day and fill it in, any time later. A day you never log counts as nothing, never as a deficit, so your numbers can't flatter you."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I track a bulk or maintenance, not just a cut?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. Pick lose fat, maintain, or build muscle, and your targets follow. After a week of logs and a few weigh ins, Grain learns what you really burn and suggests a better target."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I log my workouts in Grain?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. Last session's weights and reps are already filled in, so a repeated set is one tap. Records, a rest timer and progress next to your food and bodyweight are built in, and it works with no signal."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I import my history from Strong or Hevy?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. Import a Strong or Hevy export, any training spreadsheet saved as CSV, or pasted notes. Exercise names are matched for you."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Does Grain work for home cooked food?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. Grain understands meals from everywhere, home cooking included: say it the way you would describe it, and it works out each part."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Is my data private?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Your meals are saved without your name. You can download everything you've logged or delete your account and all of it at any time."
+                }
+              }
+            ]
           }
         ]
       }
@@ -1530,6 +1626,102 @@
             </article>
           </div>
           <div class="rail-dots" data-rail-dots></div>
+        </div>
+      </section>
+
+      <section class="faq wrap" aria-labelledby="faq-title">
+        <div class="section-head" data-reveal>
+          <h2 id="faq-title">Questions, answered.</h2>
+        </div>
+        <div class="faq-list" data-reveal>
+          <details class="faq-item glass">
+            <summary><h3>Is Grain free?</h3></summary>
+            <p>
+              Yes, Grain is free right now. A paid plan will come later;
+              anything you log stays yours either way.
+            </p>
+          </details>
+          <details class="faq-item glass">
+            <summary><h3>How does Grain count calories?</h3></summary>
+            <p>
+              Tell GrainAI what you ate in plain words, typed or spoken, like
+              &quot;200 g chicken breast, a bowl of rice, a spoon of olive
+              oil&quot;. It matches each food to measured nutrition data, works
+              out the calories, protein, carbs and fat, and tags every food as a
+              good match, an estimate, or an amount to check.
+            </p>
+          </details>
+          <details class="faq-item glass">
+            <summary><h3>Can Grain count calories from a photo?</h3></summary>
+            <p>
+              No, on purpose. A photo can&#x27;t see the oil in the pan, the
+              chicken under the rice, or how much is really on the plate. Saying
+              what you ate is faster for anyone who already knows, and far more
+              accurate.
+            </p>
+          </details>
+          <details class="faq-item glass">
+            <summary><h3>Does Grain work on iPhone and Android?</h3></summary>
+            <p>
+              Yes. Grain runs in your phone&#x27;s browser at app.getgrain.fit,
+              and you can add it to your home screen so it opens like any other
+              app. On an iPhone, Grain shows you the exact taps.
+            </p>
+          </details>
+          <details class="faq-item glass">
+            <summary><h3>What if I forget to log a day?</h3></summary>
+            <p>
+              Step back to that day and fill it in, any time later. A day you
+              never log counts as nothing, never as a deficit, so your numbers
+              can&#x27;t flatter you.
+            </p>
+          </details>
+          <details class="faq-item glass">
+            <summary>
+              <h3>Can I track a bulk or maintenance, not just a cut?</h3>
+            </summary>
+            <p>
+              Yes. Pick lose fat, maintain, or build muscle, and your targets
+              follow. After a week of logs and a few weigh ins, Grain learns
+              what you really burn and suggests a better target.
+            </p>
+          </details>
+          <details class="faq-item glass">
+            <summary><h3>Can I log my workouts in Grain?</h3></summary>
+            <p>
+              Yes. Last session&#x27;s weights and reps are already filled in,
+              so a repeated set is one tap. Records, a rest timer and progress
+              next to your food and bodyweight are built in, and it works with
+              no signal.
+            </p>
+          </details>
+          <details class="faq-item glass">
+            <summary>
+              <h3>Can I import my history from Strong or Hevy?</h3>
+            </summary>
+            <p>
+              Yes. Import a Strong or Hevy export, any training spreadsheet
+              saved as CSV, or pasted notes. Exercise names are matched for you.
+            </p>
+          </details>
+          <details class="faq-item glass">
+            <summary>
+              <h3>Does Grain work for home cooked food?</h3>
+            </summary>
+            <p>
+              Yes. Grain understands meals from everywhere, home cooking
+              included: say it the way you would describe it, and it works out
+              each part.
+            </p>
+          </details>
+          <details class="faq-item glass">
+            <summary><h3>Is my data private?</h3></summary>
+            <p>
+              Your meals are saved without your name. You can download
+              everything you&#x27;ve logged or delete your account and all of it
+              at any time.
+            </p>
+          </details>
         </div>
       </section>
 

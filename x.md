@@ -891,3 +891,28 @@ salmon and potatoes, and the share card image says olive oil and 644.
 The demo still knows the Indian dishes if someone types them; they are just
 not the examples any more. GrainAI roasts a tapped suggestion by its own
 name ("tuna sandwich at lunch"), not by its biggest ingredient.
+
+### Getting found on Google
+
+A site: search for getgrain.fit returned nothing. Google had never been told
+the site exists: Search Console was never set up. That is the real blocker,
+and it needs the owner's Google account, so it is done by hand.
+
+On the page:
+
+- A "Questions, answered." section before the closing card, ten questions
+  people actually search (is it free, how does it count calories, can it use
+  a photo, iPhone and Android, a forgotten day, bulking, workouts, Strong and
+  Hevy, home cooked food, privacy). Native details and summary, so the
+  answers are in the page for search engines and need no script.
+- The same ten as FAQPage structured data, plus a feature list and a
+  screenshot on the WebApplication entry.
+- Sitemap date moved to today.
+- app.getgrain.fit now sends noindex on every page. Its screens sit behind
+  sign in and all share one title, so in the index they would only compete
+  with getgrain.fit. Brand searches should land on the landing page.
+
+Ranking for "calorie tracker" is out of reach for a new domain: app stores
+own it. What moves a new site is being indexed, then links from places
+Google trusts (Product Hunt, BetaList, creators' bios) and long tail
+searches the FAQ answers.
