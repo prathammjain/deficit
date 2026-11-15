@@ -1032,3 +1032,26 @@ food function passes deno check. 473 tests pass.
 
 Order to ship: run the new SQL section first, then push, then deploy the
 food function. Existing users lose GrainAI until they are invited.
+
+### Food data sources researched
+
+Before working on engine accuracy, surveyed every downloadable food
+database and API, with licences, in the doc "Grain engine: food data
+sources" (https://claude.ai/artifact/EV7mrQrLZogHWVV6HZuMcC).
+
+Decision proposed: own the data, don't rent it. Import USDA Foundation,
+SR Legacy and FNDDS (public domain; FNDDS has cooked dishes and 22,046
+household portion weights) into our own Postgres and stop calling the
+USDA API per meal. Add UK CoFID, Canada CNF, Australia AFCD and France
+Ciqual as cross checks (open, credit required). Paid APIs (FatSecret,
+Nutritionix, Edamam) would do the parsing we already do; only FatSecret
+Premier with the India dataset is worth revisiting, later.
+
+Licence gap found: the IFCT 2017 book reserves electronic storage "for
+creating a product" to NIN's written permission, and INDB's repository
+states no licence. Our _ifct.ts (525 rows) and the 90 curated dishes
+depend on them. Action: permission emails to NIN and the INDB authors.
+Avoid NEVO (no charging users), the CoFID API and Quadram labelling set
+(non commercial) and the ifct2017 package (AGPL).
+
+Next: a 200 meal accuracy test set and a baseline, before any change.
