@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { GlassSurface, Hairline } from '@/components/ui/primitives';
 import { palette, space, type as typo } from '@/constants/palette';
 import type { AdaptiveTdee } from '@/lib/adaptive-tdee';
+import type { CardioJump } from '@/lib/cardio/cardio';
 
 /**
  * The weekly check in, on the day it happened: what moved, why, and one tap
@@ -14,6 +15,7 @@ export function CheckInCard({
   targetBefore,
   targetNow,
   adaptive,
+  cardioJump,
   onKeepLastWeek,
 }: {
   maintenanceBefore: number;
@@ -21,6 +23,8 @@ export function CheckInCard({
   targetBefore: number;
   targetNow: number;
   adaptive: AdaptiveTdee | null;
+  /** A clear rise in cardio and HYROX: said next to a higher burn. */
+  cardioJump?: CardioJump | null;
   onKeepLastWeek: () => void;
 }) {
   const up = maintenanceNow > maintenanceBefore;
@@ -52,6 +56,15 @@ export function CheckInCard({
             : `${Math.abs(trend).toFixed(1)} kg a week ${trend < 0 ? 'down' : 'up'}`}
           . Grain moves toward that a step at a time, so one odd week can’t
           swing your plan.
+        </Text>
+      ) : null}
+
+      {up && cardioJump ? (
+        <Text style={cs.body}>
+          You did {cardioJump.recent} minutes of cardio and HYROX in the last 7
+          days, against {cardioJump.usual} in a usual week before that. That’s
+          part of why your burn went up. Cardio isn’t added to your target on
+          top: it shows up here, in what you really burn.
         </Text>
       ) : null}
 

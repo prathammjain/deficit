@@ -335,6 +335,27 @@ describe('the read', () => {
     ).toBe('1 HYROX sim that week, with a new best time.');
   });
 
+  it('reads a week of only cardio, or cardio and HYROX, as training', () => {
+    const none = { ...base.training, sessions: 0 };
+    expect(
+      periodRead({
+        ...base,
+        training: none,
+        cardio: { sessions: 3, minutes: 140, records: 0 },
+      }),
+    ).toBe('3 cardio sessions this week, 140 minutes, no lifting.');
+    expect(
+      periodRead({
+        ...base,
+        training: none,
+        hyrox: { sims: 1, records: 0 },
+        cardio: { sessions: 2, minutes: 60, records: 1 },
+      }),
+    ).toBe(
+      '1 HYROX sim and 2 cardio sessions this week, with a new best time.',
+    );
+  });
+
   it('joins strength and bodyweight', () => {
     expect(
       periodRead({

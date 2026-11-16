@@ -291,7 +291,7 @@ export function OnboardingFlow({
             <Question
               eyebrow={stepLabel}
               title="How active are you?"
-              hint="Be honest. Overestimating is the most common mistake."
+              hint="Count your usual workouts, cardio and HYROX. Be honest: overestimating is the most common mistake. Grain checks this against your real burn every week."
             >
               <View style={styles.stack}>
                 {ACTIVITY_OPTIONS.map((o) => (

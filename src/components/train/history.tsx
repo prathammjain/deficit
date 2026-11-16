@@ -1,6 +1,6 @@
 /**
- * history.tsx: all training, newest first, grouped by week: workouts and
- * HYROX sims in one timeline.
+ * history.tsx: all training, newest first, grouped by week: workouts, HYROX
+ * sims and cardio in one timeline.
  */
 
 import { router } from 'expo-router';
@@ -8,6 +8,14 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { Card, SectionLabel } from '@/components/ui/primitives';
+import {
+  clock,
+  distanceText,
+  kindOf,
+  recordSessions,
+  sessionPace,
+  type CardioSession,
+} from '@/lib/cardio/cardio';
 import { recordSims } from '@/lib/hyrox/progress';
 import {
   division,
@@ -26,7 +34,8 @@ const PAGE = 20;
 
 type Item =
   | { kind: 'workout'; w: Workout; at: number; date: string }
-  | { kind: 'sim'; s: Sim; at: number; date: string };
+  | { kind: 'sim'; s: Sim; at: number; date: string }
+  | { kind: 'cardio'; c: CardioSession; at: number; date: string };
 
 function dayText(day: string) {
   const [y, m, d] = day.split('-').map(Number);
@@ -61,8 +70,15 @@ export function WorkoutHistory({
       at: s.startedAt,
       date: s.date,
     })),
+    ...data.cardio.map((c) => ({
+      kind: 'cardio' as const,
+      c,
+      at: c.startedAt,
+      date: c.date,
+    })),
   ].sort((a, b) => b.at - a.at);
   const simRecords = recordSims(data.sims);
+  const cardioRecords = recordSessions(data.cardio);
   const groups: { label: string; items: Item[] }[] = [];
   for (const item of newest.slice(0, shown)) {
     const label = periodLabel(periodOf('week', item.date), today);
@@ -100,6 +116,16 @@ export function WorkoutHistory({
           <SectionLabel>{g.label}</SectionLabel>
           <Card padded={false}>
             {g.items.map((item, i) => {
+              if (item.kind === 'cardio') {
+                return (
+                  <CardioRow
+                    key={item.c.id}
+                    session={item.c}
+                    first={i === 0}
+                    record={cardioRecords.has(item.c.id)}
+                  />
+                );
+              }
               if (item.kind === 'sim') {
                 return (
                   <SimRow
@@ -207,6 +233,57 @@ function SimRow({
       </Text>
       <View style={tr.histStats}>
         <Text style={tr.histStat}>{raceClock(summarize(sim).totalMs)}</Text>
+        {record ? <Text style={tr.prTag}>Best time</Text> : null}
+      </View>
+    </Pressable>
+  );
+}
+
+/** A cardio session in the timeline; opens it on the Cardio tab. */
+function CardioRow({
+  session,
+  first,
+  record,
+}: {
+  session: CardioSession;
+  first: boolean;
+  record: boolean;
+}) {
+  const pace = sessionPace(session);
+  return (
+    <Pressable
+      onPress={() =>
+        router.navigate({
+          pathname: '/train',
+          params: { tab: 'cardio', edit: session.id, at: String(Date.now()) },
+        })
+      }
+      style={({ pressed }) => [
+        tr.histRow,
+        first && { borderTopWidth: 0 },
+        pressed && tr.pressed,
+      ]}
+    >
+      <View style={tr.histTop}>
+        <Text style={tr.histName} numberOfLines={1}>
+          {kindOf(session.kind).label}
+          {session.km ? ` · ${distanceText(session.km, session.kind)}` : ''}
+        </Text>
+        <Text style={tr.histDate}>{dayText(session.date)}</Text>
+      </View>
+      <Text style={tr.histLifts} numberOfLines={1}>
+        {session.effort === 'vigorous'
+          ? 'Vigorous'
+          : session.effort === 'moderate'
+            ? 'Moderate'
+            : 'Light'}
+        {session.avgHr ? ` · ${session.avgHr} bpm` : ''}
+      </Text>
+      <View style={tr.histStats}>
+        <Text style={tr.histStat}>
+          {clock(session.ms)}
+          {pace ? ` · ${pace}` : ''}
+        </Text>
         {record ? <Text style={tr.prTag}>Best time</Text> : null}
       </View>
     </Pressable>

@@ -1358,3 +1358,60 @@ food only card and line.
   twitter:card summary_large_image with title, description, image and
   alt. Privacy and Terms pages got their own titles with the same
   picture. The structured data screenshot points at the new picture.
+
+## 2026-11-16: Cardio, as one training record with lifting and HYROX
+
+Decision: cardio never adds calories to the food target. The activity
+level only seeds the first maintenance; the weekly check in then measures
+real burn from intake and the weight trend, so cardio someone actually
+does is already in their numbers. Adding a session's calories on top
+would count it twice. Two more reasons: wrist devices estimate energy
+badly (Shcherbina et al. 2017, J Pers Med: the best of seven was off by
+27% on average, the worst by 93%), and the body makes up part of any
+exercise burn (Riou et al. 2015, Nutrients: weight loss from exercise is
+usually less than predicted). So no calorie figure is shown anywhere.
+
+Built:
+- lib/cardio/cardio.ts and store.ts (tested): run, walk, ride, row,
+  SkiErg, swim, stairs, other. Time, distance (km, or metres for row,
+  SkiErg and swim), pace per km, per 500 m, per 100 m or km/h, average
+  heart rate, and effort from the talk test (light, moderate, vigorous).
+  Synced under deficit.cardio.sessions.v1. A pace faster than the world
+  record or a heart rate outside 30 to 230 is refused as a typo.
+- Weekly minutes against WHO 2020 for adults: 150 to 300 moderate
+  minutes, vigorous counted double, light logged but not counted; HYROX
+  sims count as vigorous. Strength days against the WHO's 2 a week.
+- Legacy and progress like HYROX and lifts: best times at standard
+  distances (run 1, 5, 10 km, half and full marathon; row 500 m, 2k, 5k,
+  10k; and so on) from sessions that covered the distance and at most 5%
+  more, longest distance, longest session, pace of the last 28 days
+  against the 28 before and against the first ever session. Records
+  carry across breaks. A "Best time" tag in the history.
+- One record: cardio counts in activity (sessions, days, minutes), the
+  week strip, the Home training card, the sessions by week chart, the
+  period read line ("3 cardio sessions this week, 140 minutes, no
+  lifting.") and the shared history, where a cardio row opens that
+  session for editing on the new Cardio tab in Train.
+- The check in: when the burn went up and the last 7 days held at least
+  half as much again aerobic training (cardio plus HYROX) as the usual
+  week of the 4 before, and an hour more, the card says so. The maths
+  doesn't change.
+- Lifting and cardio less than 3 hours apart: shown once, after saving.
+  Schumann et al. 2022 (Sports Med, 43 studies): no effect on size or
+  maximal strength, power gains can be blunted, mostly in the same
+  session; 3 h apart the effect wasn't significant.
+- Onboarding: the activity question asks to count usual workouts, cardio
+  and HYROX, and says Grain checks it against real burn every week.
+
+Left out for now: fuelling advice for long endurance days, until it is
+researched properly.
+
+Checked: 553 tests pass, tsc and eslint clean. In a local web build:
+logging a run, the world record check, the 3 hour note, the WHO card,
+pace trend and records, a cardio row opening its edit form, the Progress
+read line and sessions chart, and the check in note.
+
+Seen while testing, not caused by this: a web build with the Supabase
+settings logs React hydration error #418 on load (the server rendered
+page is the loading gate, the first client render differs). A build
+without them doesn't. Worth a look separately.

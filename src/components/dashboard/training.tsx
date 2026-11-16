@@ -8,6 +8,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { Card } from '@/components/ui/primitives';
 import { palette, space } from '@/constants/palette';
+import type { CardioSession } from '@/lib/cardio/cardio';
 import { countdown } from '@/lib/hyrox/countdown';
 import type { Sim } from '@/lib/hyrox/race';
 import type { Following } from '@/lib/supabase/programs';
@@ -25,6 +26,7 @@ const NO_EXERCISES = new Map<string, Exercise>();
 export function TrainCard({
   workouts,
   sims = [],
+  cardio = [],
   following,
   today,
   race,
@@ -32,6 +34,8 @@ export function TrainCard({
   workouts: Workout[];
   /** HYROX sims count as training too. */
   sims?: Sim[];
+  /** So do cardio sessions. */
+  cardio?: CardioSession[];
   following: Following | null;
   today: string;
   /** A HYROX race on the calendar, counted down under the week. */
@@ -50,7 +54,7 @@ export function TrainCard({
       : null;
   const week = periodOf('week', today);
   const t = trainingSummary(workouts, NO_EXERCISES, week);
-  const a = activity(workouts, sims, week);
+  const a = activity(workouts, sims, week, cardio);
   const program = following?.program;
   const next =
     program && program.days.length
@@ -83,7 +87,7 @@ export function TrainCard({
           </View>
         </View>
 
-        {workouts.length === 0 && sims.length === 0 ? (
+        {workouts.length === 0 && sims.length === 0 && cardio.length === 0 ? (
           <Text style={st.weekBody}>
             No workouts yet. Log one on Train and it shows up here, beside your
             food.

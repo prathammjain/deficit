@@ -63,6 +63,8 @@ import {
 import { computeTargets, type ProfileInput } from '@/lib/targets';
 import { predictWeeklyLoss } from '@/lib/weekly-prediction';
 import type { Sim } from '@/lib/hyrox/race';
+import { cardioJump, type CardioSession } from '@/lib/cardio/cardio';
+import { loadCardio } from '@/lib/cardio/store';
 import { loadSettings as loadHyrox, loadSims } from '@/lib/hyrox/store';
 import { loadWorkouts } from '@/lib/train/store';
 import type { Workout } from '@/lib/train/workout';
@@ -113,6 +115,7 @@ export default function HomeScreen() {
     null,
   );
   const [sims, setSims] = useState<Sim[]>([]);
+  const [cardio, setCardio] = useState<CardioSession[]>([]);
   const { following } = useFollowing();
 
   // Arrived from a program link that needed signing in first: open it.
@@ -124,7 +127,7 @@ export default function HomeScreen() {
   const refresh = useCallback(async () => {
     // All at once rather than the profile first: only a brand new account
     // has no profile, and for everyone else that saves a round trip.
-    const [p, lw, ws, recs, marks, hyrox, hx] = await Promise.all([
+    const [p, lw, ws, recs, marks, hyrox, hx, cd] = await Promise.all([
       loadProfile(),
       latestWeight(),
       loadWorkouts().catch(() => [] as Workout[]),
@@ -132,9 +135,11 @@ export default function HomeScreen() {
       loadCompleteDays().catch(() => new Set<string>()),
       loadHyrox().catch(() => null),
       loadSims().catch(() => [] as Sim[]),
+      loadCardio().catch(() => [] as CardioSession[]),
     ]);
     setRace(hyrox?.race ?? null);
     setSims(hx);
+    setCardio(cd);
     let prof = p;
     if (p) {
       const hist = honestHistory(recs, computeTargets(p).targetKcal, marks);
@@ -349,6 +354,7 @@ export default function HomeScreen() {
           }
           targetNow={t.targetKcal}
           adaptive={adaptive}
+          cardioJump={cardioJump(cardio, sims, today)}
           onKeepLastWeek={handleKeepLastWeek}
         />
       ) : null}
@@ -405,6 +411,7 @@ export default function HomeScreen() {
       <TrainCard
         workouts={workouts}
         sims={sims}
+        cardio={cardio}
         following={following}
         today={today}
         race={race}

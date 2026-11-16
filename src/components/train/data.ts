@@ -6,6 +6,8 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 
+import type { CardioSession } from '@/lib/cardio/cardio';
+import { loadCardio } from '@/lib/cardio/store';
 import type { Sim } from '@/lib/hyrox/race';
 import { loadSims } from '@/lib/hyrox/store';
 import { loadProfile } from '@/lib/profile-store';
@@ -26,6 +28,8 @@ export interface Training {
   workouts: Workout[];
   /** HYROX sims, oldest first: training too, counted beside workouts. */
   sims: Sim[];
+  /** Cardio sessions, oldest first: training too. */
+  cardio: CardioSession[];
   /** The library plus the user's own. */
   exercises: Exercise[];
   exById: Map<string, Exercise>;
@@ -38,7 +42,7 @@ export interface Training {
 }
 
 export async function loadTraining(): Promise<Training> {
-  const [workouts, custom, routines, settings, weight, profile, sims] =
+  const [workouts, custom, routines, settings, weight, profile, sims, cardio] =
     await Promise.all([
       loadWorkouts(),
       loadCustomExercises(),
@@ -47,11 +51,13 @@ export async function loadTraining(): Promise<Training> {
       latestWeight().catch(() => null),
       loadProfile().catch(() => null),
       loadSims().catch(() => [] as Sim[]),
+      loadCardio().catch(() => [] as CardioSession[]),
     ]);
   const exercises = [...LIBRARY, ...custom];
   return {
     workouts,
     sims: [...sims].reverse(),
+    cardio: [...cardio].reverse(),
     exercises,
     exById: exerciseMap(exercises),
     routines,

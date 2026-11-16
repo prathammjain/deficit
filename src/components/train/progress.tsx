@@ -13,6 +13,7 @@ import { ChevronIcon } from '@/components/ui/icons';
 import { Card, SectionLabel } from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
 import { loadCompleteDays } from '@/lib/fulldays';
+import { recordSessions } from '@/lib/cardio/cardio';
 import { recordsSetBetween } from '@/lib/hyrox/progress';
 import { gatherRange } from '@/lib/history';
 import type { DayRecord } from '@/lib/history-stats';
@@ -124,9 +125,17 @@ export function ProgressView({
   // Cheap enough to count on every render, even with years of history.
   const { workouts, exById, bodyKg } = data;
   const training = trainingSummary(workouts, exById, period);
-  // Lifting and HYROX are one training record: both count as sessions.
-  const act = activity(workouts, data.sims, period);
+  // Lifting, HYROX and cardio are one training record: all count as sessions.
+  const act = activity(workouts, data.sims, period, data.cardio);
   const simRecords = recordsSetBetween(data.sims, period.start, period.end);
+  const cardioBests = recordSessions(data.cardio);
+  const inSpan = data.cardio.filter(
+    (c) => c.date >= period.start && c.date <= period.end,
+  );
+  const cardioRecords = inSpan.filter((c) => cardioBests.has(c.id)).length;
+  const cardioMinutes = Math.round(
+    inSpan.reduce((t, c) => t + c.ms, 0) / 60000,
+  );
   const previous = trainingSummary(workouts, exById, sameDays);
   const lifts = liftBoard(workouts, exById, bodyKg, period);
   const series = trainingSeries(
@@ -148,6 +157,11 @@ export function ProgressView({
     food: fs,
     body,
     hyrox: { sims: act.sims, records: simRecords },
+    cardio: {
+      sessions: act.cardio,
+      minutes: cardioMinutes,
+      records: cardioRecords,
+    },
   });
   const weeks = Math.max(1, periodDays(period).length / 7);
   const volumeChange =
@@ -203,19 +217,22 @@ export function ProgressView({
         <View style={tr.summaryBlock}>
           <Text style={tr.menuLabel}>TRAINING</Text>
           <Text style={tr.summaryValue}>
-            {act.workouts || !act.sims
+            {act.workouts || !(act.sims || act.cardio)
               ? `${training.volume.toLocaleString()} kg moved`
               : activityText(act)}
           </Text>
           <Text style={tr.summarySub}>
             {act.workouts
               ? `${activityText(act)} · ${training.sets} hard sets`
-              : act.sims
+              : act.sims || act.cardio
                 ? 'No lifting'
                 : '0 workouts'}
             {act.minutes > 0 ? ` · ${durationText(act.minutes * 60000)}` : ''}
             {simRecords
               ? ` · ${simRecords} new HYROX best ${simRecords === 1 ? 'time' : 'times'}`
+              : ''}
+            {cardioRecords
+              ? ` · ${cardioRecords} new cardio best ${cardioRecords === 1 ? 'time' : 'times'}`
               : ''}
           </Text>
           {volumeChange != null ? (
@@ -274,7 +291,8 @@ export function ProgressView({
       <Card>
         <BarChart
           values={series.map(
-            (s) => activity(workouts, data.sims, s.period).sessions,
+            (s) =>
+              activity(workouts, data.sims, s.period, data.cardio).sessions,
           )}
           height={80}
           positiveColor={palette.text}
@@ -286,8 +304,8 @@ export function ProgressView({
           </Text>
         </View>
         <Text style={[tr.faint, { marginTop: 8 }]}>
-          Every workout and HYROX sim, so a switch in training never reads as a
-          break.
+          Every workout, HYROX sim and cardio session, so a switch in training
+          never reads as a break.
         </Text>
       </Card>
 

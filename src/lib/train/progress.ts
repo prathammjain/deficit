@@ -495,6 +495,8 @@ export interface ReadInput {
   body: BodySummary;
   /** HYROX sims in the period, and how many set a new best time. */
   hyrox?: { sims: number; records: number };
+  /** Cardio sessions in the period, their minutes, and new best times. */
+  cardio?: { sessions: number; minutes: number; records: number };
 }
 
 /**
@@ -503,13 +505,23 @@ export interface ReadInput {
  */
 export function periodRead(x: ReadInput): string {
   const span = x.kind === 'week' ? 'week' : 'month';
-  if (x.training.sessions === 0 && x.hyrox?.sims) {
-    const n = x.hyrox.sims;
-    const sims = `${n} HYROX ${n === 1 ? 'sim' : 'sims'}`;
+  if (x.training.sessions === 0 && (x.hyrox?.sims || x.cardio?.sessions)) {
     const when = x.current ? `this ${span}` : `that ${span}`;
-    return x.hyrox.records
-      ? `${sims} ${when}, with a new best time.`
-      : `${sims} ${when}, no lifting.`;
+    const n = x.hyrox?.sims ?? 0;
+    const c = x.cardio?.sessions ?? 0;
+    const done = [
+      n ? `${n} HYROX ${n === 1 ? 'sim' : 'sims'}` : '',
+      c ? `${c} cardio ${c === 1 ? 'session' : 'sessions'}` : '',
+    ]
+      .filter(Boolean)
+      .join(' and ');
+    if (x.hyrox?.records || x.cardio?.records) {
+      return `${done} ${when}, with a new best time.`;
+    }
+    if (!n && x.cardio) {
+      return `${done} ${when}, ${x.cardio.minutes} minutes, no lifting.`;
+    }
+    return `${done} ${when}, no lifting.`;
   }
   if (x.training.sessions === 0) {
     return x.current

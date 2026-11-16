@@ -1,7 +1,8 @@
 /**
  * The Train tab. Workouts: start, repeat, run a routine, describe one after
  * the fact, and the history. Progress: overload by week or month, joined
- * with food and bodyweight. HYROX: race sims and where the time goes.
+ * with food and bodyweight. Cardio: runs, rides, rows and swims, with pace
+ * and best times. HYROX: race sims and where the time goes.
  */
 
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -9,6 +10,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import { Tabs } from '@/components/train/bits';
+import { CardioView } from '@/components/train/cardio';
 import { useTraining } from '@/components/train/data';
 import { DescribePanel } from '@/components/train/describe';
 import {
@@ -36,21 +38,28 @@ import {
   type Session,
 } from '@/lib/train/workout';
 
-type Tab = 'workouts' | 'progress' | 'hyrox';
+type Tab = 'workouts' | 'progress' | 'cardio' | 'hyrox';
+
+const tabFrom = (t?: string): Tab | null =>
+  t === 'hyrox' || t === 'cardio' ? t : null;
 
 export default function TrainScreen() {
   const { data, setData, reload } = useTraining();
   const { following, setFollowing } = useFollowing();
-  const params = useLocalSearchParams<{ tab?: string; at?: string }>();
-  const [tab, setTab] = useState<Tab>(
-    params.tab === 'hyrox' ? 'hyrox' : 'workouts',
-  );
-  // Arriving from a finished HYROX sim lands on its tab. The screen stays
-  // mounted between visits, so each arrival carries its own stamp.
+  const params = useLocalSearchParams<{
+    tab?: string;
+    at?: string;
+    edit?: string;
+  }>();
+  const [tab, setTab] = useState<Tab>(tabFrom(params.tab) ?? 'workouts');
+  // Arriving from a finished HYROX sim, or a cardio session in the history,
+  // lands on its tab. The screen stays mounted between visits, so each
+  // arrival carries its own stamp.
   const [arrival, setArrival] = useState(params.at);
   if (params.at !== arrival) {
     setArrival(params.at);
-    if (params.tab === 'hyrox') setTab('hyrox');
+    const t = tabFrom(params.tab);
+    if (t) setTab(t);
   }
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [describing, setDescribing] = useState(false);
@@ -122,6 +131,7 @@ export default function TrainScreen() {
         options={[
           { id: 'workouts', label: 'Workouts' },
           { id: 'progress', label: 'Progress' },
+          { id: 'cardio', label: 'Cardio' },
           { id: 'hyrox', label: 'HYROX' },
         ]}
         value={tab}
@@ -209,6 +219,14 @@ export default function TrainScreen() {
         </>
       ) : tab === 'progress' ? (
         <ProgressView data={data} today={today} />
+      ) : tab === 'cardio' ? (
+        <CardioView
+          data={data}
+          today={today}
+          editId={params.tab === 'cardio' ? params.edit : undefined}
+          editStamp={params.tab === 'cardio' ? params.at : undefined}
+          onChanged={(cardio) => setData({ ...data, cardio })}
+        />
       ) : (
         <HyroxView />
       )}

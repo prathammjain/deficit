@@ -217,7 +217,7 @@ export function WeekStrip({
 }) {
   const week = periodOf('week', today);
   const t = trainingSummary(data.workouts, data.exById, week);
-  const a = activity(data.workouts, data.sims, week);
+  const a = activity(data.workouts, data.sims, week, data.cardio);
   return (
     <Pressable
       onPress={onPress}
