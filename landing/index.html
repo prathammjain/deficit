@@ -882,7 +882,66 @@
         </div>
       </section>
 
-      <section class="why wrap" aria-labelledby="why-title">
+      <section class="engine wrap" id="engine" aria-labelledby="engine-title">
+        <div class="section-head" data-reveal>
+          <p class="eyebrow">
+            <svg class="spark" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M10 2.5c.7 4.6 2.9 6.8 7.5 7.5-4.6.7-6.8 2.9-7.5 7.5-.7-4.6-2.9-6.8-7.5-7.5 4.6-.7 6.8-2.9 7.5-7.5Z"
+              /></svg
+            >GrainAI
+          </p>
+          <h2 id="engine-title">How GrainAI works out a meal</h2>
+          <p class="section-lede">
+            GrainAI doesn’t make numbers up. It looks each food up in nutrition
+            databases first, picks the closest match, and does the portion maths
+            in code. When there is no good match, it marks the food as an
+            estimate so you can check it.
+          </p>
+        </div>
+
+        <div class="glass engine-card" data-engine data-reveal>
+          <div class="e-meals" role="group" aria-label="Pick an example meal">
+            <button type="button" data-meal="0" aria-pressed="true">
+              Chicken, rice and oil
+            </button>
+            <button type="button" data-meal="1" aria-pressed="false">
+              Eggs on toast
+            </button>
+            <button type="button" data-meal="2" aria-pressed="false">
+              Dal, roti and rice
+            </button>
+          </div>
+
+          <div class="e-pipe">
+            <div class="e-step" data-e="1">
+              <p class="e-label"><b>1</b>You write</p>
+              <p class="e-input"><span data-e-input></span><i class="caret"></i></p>
+            </div>
+            <div class="e-step" data-e="2">
+              <p class="e-label"><b>2</b>Split into foods</p>
+              <div class="e-foods" data-e-foods></div>
+            </div>
+            <div class="e-step" data-e="3">
+              <p class="e-label"><b>3</b>Look each one up</p>
+              <div class="e-look" data-e-look></div>
+            </div>
+            <div class="e-step" data-e="4">
+              <p class="e-label"><b>4</b>Weigh and add up</p>
+              <div class="e-sum" data-e-sum></div>
+            </div>
+          </div>
+
+          <p class="e-note">
+            Values per 100 g from USDA FoodData Central. Cooked home dishes use
+            Grain’s own recipe table. Recipes vary, so those are marked as
+            estimates.
+          </p>
+        </div>
+      </section>
+
+      <div class="tabset" data-tabset="accuracy" data-tabset-label="How accurate it is">
+      <section data-tab="Why not photos" class="why wrap" aria-labelledby="why-title">
         <div class="section-head" data-reveal>
           <div
             class="hint hint-mid hint-amber hint-why"
@@ -1118,65 +1177,7 @@
         </div>
       </section>
 
-      <section class="engine wrap" id="engine" aria-labelledby="engine-title">
-        <div class="section-head" data-reveal>
-          <p class="eyebrow">
-            <svg class="spark" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                d="M10 2.5c.7 4.6 2.9 6.8 7.5 7.5-4.6.7-6.8 2.9-7.5 7.5-.7-4.6-2.9-6.8-7.5-7.5 4.6-.7 6.8-2.9 7.5-7.5Z"
-              /></svg
-            >GrainAI
-          </p>
-          <h2 id="engine-title">How GrainAI works out a meal</h2>
-          <p class="section-lede">
-            GrainAI doesn’t make numbers up. It looks each food up in nutrition
-            databases first, picks the closest match, and does the portion maths
-            in code. When there is no good match, it marks the food as an
-            estimate so you can check it.
-          </p>
-        </div>
-
-        <div class="glass engine-card" data-engine data-reveal>
-          <div class="e-meals" role="group" aria-label="Pick an example meal">
-            <button type="button" data-meal="0" aria-pressed="true">
-              Chicken, rice and oil
-            </button>
-            <button type="button" data-meal="1" aria-pressed="false">
-              Eggs on toast
-            </button>
-            <button type="button" data-meal="2" aria-pressed="false">
-              Dal, roti and rice
-            </button>
-          </div>
-
-          <div class="e-pipe">
-            <div class="e-step" data-e="1">
-              <p class="e-label"><b>1</b>You write</p>
-              <p class="e-input"><span data-e-input></span><i class="caret"></i></p>
-            </div>
-            <div class="e-step" data-e="2">
-              <p class="e-label"><b>2</b>Split into foods</p>
-              <div class="e-foods" data-e-foods></div>
-            </div>
-            <div class="e-step" data-e="3">
-              <p class="e-label"><b>3</b>Look each one up</p>
-              <div class="e-look" data-e-look></div>
-            </div>
-            <div class="e-step" data-e="4">
-              <p class="e-label"><b>4</b>Weigh and add up</p>
-              <div class="e-sum" data-e-sum></div>
-            </div>
-          </div>
-
-          <p class="e-note">
-            Values per 100 g from USDA FoodData Central. Cooked home dishes use
-            Grain’s own recipe table. Recipes vary, so those are marked as
-            estimates.
-          </p>
-        </div>
-      </section>
-
-      <section class="split proof wrap" aria-labelledby="proof-title">
+      <section data-tab="Sources" class="split proof wrap" aria-labelledby="proof-title">
         <div class="split-copy" data-reveal>
           <div
             class="hint hint-mid hint-amber hint-proof"
@@ -1230,7 +1231,7 @@
         </div>
       </section>
 
-      <section
+      <section data-tab="Custom"
         class="split split-flip custom wrap"
         aria-labelledby="custom-title"
       >
@@ -1281,83 +1282,7 @@
           </div>
         </div>
       </section>
-
-      <section class="split adapt wrap" id="targets" aria-labelledby="adapt-title">
-        <div class="split-copy" data-reveal>
-          <div class="hint hint-mid hint-honest" aria-hidden="true"></div>
-          <h2 id="adapt-title">Targets that adjust to your real burn</h2>
-          <p class="section-lede">
-            Calorie formulas are a starting guess, and they are often off by a
-            few hundred calories. Once a week Grain compares what you ate with
-            how your weight moved, works out what you really burn, and moves
-            your targets toward it. It moves at most 250 kcal a week, so one odd
-            week can’t throw your plan off. One tap keeps last week’s target.
-          </p>
-          <p class="adapt-try">Move the sliders to see a weekly check in.</p>
-        </div>
-
-        <div class="glass adapt-card" data-adapt data-reveal>
-          <label class="a-slider">
-            <span class="a-row"
-              >Eaten a day, on average <b data-a-intake-out>2,000 kcal</b></span
-            >
-            <input
-              type="range"
-              min="1400"
-              max="3400"
-              step="50"
-              value="2000"
-              data-a-intake
-              aria-label="Calories eaten a day, on average"
-            />
-          </label>
-          <label class="a-slider">
-            <span class="a-row"
-              >Weight change a week <b data-a-trend-out>0.5 kg down</b></span
-            >
-            <input
-              type="range"
-              min="-1"
-              max="0.6"
-              step="0.05"
-              value="-0.5"
-              data-a-trend
-              aria-label="Weight change a week, in kilograms"
-            />
-          </label>
-
-          <div class="a-check" aria-live="polite">
-            <p class="a-eyebrow">Weekly check in</p>
-            <p class="a-title" data-a-title>You burn less than we thought</p>
-            <div class="a-gauge" aria-hidden="true">
-              <div class="a-track">
-                <i class="a-mark a-formula" data-a-formula></i>
-                <i class="a-mark a-measured" data-a-measured></i>
-                <i class="a-fill" data-a-fill></i>
-              </div>
-              <div class="a-keys">
-                <span><i class="k-formula"></i>Formula</span>
-                <span><i class="k-measured"></i>Measured</span>
-                <span><i class="k-plan"></i>Your plan</span>
-              </div>
-            </div>
-            <p class="a-line">
-              <span>Measured burn</span><b data-a-burn>2,550 kcal</b>
-            </p>
-            <p class="a-line">
-              <span>Maintenance</span
-              ><span><s>2,837</s> <b data-a-maint>2,593</b> kcal</span>
-            </p>
-            <p class="a-line">
-              <span>Daily target</span
-              ><span><s>2,287</s> <b data-a-target>2,043</b> kcal</span>
-            </p>
-            <p class="a-note" data-a-note>
-              A step of 244 kcal toward your measured burn.
-            </p>
-          </div>
-        </div>
-      </section>
+      </div>
 
       <section class="week wrap" aria-labelledby="week-title">
         <div class="section-head" data-reveal>
@@ -1535,7 +1460,85 @@
         </div>
       </section>
 
-      <section class="split honest wrap" aria-labelledby="honest-title">
+      <div class="tabset" data-tabset="numbers" data-tabset-label="Your numbers">
+      <section data-tab="Targets" class="split adapt wrap" id="targets" aria-labelledby="adapt-title">
+        <div class="split-copy" data-reveal>
+          <div class="hint hint-mid hint-honest" aria-hidden="true"></div>
+          <h2 id="adapt-title">Targets that adjust to your real burn</h2>
+          <p class="section-lede">
+            Calorie formulas are a starting guess, and they are often off by a
+            few hundred calories. Once a week Grain compares what you ate with
+            how your weight moved, works out what you really burn, and moves
+            your targets toward it. It moves at most 250 kcal a week, so one odd
+            week can’t throw your plan off. One tap keeps last week’s target.
+          </p>
+          <p class="adapt-try">Move the sliders to see a weekly check in.</p>
+        </div>
+
+        <div class="glass adapt-card" data-adapt data-reveal>
+          <label class="a-slider">
+            <span class="a-row"
+              >Eaten a day, on average <b data-a-intake-out>2,000 kcal</b></span
+            >
+            <input
+              type="range"
+              min="1400"
+              max="3400"
+              step="50"
+              value="2000"
+              data-a-intake
+              aria-label="Calories eaten a day, on average"
+            />
+          </label>
+          <label class="a-slider">
+            <span class="a-row"
+              >Weight change a week <b data-a-trend-out>0.5 kg down</b></span
+            >
+            <input
+              type="range"
+              min="-1"
+              max="0.6"
+              step="0.05"
+              value="-0.5"
+              data-a-trend
+              aria-label="Weight change a week, in kilograms"
+            />
+          </label>
+
+          <div class="a-check" aria-live="polite">
+            <p class="a-eyebrow">Weekly check in</p>
+            <p class="a-title" data-a-title>You burn less than we thought</p>
+            <div class="a-gauge" aria-hidden="true">
+              <div class="a-track">
+                <i class="a-mark a-formula" data-a-formula></i>
+                <i class="a-mark a-measured" data-a-measured></i>
+                <i class="a-fill" data-a-fill></i>
+              </div>
+              <div class="a-keys">
+                <span><i class="k-formula"></i>Formula</span>
+                <span><i class="k-measured"></i>Measured</span>
+                <span><i class="k-plan"></i>Your plan</span>
+              </div>
+            </div>
+            <p class="a-line">
+              <span>Measured burn</span><b data-a-burn>2,550 kcal</b>
+            </p>
+            <p class="a-line">
+              <span>Maintenance</span
+              ><span><s>2,837</s> <b data-a-maint>2,593</b> kcal</span>
+            </p>
+            <p class="a-line">
+              <span>Daily target</span
+              ><span><s>2,287</s> <b data-a-target>2,043</b> kcal</span>
+            </p>
+            <p class="a-note" data-a-note>
+              A step of 244 kcal toward your measured burn.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section data-tab="Progress" class="split split-flip honest wrap" aria-labelledby="honest-title">
         <div class="split-copy" data-reveal>
           <div class="hint hint-mid hint-honest" aria-hidden="true"></div>
           <h2 id="honest-title">Progress that only counts what you really did</h2>
@@ -1577,8 +1580,8 @@
         </div>
       </section>
 
-      <section
-        class="split split-flip catch wrap"
+      <section data-tab="Missed days"
+        class="split catch wrap"
         id="catch-up"
         aria-labelledby="grainai-title"
       >
@@ -1659,8 +1662,10 @@
           </div>
         </div>
       </section>
+      </div>
 
-      <section class="train wrap" aria-labelledby="train-title">
+      <div class="tabset" data-tabset="training" data-tabset-label="Training">
+      <section data-tab="Workouts" class="train wrap" aria-labelledby="train-title">
         <div class="section-head" data-reveal>
           <div class="hint hint-mid hint-train" aria-hidden="true"></div>
           <p class="new-tag">New in Grain</p>
@@ -1796,7 +1801,7 @@
         </div>
       </section>
 
-      <section
+      <section data-tab="One record"
         class="split split-flip record wrap"
         id="record"
         aria-labelledby="record-title"
@@ -1862,7 +1867,7 @@
         </div>
       </section>
 
-      <section class="hyrox wrap" id="hyrox" aria-labelledby="hyrox-title">
+      <section data-tab="HYROX" class="hyrox wrap" id="hyrox" aria-labelledby="hyrox-title">
         <div class="section-head" data-reveal>
           <div class="hint hint-mid hint-week" aria-hidden="true"></div>
           <p class="eyebrow">HYROX</p>
@@ -1936,6 +1941,7 @@
           </div>
         </div>
       </section>
+      </div>
 
       <section class="coach wrap" aria-labelledby="coach-title">
         <div class="section-head" data-reveal>
@@ -2343,5 +2349,6 @@
     <script src="rail.js" defer></script>
     <script src="tour.js" defer></script>
     <script src="demos.js" defer></script>
+    <script src="tabs.js" defer></script>
   </body>
 </html>

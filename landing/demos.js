@@ -40,17 +40,17 @@
     });
   }
 
-  /** Calls `fn` again whenever the page width changes (not on phone
-   *  toolbar height changes). */
-  function onWidth(fn) {
-    let w = innerWidth;
-    let t = 0;
-    addEventListener('resize', () => {
-      if (innerWidth === w) return;
-      w = innerWidth;
-      clearTimeout(t);
-      t = setTimeout(fn, 150);
-    });
+  /** Calls `fn` whenever `el` takes a new width: on rotation or resize,
+   *  and when it first shows after being hidden (a tab on a phone). */
+  function onWidth(el, fn) {
+    if (!('ResizeObserver' in window)) return;
+    let w = el.offsetWidth;
+    new ResizeObserver(() => {
+      const now = el.offsetWidth;
+      if (!now || now === w) return;
+      w = now;
+      fn();
+    }).observe(el);
   }
 
   /** Count a number in an element toward `to`, from whatever it shows. */
@@ -265,31 +265,35 @@
       ghost.style.cssText = `position:absolute;left:0;top:0;width:${pipe.clientWidth}px;min-height:0;visibility:hidden;pointer-events:none`;
       card.appendChild(ghost);
       const g = (k) => ghost.querySelector(`[data-e-${k}]`);
+      // On a phone the unpicked matches fold away, so the tallest moment
+      // is one food still showing all its matches; measure each.
+      const item = (f, open) =>
+        `<div class="e-item"><p>${open ? 'Looking up ' : ''}“${esc(f.said)}”</p><div class="e-cands">${f.cands
+          .map((c, i) =>
+            open ? cand(c) : cand(c).replace('e-cand', i ? 'e-cand is-out' : 'e-cand is-picked'),
+          )
+          .join('')}</div><p class="e-why">${esc(f.why)}</p></div>`;
+      ghost.querySelectorAll('.e-step').forEach((s) => s.classList.add('is-on'));
       let tallest = 0;
       for (const meal of MEALS) {
         g('input').textContent = meal.text;
         g('foods').innerHTML = meal.foods
           .map((f) => `<span class="e-food">${esc(f.said)}</span>`)
           .join('');
-        g('look').innerHTML = meal.foods
-          .map(
-            (f) =>
-              `<div class="e-item"><p>Looking up “${esc(f.said)}”</p><div class="e-cands">${f.cands
-                .map(cand)
-                .join('')}</div><p class="e-why">${esc(f.why)}</p></div>`,
-          )
-          .join('');
         g('sum').innerHTML =
           meal.foods.map(row).join('') +
           `<p class="e-total"><span>Total</span><span>${fmt(meal.total)} kcal, ${meal.protein} g protein</span></p>`;
-        tallest = Math.max(tallest, ghost.offsetHeight);
+        for (let k = -1; k < meal.foods.length; k++) {
+          g('look').innerHTML = meal.foods.map((f, j) => item(f, j === k)).join('');
+          tallest = Math.max(tallest, ghost.offsetHeight);
+        }
       }
       ghost.remove();
       pipe.style.minHeight = `${Math.ceil(tallest)}px`;
     }
     reserve();
     if (document.fonts) document.fonts.ready.then(reserve);
-    onWidth(reserve);
+    onWidth(card, reserve);
 
     function row(f) {
       const tag =
@@ -589,6 +593,7 @@
     // row and every lost time row, so neither grows while it plays.
     const lostEl = card.querySelector('[data-hx-lost]');
     function reserve() {
+      if (!card.offsetWidth) return; // in a hidden tab: done when shown
       splitsEl.style.minHeight = lostEl.style.minHeight = '';
       const keep = [splitsEl.innerHTML, lostEl.innerHTML];
       splitsEl.innerHTML = SEGS.slice(0, -1)
@@ -603,7 +608,7 @@
     }
     reserve();
     if (document.fonts) document.fonts.ready.then(reserve);
-    onWidth(reserve);
+    onWidth(card, reserve);
 
     paint();
     whenSeen(card, start);

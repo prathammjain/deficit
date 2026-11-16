@@ -1306,3 +1306,30 @@ the current step at the top, so it no longer repeats the hero's
 filling tab bar. The first section's heading is back to "Food tracking
 for people who give a f*** about every gram", and its orange full stop
 drops in when it scrolls into view.
+
+## 2026-11-16: Shorter landing page on phones
+
+Problem: on a phone the page was about 23 screens long. Two sections
+already slide sideways, so more of that would repeat itself.
+
+Done (phone widths only, under 900 px; desktop shows every section in
+full):
+- Related sections share one place behind a row of tabs (landing/tabs.js):
+  "How accurate it is" (Why not photos, Sources, Custom), "Your numbers"
+  (Targets, Progress, Missed days), "Training" (Workouts, One record,
+  HYROX). The row names every section in the group, sticks under the
+  floating bar while you read, and a dark pill glides to the chosen tab.
+  The box eases to the new height while the new panel rises in. Arrow
+  keys move between tabs; a link to a section opens its tab.
+- To make the groups possible the meal demo now follows the food
+  section, and "Your week at a glance" comes before the targets group.
+  On desktop, Progress and Missed days swapped sides so the alternating
+  layout still alternates.
+- The meal demo on a phone: unpicked database matches are struck
+  through, then fold away.
+- html and body use overflow-x clip instead of hidden where supported:
+  hidden made the body its own scroll box, so nothing could stick.
+
+Result: 23.1 screens down to 16.7 on a 390 x 844 phone. The fold saved
+less than estimated (66 px, not 550): the demo still has to keep room
+for the moment one food shows all its matches.
