@@ -185,6 +185,40 @@ export async function revokeAi(userId: string): Promise<void> {
   if (error) throw error;
 }
 
+// ---- GrainAI invite requests (from the landing page) ----------------------
+
+export interface InviteRequest {
+  id: number;
+  email: string;
+  name: string | null;
+  goal: string | null;
+  instagram: string | null;
+  created_at: string;
+  handled_at: string | null;
+  /** The account with the same email, once they have signed up. */
+  user_id: string | null;
+  ai_invited: boolean;
+}
+
+/** Up to 500 requests, open ones first, newest first. */
+export async function fetchInviteRequests(): Promise<InviteRequest[]> {
+  const { data, error } = await db().rpc('admin_invite_requests');
+  if (error) throw error;
+  return (data ?? []) as InviteRequest[];
+}
+
+/** Marks a request dealt with, or open again. */
+export async function setInviteHandled(
+  id: number,
+  handled: boolean,
+): Promise<void> {
+  const { error } = await db()
+    .from('invite_requests')
+    .update({ handled_at: handled ? now() : null })
+    .eq('id', id);
+  if (error) throw error;
+}
+
 export async function setPaywall(on: boolean): Promise<void> {
   const { error } = await db()
     .from('app_settings')

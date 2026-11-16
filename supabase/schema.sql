@@ -818,3 +818,88 @@ begin
   limit 500;
 end;
 $$;
+
+-- ---------------------------------------------------------------------------
+-- GrainAI invite requests (added 2026-11-16)
+-- ---------------------------------------------------------------------------
+-- The landing page form at getgrain.fit writes here with the public anon key.
+-- Anyone may add a request; only admins can read, mark or remove them. The
+-- checks keep junk out: a real looking email, short fields, a known goal. One
+-- request per email (a repeat gets a 409, which the form reads as "already on
+-- the list").
+
+create table if not exists public.invite_requests (
+  id          bigint generated always as identity primary key,
+  email       text not null,
+  name        text,
+  goal        text,
+  instagram   text,
+  created_at  timestamptz not null default now(),
+  handled_at  timestamptz,
+  constraint invite_email_ok check (
+    char_length(email) <= 254 and email ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'
+  ),
+  constraint invite_name_len check (name is null or char_length(name) <= 80),
+  constraint invite_goal_ok check (
+    goal is null or goal in ('fat_loss','muscle','strength','hyrox','coaching','creator','other')
+  ),
+  constraint invite_instagram_len check (instagram is null or char_length(instagram) <= 40)
+);
+
+create unique index if not exists invite_requests_email
+  on public.invite_requests (lower(email));
+
+alter table public.invite_requests enable row level security;
+
+drop policy if exists invite_requests_insert on public.invite_requests;
+create policy invite_requests_insert on public.invite_requests
+  for insert to anon, authenticated
+  with check (handled_at is null);
+
+drop policy if exists invite_requests_admin on public.invite_requests;
+create policy invite_requests_admin on public.invite_requests
+  for all to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
+revoke all on public.invite_requests from anon, authenticated;
+grant insert (email, name, goal, instagram) on public.invite_requests to anon, authenticated;
+grant select, update, delete on public.invite_requests to authenticated;
+
+-- Requests for the admin CRM, newest first, with the matching account (by
+-- email, if they have signed up) and whether GrainAI is already on for it.
+create or replace function public.admin_invite_requests()
+returns table (
+  id          bigint,
+  email       text,
+  name        text,
+  goal        text,
+  instagram   text,
+  created_at  timestamptz,
+  handled_at  timestamptz,
+  user_id     uuid,
+  ai_invited  boolean
+)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+#variable_conflict use_column
+begin
+  if not public.is_admin() then
+    raise exception 'admins only' using errcode = '42501';
+  end if;
+  return query
+  select r.id, r.email, r.name, r.goal, r.instagram, r.created_at, r.handled_at,
+         u.id, a.user_id is not null
+  from public.invite_requests r
+  left join auth.users u on lower(u.email) = lower(r.email)
+  left join public.ai_access a on a.user_id = u.id
+  order by r.handled_at is not null, r.created_at desc
+  limit 500;
+end;
+$$;
+
+revoke all on function public.admin_invite_requests() from public, anon;
+grant execute on function public.admin_invite_requests() to authenticated;

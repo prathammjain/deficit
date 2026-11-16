@@ -1230,3 +1230,52 @@ Checked: 529 tests pass, tsc and eslint clean. In a local build:
 a macros only custom meal logged as 410 kcal with 30/50/10 g; a faked
 new deploy reloaded Home on return and showed the refresh banner mid
 sim without reloading; 11 launch screen tags and the new manifest load.
+
+## 2026-11-16: Landing page rebuilt around the training ecosystem
+
+Why: Grain is no longer pitched as "describe your food to AI". It is one
+tracker for people whose work or sport depends on training: athletes,
+gym professionals, bodybuilders, coaches and fitness creators. The page
+now says that in plain English, with no slogans, and shows working
+demos instead of claims. No pricing, no testimonials, no made up
+numbers, no competitor names.
+
+- New hero: a guided tour of the whole app (food, targets, train,
+  HYROX, progress, programs) on a phone that plays by itself, pauses
+  on hover, tilts with the pointer, and jumps to a chapter from five
+  goal chips (Fat loss, Muscle gain, Strength, HYROX, Coaching).
+  landing/tour.js, data-gt and gt-* classes (proto.js already owns
+  data-tour).
+- The old hero, with its live food logging prototype, is now the
+  first section, "Log food by typing or saying what you ate".
+- New working sections (landing/demos.js): how GrainAI works out a
+  meal (matched database rows per item, USDA values, Grain recipe
+  estimates marked as estimates); adaptive targets with sliders that
+  run the real check in maths (trust 0.85, 250 kcal step cap); lifting
+  and HYROX in one record; a HYROX sim you can tap through with real
+  2026/27 sled loads per division; how we decide what goes into Grain
+  (Morton 2018 for protein, Mifflin St Jeor then energy balance, Pelland
+  2026 for training volume). We describe the method only; the app does
+  not show evidence grades yet.
+- GrainAI invite form (#invite) posts to a new invite_requests table
+  with the public anon key. supabase/schema.sql: anyone may insert
+  (email, name, goal, instagram) with checks on every field and one
+  request per email (a repeat reads as "already on the list"); only
+  admins can read, mark or delete. admin_invite_requests() returns the
+  matching account and whether GrainAI is already on. Tested on a local
+  Postgres 16: anon inserts work, duplicates, bad emails, bad goals and
+  anon reads are refused, a signed in non admin sees nothing.
+- Admin desk, Users: a GrainAI invite requests table above the users
+  table (components/admin/crm/invites.tsx). "Let in" turns GrainAI on
+  for the matching account and marks the request done; "Done" and
+  "Reopen" otherwise.
+- All motion stops for prefers-reduced-motion; demos only start when
+  scrolled into view and pause in background tabs.
+
+To do by hand: run the "GrainAI invite requests" section of
+supabase/schema.sql in the Supabase SQL editor before deploying the
+landing page, or the form will fail.
+
+Checked: 529 tests pass, tsc and eslint clean. The page was driven in a
+local browser on desktop, mobile width and reduced motion: tour, goal
+chips, sliders, HYROX taps and the form.

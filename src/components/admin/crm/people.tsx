@@ -1,7 +1,8 @@
 /**
  * people.tsx: everyone with a Grain account, as a laptop table. How active
  * they are, GrainAI let in with one click, premium gifted in two, the
- * GrainAI invite switch and daily limit, and the paywall switch. Account
+ * GrainAI invite switch and daily limit, the invite requests from the
+ * landing page, and the paywall switch. Account
  * details and counts only, never anyone's meals.
  */
 
@@ -26,6 +27,7 @@ import {
 import { message } from '../ui';
 import { cx } from './bits';
 import css from './crm.module.css';
+import { InviteRequests } from './invites';
 
 const live = (u: AdminUser) =>
   u.premium_source != null &&
@@ -208,6 +210,8 @@ export function PeopleTable({
           {error}
         </div>
       ) : null}
+
+      <InviteRequests adminId={adminId} onGranted={() => void load()} />
 
       <div className={css.tableWrap}>
         {users == null ? (
