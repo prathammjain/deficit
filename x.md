@@ -1490,3 +1490,27 @@ right boxes; plus and minus; swipe delete; 225 lb in, 102.06 kg stored,
 pounds on the finish screen; workout rating saved; intervals saved with 4
 laps; live timer through a reload into the form and cleared on save; zones,
 predictions and the load chart.
+
+## 2026-11-16: Landing page calmer on phones
+
+Feedback: an extra Open Grain button, the same tab bar used for all three
+grouped sections (and overlapping the floating bar when pinned), and too
+much on every card on a phone, where almost everyone sees the page.
+
+- Removed the Open Grain button from the food section; the nav bar and the
+  hero keep theirs. The floating bar now appears once the hero's button
+  scrolls away (it used to watch the removed one).
+- The three groups each get their own control on phones (tabs.js):
+  "How accurate it is" is an accordion (rows with a number, a title and
+  one line; one open at a time), "Your numbers" is numbered steps joined
+  by a line with Next and Back under the panel, "Training" keeps tabs with
+  a sliding pill. Nothing is sticky any more, so nothing overlaps.
+- A phone layer in styles.css (640 px and under): h1 31 px, h2 25 px,
+  body 15 px, about half the space between sections, the phone mockups at
+  80%, demo cards at 90% (feature cards 86%). Intros over about three
+  lines stop there with a More link; long bullet lists keep their first
+  two; the questions show five with "Show all 12 questions". Nothing is
+  removed, only folded.
+
+Result on a 390 x 844 phone: 16.7 screens down to 13.6. Desktop is
+unchanged (checked: no controls, no folding).

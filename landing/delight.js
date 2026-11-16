@@ -30,7 +30,7 @@
   // ---- A floating bar once the hero is behind you ----
   // Its g lights one dot at a time as you read down, the last at the end.
   const pill = document.querySelector('[data-pill]');
-  const heroCta = document.querySelector('.hero .cta');
+  const heroCta = document.querySelector('.gt-hero .cta');
   const endCard = document.querySelector('.end-card');
   if (pill && heroCta) {
     const dots = [...pill.querySelectorAll('circle')];

@@ -7180,15 +7180,19 @@ html:not(.js) .step-label b {
 }
 
 /* ---------- Grouped sections (phone only) ----------
-   tabs.js puts related sections behind one row of tabs on a phone. On a
-   wider screen the group and its stage add nothing to the layout. */
+   tabs.js puts related sections in one place on a phone, each group with
+   its own control: an accordion, numbered steps, or tabs. On a wider
+   screen the wrappers add nothing to the layout. */
 
 .tabset,
 .tabset-stage {
   display: contents;
 }
 
-.tabbar {
+.tabbar,
+.steps-bar,
+.steps-foot,
+.acc-head {
   display: none;
 }
 
@@ -7199,7 +7203,7 @@ html:not(.js) .step-label b {
   }
 
   .tabset {
-    padding-top: 28px;
+    padding-top: 20px;
   }
 
   .tabset-stage.is-morphing {
@@ -7210,42 +7214,230 @@ html:not(.js) .step-label b {
     display: none !important;
   }
 
+  /* Accordion: rows with a number, a title and one line. */
+  .acc-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: calc(100% - 2 * var(--gutter));
+    margin: 0 auto 8px;
+    padding: 14px 16px;
+    border: 1px solid rgba(25, 23, 21, 0.07);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.86);
+    text-align: left;
+    font: inherit;
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .acc-num {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(25, 23, 21, 0.06);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink-soft);
+  }
+
+  .acc-head[aria-expanded='true'] .acc-num {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .acc-words {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .acc-title {
+    font-size: 15px;
+    font-weight: 650;
+  }
+
+  .acc-sum {
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+
+  .acc-chev {
+    flex: none;
+    width: 9px;
+    height: 9px;
+    border-right: 2px solid var(--ink-soft);
+    border-bottom: 2px solid var(--ink-soft);
+    transform: rotate(45deg) translate(-2px, -2px);
+    transition: transform 0.3s var(--ease-out);
+  }
+
+  .acc-head[aria-expanded='true'] .acc-chev {
+    transform: rotate(225deg) translate(-2px, -2px);
+  }
+
+  .tabset-accordion .tabset-stage > section {
+    padding-top: 8px !important;
+    padding-bottom: 28px !important;
+  }
+
+  /* Steps: numbered circles joined by a line, Next and Back below. */
+  .steps-bar {
+    display: flex;
+    width: calc(100% - 2 * var(--gutter));
+    margin: 0 auto;
+    padding: 0;
+    list-style: none;
+    counter-reset: none;
+  }
+
+  .steps-item {
+    position: relative;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+  }
+
+  .steps-item + .steps-item::before {
+    content: '';
+    position: absolute;
+    top: 14px;
+    right: 50%;
+    width: 100%;
+    height: 2px;
+    background: rgba(25, 23, 21, 0.1);
+    transition: background 0.3s ease;
+  }
+
+  .steps-item.is-done + .steps-item::before,
+  .steps-item.is-done + .steps-item.is-now::before {
+    background: var(--ink);
+  }
+
+  .steps-btn {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .steps-num {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid rgba(25, 23, 21, 0.14);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    transition:
+      background 0.3s ease,
+      border-color 0.3s ease,
+      color 0.3s ease;
+  }
+
+  .steps-item.is-done .steps-num {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: #fff;
+  }
+
+  .steps-item.is-now .steps-num {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(244, 81, 30, 0.12);
+  }
+
+  .steps-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-soft);
+  }
+
+  .steps-item.is-now .steps-name {
+    color: var(--ink);
+  }
+
+  .steps-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: calc(100% - 2 * var(--gutter));
+    margin: 0 auto;
+    padding-bottom: 12px;
+  }
+
+  .steps-back,
+  .steps-next {
+    border: 0;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .steps-back {
+    padding: 10px 4px;
+    background: none;
+    color: var(--ink-soft);
+  }
+
+  .steps-back:disabled {
+    visibility: hidden;
+  }
+
+  .steps-next {
+    padding: 11px 18px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: #fff;
+  }
+
+  /* Tabs: a row with a dark pill that slides to the chosen tab. */
   .tabbar {
-    position: sticky;
-    top: calc(max(12px, env(safe-area-inset-top)) + 64px);
-    z-index: 30;
+    position: relative;
     display: flex;
     gap: 2px;
     width: calc(100% - 2 * var(--gutter));
     margin: 0 auto;
     padding: 4px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.94);
-    border: 1px solid rgba(25, 23, 21, 0.07);
-    box-shadow: 0 8px 24px -12px rgba(25, 23, 21, 0.25);
-    -webkit-backdrop-filter: blur(14px) saturate(1.4);
-    backdrop-filter: blur(14px) saturate(1.4);
+    background: rgba(25, 23, 21, 0.05);
   }
 
   .tabbar-tab {
     position: relative;
     z-index: 1;
     appearance: none;
-    background: none;
-    border: 0;
-    box-shadow: none;
-    font-family: inherit;
-    cursor: pointer;
     flex: 1 1 0;
     min-width: 0;
-    padding: 10px 6px;
+    padding: 9px 6px;
+    border: 0;
     border-radius: 999px;
+    background: none;
+    box-shadow: none;
+    font-family: inherit;
     font-size: 13px;
     font-weight: 600;
     color: var(--ink-soft);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    cursor: pointer;
     transition: color 0.3s ease;
   }
 
@@ -7253,12 +7445,13 @@ html:not(.js) .step-label b {
     color: #fff;
   }
 
-  .tabbar-tab:focus-visible {
+  .tabbar-tab:focus-visible,
+  .steps-btn:focus-visible,
+  .acc-head:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
 
-  /* The dark pill that glides to the chosen tab. */
   .tabbar-glide {
     position: absolute;
     top: 4px;
@@ -7266,7 +7459,6 @@ html:not(.js) .step-label b {
     left: 0;
     border-radius: 999px;
     background: var(--ink);
-    box-shadow: 0 6px 16px -8px rgba(25, 23, 21, 0.6);
     transition:
       transform 0.5s var(--ease-spring),
       width 0.5s var(--ease-spring);
@@ -7307,7 +7499,154 @@ html:not(.js) .step-label b {
 
 @media (max-width: 899px) and (prefers-reduced-motion: reduce) {
   .tabbar-glide,
+  .acc-chev,
+  .steps-num,
   .e-cand {
     transition: none;
+  }
+}
+
+/* ---------- Phones: calmer and smaller ----------
+   Nearly everyone sees this page on a phone. Smaller type, tighter
+   spacing, demos scaled down a step, and long intros cut to three lines
+   with a More link (tabs.js). Desktop is untouched. */
+
+.more-link {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  h1,
+  .gt-hero h1 {
+    font-size: 31px;
+    line-height: 1.08;
+  }
+
+  h2 {
+    font-size: 25px;
+    line-height: 1.12;
+    letter-spacing: -0.03em;
+  }
+
+  h3 {
+    font-size: 16px;
+  }
+
+  .lede {
+    margin: 14px 0 20px;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .section-lede,
+  .split .section-lede {
+    margin: 10px 0 18px;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+  }
+
+  /* Less air between sections. */
+  main > section:not(.gt-hero),
+  .tabset-stage > section {
+    padding-top: 36px !important;
+    padding-bottom: 36px !important;
+  }
+
+  .tabset-steps .tabset-stage > section,
+  .tabset-tabs .tabset-stage > section {
+    padding-top: 22px !important;
+  }
+
+  .section-head {
+    margin-bottom: 14px;
+  }
+
+  /* Phones inside the phone: a step smaller. */
+  .phone {
+    --phone-scale: 0.8;
+    margin-bottom: -124px;
+  }
+
+  /* Demo cards read a step smaller, text included. */
+  .engine-card,
+  .adapt-card,
+  .honest-card,
+  .catch-card,
+  .custom-card,
+  .record-card,
+  .proof-card,
+  .hx-sim,
+  .hx-count,
+  .hx-trend,
+  .hx-doubles,
+  .m-card,
+  .invite-card,
+  .tile,
+  .feat {
+    zoom: 0.9;
+  }
+
+  .tile {
+    padding: 14px 16px 18px;
+  }
+
+  .feat {
+    padding: 12px 12px 16px;
+  }
+
+  .feat .ui {
+    min-height: 180px;
+    margin-bottom: 10px;
+  }
+
+  .feat {
+    zoom: 0.86;
+  }
+
+  /* Long bullet lists keep their first two. */
+  .split-copy ul > li:nth-child(n + 3) {
+    display: none;
+  }
+
+  /* Three lines, then More. */
+  .is-clamped {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+  }
+
+  .more-link {
+    display: inline-block;
+    margin: -10px 0 16px;
+    padding: 4px 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    cursor: pointer;
+  }
+
+  .faq-item.is-extra {
+    display: none;
+  }
+
+  .more-faq {
+    margin: 14px 0 0;
+  }
+
+  .faq-item summary {
+    padding: 15px 46px 15px 18px;
+    font-size: 15px;
+  }
+
+  .faq-list {
+    gap: 8px;
   }
 }
