@@ -140,3 +140,33 @@ describe('raceClock', () => {
     expect(raceClock(5_000)).toBe('0:05');
   });
 });
+
+describe('doubles', () => {
+  it('uses the matching singles loads, split between partners', () => {
+    const push = segments('full')[3];
+    expect(segmentWork(push, 'doubles_open_women')).toBe(
+      '50 m at 102 kg, split between you',
+    );
+    expect(segmentWork(push, 'doubles_mixed')).toBe(
+      '50 m at 152 kg, split between you',
+    );
+    expect(segmentWork(segments('full')[0], 'doubles_pro_men')).toBe(
+      '1 km, together',
+    );
+  });
+
+  it('gives mixed doubles each partner their own wall ball target', () => {
+    expect(segmentWork(segments('full')[15], 'doubles_mixed')).toBe(
+      '100 reps, 6 kg; men to 3.00 m, women to 2.70 m, split between you',
+    );
+  });
+
+  it('never compares doubles runs with singles runs', () => {
+    const solo = sim([300, 200]);
+    const pair = sim([280, 150], { division: 'doubles_open_men' });
+    expect(bests([solo, pair], 'open_men').get('run1')).toBe(300_000);
+    expect(bests([solo, pair], 'doubles_mixed').get('run1')).toBe(280_000);
+    // Stations stay within one division, even inside doubles.
+    expect(bests([pair], 'doubles_mixed').has('ski')).toBe(false);
+  });
+});

@@ -1,22 +1,33 @@
 /**
- * The HYROX tab in Train: pick a division, start a full or half sim, see
- * what the last one says, the race with your loads, and every sim so far.
+ * The HYROX tab in Train: count down to your race, pick a division (singles
+ * or doubles), start a full or half sim, see what the last one says, the
+ * race with your loads, and every sim so far.
  */
 
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { Card, PrimaryButton, SectionLabel } from '@/components/ui/primitives';
-import { palette, space, type as typo } from '@/constants/palette';
+import { palette, radius, space, type as typo } from '@/constants/palette';
 import { shortDate } from '@/lib/date';
+import { countdown } from '@/lib/hyrox/countdown';
 import {
+  division as divisionOf,
   DIVISIONS,
   isFinished,
   PARTS,
   raceClock,
   SEASON,
   segments,
+  segmentWork,
   STATIONS,
   summarize,
   type Division,
@@ -30,7 +41,10 @@ import {
   newSim,
   saveDivision,
   saveLive,
+  saveRace,
+  type HyroxSettings,
 } from '@/lib/hyrox/store';
+import { todayKey } from '@/lib/log-store';
 
 import { Chip } from './bits';
 import { SimSummary } from './hyrox-summary';
@@ -42,6 +56,7 @@ export function HyroxView() {
   const [live, setLive] = useState<Sim | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [nudge, setNudge] = useState(false);
+  const [race, setRace] = useState<HyroxSettings['race']>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -50,6 +65,7 @@ export function HyroxView() {
         ([settings, all, running]) => {
           if (!alive) return;
           setDivision(settings.division);
+          setRace(settings.race ?? null);
           setSims(all);
           setLive(running && !isFinished(running) ? running : null);
         },
@@ -77,9 +93,22 @@ export function HyroxView() {
 
   const shown = division ?? 'open_men';
   const latest = sims[0];
+  const formats = [
+    { id: 'singles', label: 'Singles' },
+    { id: 'doubles', label: 'Doubles' },
+  ] as const;
 
   return (
     <View>
+      <SectionLabel>Your race</SectionLabel>
+      <RaceCard
+        race={race}
+        onSave={async (next) => {
+          setRace(next);
+          await saveRace(next);
+        }}
+      />
+
       {!sims.length ? (
         <Text style={[tr.body, hx.intro]}>
           HYROX is eight 1 km runs, each followed by a station, in the same
@@ -89,18 +118,29 @@ export function HyroxView() {
       ) : null}
 
       <SectionLabel>Your division</SectionLabel>
-      <View style={tr.chips}>
-        {DIVISIONS.map((d) => (
-          <Chip
-            key={d.id}
-            label={d.label}
-            on={division === d.id}
-            onPress={() => void pick(d.id)}
-          />
-        ))}
-      </View>
-      {nudge ? (
+      {formats.map((f) => (
+        <View key={f.id} style={hx.format}>
+          <Text style={[tr.label, hx.formatLabel]}>{f.label}</Text>
+          <View style={tr.chips}>
+            {DIVISIONS.filter((d) => d.format === f.id).map((d) => (
+              <Chip
+                key={d.id}
+                label={d.label}
+                on={division === d.id}
+                onPress={() => void pick(d.id)}
+              />
+            ))}
+          </View>
+        </View>
+      ))}
+      {divisionOf(shown).format === 'doubles' && division ? (
         <Text style={[tr.muted, hx.nudge]}>
+          You both run every kilometre and split each station’s work however you
+          like. Log the sim on one phone.
+        </Text>
+      ) : null}
+      {nudge ? (
+        <Text style={[tr.muted, hx.nudge, hx.accent]}>
           Pick your division first, so the loads are right.
         </Text>
       ) : null}
@@ -146,7 +186,7 @@ export function HyroxView() {
       ) : null}
 
       <SectionLabel>
-        The race, {DIVISIONS.find((d) => d.id === shown)?.label.toLowerCase()}
+        The race, {divisionOf(shown).name.toLowerCase()}
       </SectionLabel>
       <Card style={hx.card}>
         {STATIONS.map((s, i) => (
@@ -154,7 +194,10 @@ export function HyroxView() {
             <Text style={hx.n}>{i + 1}</Text>
             <View style={tr.flex1}>
               <Text style={tr.strong}>{s.name}</Text>
-              <Text style={tr.muted}>After a 1 km run · {s.work[shown]}</Text>
+              <Text style={tr.muted}>
+                After a 1 km run ·{' '}
+                {segmentWork({ kind: 'station', n: i + 1, id: s.id }, shown)}
+              </Text>
             </View>
           </View>
         ))}
@@ -178,8 +221,7 @@ export function HyroxView() {
                       {PARTS.find((p) => p.id === s.part)?.label}
                     </Text>
                     <Text style={tr.muted}>
-                      {shortDate(s.date)} ·{' '}
-                      {DIVISIONS.find((d) => d.id === s.division)?.label}
+                      {shortDate(s.date)} · {divisionOf(s.division).name}
                     </Text>
                   </View>
                   <Text style={[tr.strong, tr.num]}>
@@ -198,9 +240,147 @@ export function HyroxView() {
   );
 }
 
+/** The race countdown, or the form to set one. */
+function RaceCard({
+  race,
+  onSave,
+}: {
+  race: HyroxSettings['race'];
+  onSave: (race: NonNullable<HyroxSettings['race']> | null) => Promise<void>;
+}) {
+  const today = todayKey();
+  const [editing, setEditing] = useState(false);
+  const [date, setDate] = useState(race?.date ?? '');
+  const [name, setName] = useState(race?.name ?? '');
+
+  if (race && !editing) {
+    const c = countdown(race.date, today);
+    return (
+      <Card style={hx.card}>
+        <Text style={tr.eyebrowAccent}>
+          {(race.name || 'Race day').toUpperCase()} · {shortDate(race.date)}
+        </Text>
+        <Text style={hx.countdown}>{c.headline}</Text>
+        {c.detail ? <Text style={tr.muted}>{c.detail}</Text> : null}
+        <View style={hx.actions}>
+          <Pressable
+            onPress={() => {
+              setDate(c.days < 0 ? '' : race.date);
+              setName(c.days < 0 ? '' : (race.name ?? ''));
+              setEditing(true);
+            }}
+            hitSlop={8}
+          >
+            <Text style={[tr.linkText, tr.accentText]}>
+              {c.days < 0 ? 'Set next race' : 'Change'}
+            </Text>
+          </Pressable>
+          <Pressable onPress={() => void onSave(null)} hitSlop={8}>
+            <Text style={tr.linkText}>Remove</Text>
+          </Pressable>
+        </View>
+      </Card>
+    );
+  }
+
+  const valid = /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= today;
+  return (
+    <Card style={hx.card}>
+      <Text style={tr.muted}>
+        Got a race booked? Add it and Grain counts down to race day.
+      </Text>
+      <DateField value={date} min={today} onChange={setDate} />
+      <TextInput
+        value={name}
+        onChangeText={setName}
+        placeholder="Race name, optional (HYROX Mumbai)"
+        placeholderTextColor={palette.textFaint}
+        style={[tr.input, hx.field]}
+      />
+      <View style={hx.actions}>
+        <PrimaryButton
+          label="Save race"
+          disabled={!valid}
+          onPress={() => {
+            void onSave({
+              date,
+              ...(name.trim() ? { name: name.trim() } : {}),
+            });
+            setEditing(false);
+          }}
+          style={tr.flex1}
+        />
+        {editing ? (
+          <Pressable onPress={() => setEditing(false)} hitSlop={8}>
+            <Text style={tr.linkText}>Cancel</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </Card>
+  );
+}
+
+/** The browser's own date picker on the web; a typed date elsewhere. */
+function DateField({
+  value,
+  min,
+  onChange,
+}: {
+  value: string;
+  min: string;
+  onChange: (day: string) => void;
+}) {
+  if (Platform.OS === 'web') {
+    return (
+      <input
+        type="date"
+        value={value}
+        min={min}
+        aria-label="Race date"
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          marginTop: space.md,
+          padding: space.md,
+          borderRadius: radius.sm,
+          border: 'none',
+          background: palette.surface2,
+          color: palette.text,
+          fontSize: 15,
+          fontFamily: 'inherit',
+        }}
+      />
+    );
+  }
+  return (
+    <TextInput
+      value={value}
+      onChangeText={onChange}
+      placeholder="Race date, YYYY-MM-DD"
+      placeholderTextColor={palette.textFaint}
+      style={[tr.input, hx.field]}
+    />
+  );
+}
+
 const hx = StyleSheet.create({
   intro: { color: palette.textMuted, marginTop: space.lg },
-  nudge: { marginTop: space.sm, color: palette.accent },
+  nudge: { marginTop: space.sm },
+  accent: { color: palette.accent },
+  format: { marginTop: space.sm },
+  formatLabel: { marginBottom: space.sm },
+  countdown: {
+    ...typo.title,
+    fontSize: 40,
+    color: palette.text,
+    marginTop: space.xs,
+  },
+  field: { marginTop: space.md },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xl,
+    marginTop: space.lg,
+  },
   card: { marginTop: space.sm },
   title: { ...typo.heading, color: palette.text, marginTop: space.sm },
   button: { marginTop: space.lg },

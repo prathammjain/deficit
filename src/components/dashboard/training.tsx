@@ -8,6 +8,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { Card } from '@/components/ui/primitives';
 import { palette, space } from '@/constants/palette';
+import { countdown } from '@/lib/hyrox/countdown';
 import type { Following } from '@/lib/supabase/programs';
 import type { Exercise } from '@/lib/train/exercises';
 import { position } from '@/lib/train/program';
@@ -23,11 +24,25 @@ export function TrainCard({
   workouts,
   following,
   today,
+  race,
 }: {
   workouts: Workout[];
   following: Following | null;
   today: string;
+  /** A HYROX race on the calendar, counted down under the week. */
+  race?: { date: string; name?: string } | null;
 }) {
+  const c = race ? countdown(race.date, today) : null;
+  const raceLine =
+    race && c && c.days >= 0
+      ? `${race.name || 'Your HYROX race'} ${
+          c.days === 0
+            ? 'is today'
+            : c.days === 1
+              ? 'is tomorrow'
+              : `in ${c.days} days`
+        }`
+      : null;
   const week = periodOf('week', today);
   const t = trainingSummary(workouts, NO_EXERCISES, week);
   const program = following?.program;
@@ -85,6 +100,14 @@ export function TrainCard({
               {next.name}
             </Text>{' '}
             · {program.title}
+          </Text>
+        ) : null}
+
+        {raceLine ? (
+          <Text style={[st.weekBody, { marginTop: space.md }]}>
+            <Text style={{ color: palette.accent, fontWeight: '700' }}>
+              {raceLine}
+            </Text>
           </Text>
         ) : null}
       </Card>

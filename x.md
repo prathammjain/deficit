@@ -1131,3 +1131,26 @@ outside a sim, race day fueling (needs its own graded evidence).
 Checked: 500 tests pass, tsc and eslint clean. Ran it in a local build:
 started a sim from the tab, tapped laps, undid one, finished a seeded
 near complete sim against an earlier one, and landed back on the tab.
+
+### HYROX: race countdown and doubles
+
+- Race countdown: "Your race" at the top of the HYROX tab. Set a date
+  (the browser's own date picker) and an optional name. It shows days to
+  go, with weeks once there are two or more, then "Tomorrow", "Race
+  day", and after the race a prompt to set the next one. Home's Training
+  card adds one line: "HYROX Mumbai in 27 days".
+- Doubles: open women, open men, mixed, pro women, pro men, grouped
+  under Singles and Doubles. Each uses the matching singles loads; mixed
+  uses the open men's loads, and on wall balls each partner throws the
+  6 kg ball to their own target (men 3.00 m, women 2.70 m). Every station
+  reads "split between you", every run "1 km, together": partners divide
+  station work however they choose and both run the full 8 km (Red Bull's
+  HYROX weights overview, hyrox.com). There is no pro mixed category.
+- Bests: stations compare only within one division; runs compare within
+  one format, so a doubles run (legs fresher, stations shared) never
+  beats a singles best.
+- Stored in deficit.hyrox.v1 as race { date, name }.
+
+Checked: 507 tests pass, tsc and eslint clean. In a local build: set a
+race through the form, picked mixed doubles, saw the doubles loads, and
+the countdown line on Home.

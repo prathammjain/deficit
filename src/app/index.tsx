@@ -62,6 +62,7 @@ import {
 } from '@/lib/coach';
 import { computeTargets, type ProfileInput } from '@/lib/targets';
 import { predictWeeklyLoss } from '@/lib/weekly-prediction';
+import { loadSettings as loadHyrox } from '@/lib/hyrox/store';
 import { loadWorkouts } from '@/lib/train/store';
 import type { Workout } from '@/lib/train/workout';
 import { weekReport } from '@/lib/week-report';
@@ -107,6 +108,9 @@ export default function HomeScreen() {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [records, setRecords] = useState<DayRecord[]>([]);
   const [complete, setComplete] = useState<Set<string>>(() => new Set());
+  const [race, setRace] = useState<{ date: string; name?: string } | null>(
+    null,
+  );
   const { following } = useFollowing();
 
   // Arrived from a program link that needed signing in first: open it.
@@ -118,13 +122,15 @@ export default function HomeScreen() {
   const refresh = useCallback(async () => {
     // All at once rather than the profile first: only a brand new account
     // has no profile, and for everyone else that saves a round trip.
-    const [p, lw, ws, recs, marks] = await Promise.all([
+    const [p, lw, ws, recs, marks, hyrox] = await Promise.all([
       loadProfile(),
       latestWeight(),
       loadWorkouts().catch(() => [] as Workout[]),
       gatherDailyRecords(LOOKBACK).catch(() => [] as DayRecord[]),
       loadCompleteDays().catch(() => new Set<string>()),
+      loadHyrox().catch(() => null),
     ]);
+    setRace(hyrox?.race ?? null);
     let prof = p;
     if (p) {
       const hist = honestHistory(recs, computeTargets(p).targetKcal, marks);
@@ -392,7 +398,12 @@ export default function HomeScreen() {
       >
         Training
       </SectionLabel>
-      <TrainCard workouts={workouts} following={following} today={today} />
+      <TrainCard
+        workouts={workouts}
+        following={following}
+        today={today}
+        race={race}
+      />
 
       {/* Macros */}
       <SectionLabel>Macros</SectionLabel>

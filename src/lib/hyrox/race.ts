@@ -4,10 +4,14 @@
  *
  * The format never changes between events: eight 1 km runs, each followed
  * by one station, always in the same order. Divisions change only the loads
- * and the wall ball. Loads below are the singles divisions for season
- * 2026/27, from hyrox.com (the race page) and the published rulebook
- * figures; sled loads include the sled. Check them against the new
- * rulebook each season.
+ * and the wall ball. Loads below are for season 2026/27, from hyrox.com
+ * (the race page) and the published rulebook figures; sled loads include
+ * the sled. Check them against the new rulebook each season.
+ *
+ * Doubles race the same course at the matching singles loads: both
+ * partners run every kilometre together, and split each station's work
+ * however they like. Mixed doubles use the open men's loads; on wall balls
+ * each partner throws to their own target.
  *
  * Time between a station and the next run (the Roxzone) is not a separate
  * lap here: a run lap runs from leaving one station to starting the next,
@@ -16,14 +20,98 @@
 
 export const SEASON = '2026/27';
 
-export type Division = 'open_women' | 'open_men' | 'pro_women' | 'pro_men';
+type Singles = 'open_women' | 'open_men' | 'pro_women' | 'pro_men';
 
-export const DIVISIONS: { id: Division; label: string }[] = [
-  { id: 'open_women', label: 'Open women' },
-  { id: 'open_men', label: 'Open men' },
-  { id: 'pro_women', label: 'Pro women' },
-  { id: 'pro_men', label: 'Pro men' },
+export type Division =
+  | Singles
+  | 'doubles_open_women'
+  | 'doubles_open_men'
+  | 'doubles_mixed'
+  | 'doubles_pro_women'
+  | 'doubles_pro_men';
+
+export type Format = 'singles' | 'doubles';
+
+export interface DivisionDef {
+  id: Division;
+  format: Format;
+  /** Short, next to the format: "Open women", "Mixed". */
+  label: string;
+  /** On its own: "Doubles mixed". */
+  name: string;
+  /** Whose loads the stations use. */
+  loads: Singles;
+}
+
+export const DIVISIONS: DivisionDef[] = [
+  {
+    id: 'open_women',
+    format: 'singles',
+    label: 'Open women',
+    name: 'Open women',
+    loads: 'open_women',
+  },
+  {
+    id: 'open_men',
+    format: 'singles',
+    label: 'Open men',
+    name: 'Open men',
+    loads: 'open_men',
+  },
+  {
+    id: 'pro_women',
+    format: 'singles',
+    label: 'Pro women',
+    name: 'Pro women',
+    loads: 'pro_women',
+  },
+  {
+    id: 'pro_men',
+    format: 'singles',
+    label: 'Pro men',
+    name: 'Pro men',
+    loads: 'pro_men',
+  },
+  {
+    id: 'doubles_open_women',
+    format: 'doubles',
+    label: 'Open women',
+    name: 'Doubles open women',
+    loads: 'open_women',
+  },
+  {
+    id: 'doubles_open_men',
+    format: 'doubles',
+    label: 'Open men',
+    name: 'Doubles open men',
+    loads: 'open_men',
+  },
+  {
+    id: 'doubles_mixed',
+    format: 'doubles',
+    label: 'Mixed',
+    name: 'Doubles mixed',
+    loads: 'open_men',
+  },
+  {
+    id: 'doubles_pro_women',
+    format: 'doubles',
+    label: 'Pro women',
+    name: 'Doubles pro women',
+    loads: 'pro_women',
+  },
+  {
+    id: 'doubles_pro_men',
+    format: 'doubles',
+    label: 'Pro men',
+    name: 'Doubles pro men',
+    loads: 'pro_men',
+  },
 ];
+
+export function division(id: Division): DivisionDef {
+  return DIVISIONS.find((d) => d.id === id) as DivisionDef;
+}
 
 export type StationId =
   | 'ski'
@@ -35,8 +123,8 @@ export type StationId =
   | 'sandbag_lunges'
   | 'wall_balls';
 
-/** Loads per division: [open women, open men, pro women, pro men]. */
-type ByDivision<T> = Record<Division, T>;
+/** Loads per singles division: [open women, open men, pro women, pro men]. */
+type ByDivision<T> = Record<Singles, T>;
 const by = <T>(ow: T, om: T, pw: T, pm: T): ByDivision<T> => ({
   open_women: ow,
   open_men: om,
@@ -151,8 +239,18 @@ export function segmentName(s: Segment): string {
   return s.kind === 'run' ? `Run ${s.n}` : STATIONS[s.n - 1].name;
 }
 
-export function segmentWork(s: Segment, division: Division): string {
-  return s.kind === 'run' ? '1 km' : STATIONS[s.n - 1].work[division];
+/** Wall balls for mixed doubles: the men's ball, each to their own target. */
+const MIXED_WALL_BALLS = '100 reps, 6 kg; men to 3.00 m, women to 2.70 m';
+
+export function segmentWork(s: Segment, id: Division): string {
+  const d = division(id);
+  if (s.kind === 'run')
+    return d.format === 'doubles' ? '1 km, together' : '1 km';
+  const work =
+    id === 'doubles_mixed' && s.id === 'wall_balls'
+      ? MIXED_WALL_BALLS
+      : STATIONS[s.n - 1].work[d.loads];
+  return d.format === 'doubles' ? `${work}, split between you` : work;
 }
 
 /** A finished or running simulation. Times are epoch ms. */
@@ -217,14 +315,17 @@ export function summarize(sim: Sim): SimSummary {
 
 /**
  * Your best time for every segment across earlier sims. Stations only count
- * sims in the same division, since the loads differ; a 1 km run is a 1 km
- * run in any division.
+ * sims in the same division, since loads and partners differ. Runs count
+ * any sim of the same format: a 1 km run is a 1 km run at any load, but in
+ * doubles the stations are shared, so the legs arrive fresher.
  */
-export function bests(sims: Sim[], division: Division): Map<string, number> {
+export function bests(sims: Sim[], id: Division): Map<string, number> {
   const out = new Map<string, number>();
+  const format = division(id).format;
   for (const sim of sims) {
     for (const s of splits(sim)) {
-      if (s.segment.kind === 'station' && sim.division !== division) continue;
+      if (s.segment.kind === 'station' && sim.division !== id) continue;
+      if (division(sim.division).format !== format) continue;
       const cur = out.get(s.key);
       if (cur == null || s.ms < cur) out.set(s.key, s.ms);
     }

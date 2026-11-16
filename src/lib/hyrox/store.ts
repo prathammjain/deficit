@@ -17,6 +17,8 @@ const LIVE = 'deficit.hyrox.live.v1';
 
 export interface HyroxSettings {
   division: Division | null;
+  /** Next race, as a day key, and an optional name ("HYROX Mumbai"). */
+  race?: { date: string; name?: string } | null;
 }
 
 export async function loadSettings(
@@ -30,6 +32,15 @@ export async function saveDivision(
   store: KVStore = kv,
 ): Promise<HyroxSettings> {
   const next = { ...(await loadSettings(store)), division };
+  await setJSON(store, SETTINGS, next);
+  return next;
+}
+
+export async function saveRace(
+  race: { date: string; name?: string } | null,
+  store: KVStore = kv,
+): Promise<HyroxSettings> {
+  const next = { ...(await loadSettings(store)), race };
   await setJSON(store, SETTINGS, next);
   return next;
 }

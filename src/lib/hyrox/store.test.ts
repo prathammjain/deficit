@@ -8,6 +8,7 @@ import {
   newSim,
   saveDivision,
   saveLive,
+  saveRace,
   saveSim,
 } from './store';
 
@@ -17,6 +18,19 @@ describe('hyrox store', () => {
     expect((await loadSettings(s)).division).toBeNull();
     await saveDivision('pro_women', s);
     expect((await loadSettings(s)).division).toBe('pro_women');
+  });
+
+  it('keeps the race date beside the division, and clears it', async () => {
+    const s = createMemoryStore();
+    await saveDivision('doubles_mixed', s);
+    await saveRace({ date: '2026-12-13', name: 'HYROX Mumbai' }, s);
+    expect(await loadSettings(s)).toEqual({
+      division: 'doubles_mixed',
+      race: { date: '2026-12-13', name: 'HYROX Mumbai' },
+    });
+    await saveRace(null, s);
+    expect((await loadSettings(s)).race).toBeNull();
+    expect((await loadSettings(s)).division).toBe('doubles_mixed');
   });
 
   it('keeps finished sims newest first, and deletes them', async () => {
