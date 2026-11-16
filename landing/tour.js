@@ -1,7 +1,7 @@
-// The hero tour: a phone that walks through Grain one chapter at a time,
+// The hero tour: a stack of cards that walks through Grain one chapter at a time,
 // food, targets, training, HYROX, progress and programs. It moves on by
 // itself, holds still while someone points at it or touches it, and jumps to
-// a chapter from the tabs under it or the "Show me the part for" chips. Each
+// a chapter from the tabs under it. Each
 // screen plays what it does in the app. With reduced motion it doesn't move
 // on by itself and every screen shows its finished state.
 
@@ -18,10 +18,17 @@
   const slides = [...stage.querySelectorAll('.t-slide')];
   const tabs = [...stage.querySelectorAll('[data-go]')];
   const caption = stage.querySelector('[data-gt-caption]');
-  const appTabs = [...stage.querySelectorAll('.t-tabbar span')];
-  const chips = [...document.querySelectorAll('[data-persona]')];
   const tilt = stage.querySelector('[data-gt-tilt]');
   const order = slides.map((s) => s.dataset.slide);
+
+  // Each card opens with its chapter number and name instead of an app
+  // screen title, so the tour reads as a tour and not as a second phone.
+  slides.forEach((s, i) => {
+    const head = document.createElement('p');
+    head.className = 't-chapter';
+    head.innerHTML = `<b>0${i + 1}</b>${s.getAttribute('aria-label')}`;
+    s.prepend(head);
+  });
 
   const CAPTIONS = {
     food: 'Type or say what you ate. GrainAI looks up each food and adds up the calories and macros.',
@@ -36,15 +43,6 @@
     programs:
       'Coaches share a program with a code. Followers get each day’s session.',
   };
-  const APP_TAB = {
-    food: 'log',
-    targets: 'home',
-    train: 'train',
-    hyrox: 'train',
-    progress: 'history',
-    programs: 'train',
-  };
-
   stage.style.setProperty('--gt-step', `${STEP}ms`);
 
   let index = -1;
@@ -84,9 +82,6 @@
     slide.classList.add('is-active');
     tabs.forEach((t) =>
       t.setAttribute('aria-selected', String(t.dataset.go === name)),
-    );
-    appTabs.forEach((t) =>
-      t.classList.toggle('is-on', t.dataset.tab === APP_TAB[name]),
     );
     setCaption(CAPTIONS[name]);
     // Restart the progress line under the chosen tab.
@@ -222,28 +217,8 @@
   // ---- Controls ----
 
   tabs.forEach((t) =>
-    t.addEventListener('click', () => {
-      chips.forEach((c) => c.setAttribute('aria-pressed', 'false'));
-      go(t.dataset.go, true);
-    }),
+    t.addEventListener('click', () => go(t.dataset.go, true)),
   );
-
-  chips.forEach((c) => {
-    c.setAttribute('aria-pressed', 'false');
-    c.addEventListener('click', () => {
-      chips.forEach((x) =>
-        x.setAttribute('aria-pressed', String(x === c)),
-      );
-      go(c.dataset.persona, true);
-      // On a phone the tour sits under the text: bring it into view.
-      if (window.innerWidth < 960) {
-        stage.scrollIntoView({
-          behavior: reduced ? 'auto' : 'smooth',
-          block: 'center',
-        });
-      }
-    });
-  });
 
   // Hold still while someone is looking closely.
   stage.addEventListener('pointerenter', () => {
@@ -259,7 +234,7 @@
     }
   });
 
-  // The phone leans toward a mouse pointer, a few degrees at most.
+  // The cards lean toward a mouse pointer, a few degrees at most.
   const fine = window.matchMedia('(pointer: fine)').matches;
   if (tilt && fine && !reduced) {
     stage.addEventListener('pointermove', (e) => {

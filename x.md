@@ -1514,3 +1514,10 @@ much on every card on a phone, where almost everyone sees the page.
 
 Result on a 390 x 844 phone: 16.7 screens down to 13.6. Desktop is
 unchanged (checked: no controls, no folding).
+
+## 2026-11-16: Hero no longer looks like a second copy of the demo phone
+
+- A friend thought the hero tour and the working phone below it were the same thing twice. Both were phones showing the same app screens.
+- The hero tour is now a dark stack of cards with a chapter header ("01 Food", "04 HYROX") in place of the app's screen titles, status bar and tab bar. It still plays all six chapters by itself.
+- The working phone in the food section is now the only phone on the page, with a "Live demo · tap the phone to try it" badge above it.
+- Removed the "Show me the part for" chips (Fat loss, Muscle gain, Strength, HYROX, Coaching). They only jumped the tour to a chapter, which the tabs under the tour already do.
