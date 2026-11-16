@@ -73,14 +73,20 @@
   }
 
   // ---- The full stop in the headline is a grain ----
-  const stop = document.querySelector('.h1-stop');
-  if (stop && !reduced) {
+  // Each one drops a moment after its headline comes into view.
+  document.querySelectorAll('.h1-stop').forEach((stop) => {
+    if (reduced || !('IntersectionObserver' in window)) return;
     stop.classList.add('is-waiting');
-    setTimeout(() => {
-      stop.classList.remove('is-waiting');
-      stop.classList.add('is-dropped');
-    }, 1100);
-  }
+    const io = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return;
+      io.disconnect();
+      setTimeout(() => {
+        stop.classList.remove('is-waiting');
+        stop.classList.add('is-dropped');
+      }, 900);
+    });
+    io.observe(stop);
+  });
 
   // ---- Grains pour into the g ----
   // Rice shaped grains fall into the logo, bottom row first like filling a

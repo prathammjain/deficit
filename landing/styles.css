@@ -1303,7 +1303,7 @@ html:not(.js) .step-label b {
   display: flex;
   align-items: baseline;
   gap: 6px;
-  min-height: 50px;
+  height: 50px;
   padding: 14px 16px;
   border-radius: 14px;
   background: #fff;
@@ -1311,6 +1311,14 @@ html:not(.js) .step-label b {
   box-shadow: 0 1px 2px rgba(17, 19, 24, 0.04);
   font-size: 15.5px;
   font-weight: 500;
+}
+
+.c-field span,
+.c-today li span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .c-field small {
@@ -4285,53 +4293,91 @@ html:not(.js) .step-label b {
   stroke: none;
 }
 
-.tour-segs {
-  display: flex;
-  gap: 4px;
-  margin: 12px 0 14px;
-}
-
-.tour-seg {
-  flex: 1;
-  height: 16px;
-  padding: 6px 0 !important;
-}
-
-.tour-seg i {
-  display: block;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(25, 23, 21, 0.1);
-  overflow: hidden;
+.tour-dial {
   position: relative;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  margin: -4px 4px -4px -4px;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
-.tour-seg i {
-  background-image: linear-gradient(var(--ink), var(--ink));
-  background-repeat: no-repeat;
-  background-size: 0 100%;
+.tour-dial svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transform: rotate(var(--turn, -20deg));
+  transition: transform 0.7s cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 
-.tour-seg.is-done i {
-  background-size: 100% 100%;
+.tour-arc {
+  cursor: pointer;
 }
 
-.tour-seg.is-now i {
-  background-color: rgba(244, 81, 30, 0.18);
-  background-image: none;
+.tour-arc path {
+  fill: none;
+  stroke-linecap: round;
 }
 
-.tour-seg.is-now i {
-  transform-origin: left;
+.tour-arc-hit {
+  stroke: transparent;
+  stroke-width: 14;
 }
 
-.tour-seg.is-now i::before {
-  content: '';
+.tour-arc-track {
+  stroke: rgba(25, 23, 21, 0.1);
+  stroke-width: 4;
+  transition: stroke 0.3s ease;
+}
+
+.tour-arc:hover .tour-arc-track {
+  stroke: rgba(25, 23, 21, 0.22);
+}
+
+.tour-arc-fill {
+  stroke: var(--ink);
+  stroke-width: 4;
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: calc(1 - var(--f, 0));
+}
+
+.tour-arc.is-now .tour-arc-track {
+  stroke: rgba(244, 81, 30, 0.2);
+}
+
+.tour-arc.is-now .tour-arc-fill {
+  stroke: var(--accent);
+  stroke-width: 5;
+}
+
+.tour-dial .tour-count {
   position: absolute;
   inset: 0;
-  background: var(--accent);
-  transform: scaleX(var(--f, 0));
-  transform-origin: left;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  line-height: 1;
+}
+
+.tour-count b {
+  display: block;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+  animation: pop 0.4s var(--ease-out) both;
+}
+
+.tour-count small {
+  display: block;
+  margin-top: 2px;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--ink-faint);
+}
+
+.tour-top {
+  margin-bottom: 12px;
 }
 
 .tour-title {
@@ -4544,8 +4590,8 @@ html:not(.js) .step-label b {
     padding: 12px 14px 8px;
   }
 
-  .tour-segs {
-    margin: 8px 0 10px;
+  .tour-top {
+    margin-bottom: 8px;
   }
 
   .tour-text {
@@ -4734,6 +4780,14 @@ html:not(.js) .step-label b {
   margin: 0;
   font-size: 14px;
   color: var(--ink-soft);
+}
+
+/* On a phone the reminder wraps to two lines before it's filled in and one
+   after; keep the two lines' room so the page doesn't shift. */
+@media (max-width: 640px) {
+  .c-slip .c-body {
+    min-height: 2lh;
+  }
 }
 
 .c-slip.is-pressed {
@@ -6062,6 +6116,7 @@ html:not(.js) .step-label b {
   position: relative;
   z-index: 1;
   display: grid;
+  align-content: start;
   gap: 14px;
 }
 
@@ -6252,8 +6307,9 @@ html:not(.js) .step-label b {
 
 @media (min-width: 900px) {
   .e-pipe {
+    align-content: stretch;
     grid-template-columns: 1fr 0.85fr 1.35fr 1.2fr;
-    align-items: start;
+    align-items: stretch;
   }
 }
 
@@ -6753,9 +6809,22 @@ html:not(.js) .step-label b {
   font-variant-numeric: tabular-nums;
 }
 
+/* Live and result sit in the same spot; the hidden one keeps its room, so
+   swapping them never changes the card's height. */
+.hx-sim {
+  display: grid;
+  align-content: start;
+}
+
+.hx-live,
+.hx-result {
+  grid-area: 2 / 1;
+}
+
 .hx-result[hidden],
 .hx-live[hidden] {
-  display: none;
+  display: block;
+  visibility: hidden;
 }
 
 .hx-result {

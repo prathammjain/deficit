@@ -1287,29 +1287,45 @@
   let begun = false;
   let raf = 0;
 
+  // A ring of one arc per step. The current arc fills while you read and
+  // the ring turns so the current step sits at the top. Back and Next do the
+  // same for the keyboard; a click on an arc jumps to that step.
+  const SVG = 'http://www.w3.org/2000/svg';
+  const dial = $('[data-tour-dial]', card);
+  const arcGroup = $('[data-tour-arcs]', card);
+  const R = 23;
+  const SPAN = 360 / STEPS.length;
+  const pt = (deg) => {
+    const a = (deg * Math.PI) / 180;
+    return `${(28 + R * Math.sin(a)).toFixed(2)} ${(28 - R * Math.cos(a)).toFixed(2)}`;
+  };
   const segs = STEPS.map((s, i) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'tour-seg';
-    b.setAttribute('aria-label', `Step ${i + 1}: ${s.title}`);
-    b.innerHTML = '<i></i>';
-    b.addEventListener('click', () => go(i, true));
-    $('[data-tour-segs]', card).appendChild(b);
-    return b;
+    const d = `M ${pt(i * SPAN + 5)} A ${R} ${R} 0 0 1 ${pt((i + 1) * SPAN - 5)}`;
+    const g = document.createElementNS(SVG, 'g');
+    g.setAttribute('class', 'tour-arc');
+    g.innerHTML =
+      `<title>Step ${i + 1}: ${s.title.replace(/</g, '&lt;')}</title>` +
+      `<path class="tour-arc-hit" d="${d}"/>` +
+      `<path class="tour-arc-track" d="${d}"/>` +
+      `<path class="tour-arc-fill" d="${d}" pathLength="1"/>`;
+    g.addEventListener('click', () => go(i, true));
+    arcGroup.appendChild(g);
+    return g;
   });
   const fill = (i, v) =>
-    segs[i].firstChild.style.setProperty('--f', v.toFixed(3));
+    segs[i].lastChild.style.setProperty('--f', v.toFixed(3));
 
   function paintCard() {
     const s = STEPS[at];
-    $('[data-tour-count]', card).textContent = `${at + 1} of ${STEPS.length}`;
+    $('[data-tour-count]', card).innerHTML =
+      `<b>${at + 1}</b><small>of ${STEPS.length}</small>`;
+    dial.style.setProperty('--turn', `${-(at + 0.5) * SPAN}deg`);
     $('[data-tour-chapter]', card).textContent = s.chapter;
     $('[data-tour-title]', card).textContent = s.title;
     $('[data-tour-text]', card).textContent = s.text;
-    segs.forEach((b, i) => {
-      b.classList.toggle('is-done', i < at);
-      b.classList.toggle('is-now', i === at);
-      b.setAttribute('aria-current', i === at ? 'step' : 'false');
+    segs.forEach((g, i) => {
+      g.classList.toggle('is-done', i < at);
+      g.classList.toggle('is-now', i === at);
       fill(i, i < at ? 1 : 0);
     });
     $('[data-tour-prev]', card).disabled = at === 0;
@@ -1317,6 +1333,35 @@
       ? 'Replay tour'
       : 'Next';
     paintPlay();
+  }
+
+  // Steps have different amounts of text. Hold the card at the height of
+  // the longest, measured on a hidden copy, so the page doesn't shift.
+  const copy = $('[data-tour-text]', card).parentElement;
+  function reserveText() {
+    const ghost = copy.cloneNode(true);
+    ghost.removeAttribute('aria-live');
+    ghost.setAttribute('aria-hidden', 'true');
+    ghost.style.cssText = `position:absolute;visibility:hidden;pointer-events:none;width:${copy.clientWidth}px`;
+    copy.after(ghost);
+    let tallest = 0;
+    for (const s of STEPS) {
+      $('[data-tour-title]', ghost).textContent = s.title;
+      $('[data-tour-text]', ghost).textContent = s.text;
+      tallest = Math.max(tallest, ghost.offsetHeight);
+    }
+    ghost.remove();
+    copy.style.minHeight = `${Math.ceil(tallest)}px`;
+  }
+  reserveText();
+  if (document.fonts) document.fonts.ready.then(reserveText);
+  {
+    let w = innerWidth;
+    addEventListener('resize', () => {
+      if (innerWidth === w) return;
+      w = innerWidth;
+      reserveText();
+    });
   }
 
   function paintPlay() {

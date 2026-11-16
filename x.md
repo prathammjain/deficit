@@ -1279,3 +1279,30 @@ landing page, or the form will fail.
 Checked: 529 tests pass, tsc and eslint clean. The page was driven in a
 local browser on desktop, mobile width and reduced motion: tour, goal
 chips, sliders, HYROX taps and the form.
+
+## 2026-11-16: Landing page stops moving by itself
+
+Problem: further down the page, the page shifted up and down on its own,
+on phones and desktop. Cause: demos that autoplay changed their own
+height and kept looping off screen. The GrainAI meal demo grew by up to
+560 px on a phone as each item appeared, then shrank back for the next
+meal; the HYROX sim grew about 100 px; the custom food card, the food
+tour card and the catch up card changed by 20 to 40 px. Everything below
+moved each time. Safari doesn't correct for this at all (no scroll
+anchoring), Chrome only partly.
+
+Fix: each demo keeps a fixed height. The meal demo and the food tour card
+measure their tallest state on a hidden copy and keep that height (again
+on width changes and once fonts load); the HYROX sim's live and result
+views share one spot; the custom card's fields have a fixed height and
+long names end in an ellipsis. The meal demo and HYROX sim only start
+their next loop when on screen. Checked in a headless browser on phone
+and desktop widths: no section changes height while its demo loops.
+Trade off: the meal demo is now always as tall as its biggest meal
+(1,568 px on a phone).
+
+Also: the food tour's progress is a ring of nine arcs that turns to keep
+the current step at the top, so it no longer repeats the hero's
+filling tab bar. The first section's heading is back to "Food tracking
+for people who give a f*** about every gram", and its orange full stop
+drops in when it scrolls into view.

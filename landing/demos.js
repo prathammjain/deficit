@@ -27,6 +27,32 @@
     io.observe(el);
   }
 
+  /** Resolves once `el` is at least partly on screen (now or later). */
+  function onScreen(el) {
+    if (!('IntersectionObserver' in window)) return Promise.resolve();
+    return new Promise((resolve) => {
+      const io = new IntersectionObserver((entries) => {
+        if (!entries[0].isIntersecting) return;
+        io.disconnect();
+        resolve();
+      });
+      io.observe(el);
+    });
+  }
+
+  /** Calls `fn` again whenever the page width changes (not on phone
+   *  toolbar height changes). */
+  function onWidth(fn) {
+    let w = innerWidth;
+    let t = 0;
+    addEventListener('resize', () => {
+      if (innerWidth === w) return;
+      w = innerWidth;
+      clearTimeout(t);
+      t = setTimeout(fn, 150);
+    });
+  }
+
   /** Count a number in an element toward `to`, from whatever it shows. */
   function tween(el, to, ms = 500, suffix = '') {
     const from = Number(el.dataset.v ?? to);
@@ -229,6 +255,42 @@
       steps.forEach((s) => s.classList.remove('is-now'));
     }
 
+    // The demo fills in step by step. Hold the box at the height of the
+    // tallest finished meal, measured off screen, so nothing below it moves
+    // while it plays. (The "Looking up" line is measured since it can wrap.)
+    const pipe = card.querySelector('.e-pipe');
+    function reserve() {
+      const ghost = pipe.cloneNode(true);
+      ghost.setAttribute('aria-hidden', 'true');
+      ghost.style.cssText = `position:absolute;left:0;top:0;width:${pipe.clientWidth}px;min-height:0;visibility:hidden;pointer-events:none`;
+      card.appendChild(ghost);
+      const g = (k) => ghost.querySelector(`[data-e-${k}]`);
+      let tallest = 0;
+      for (const meal of MEALS) {
+        g('input').textContent = meal.text;
+        g('foods').innerHTML = meal.foods
+          .map((f) => `<span class="e-food">${esc(f.said)}</span>`)
+          .join('');
+        g('look').innerHTML = meal.foods
+          .map(
+            (f) =>
+              `<div class="e-item"><p>Looking up “${esc(f.said)}”</p><div class="e-cands">${f.cands
+                .map(cand)
+                .join('')}</div><p class="e-why">${esc(f.why)}</p></div>`,
+          )
+          .join('');
+        g('sum').innerHTML =
+          meal.foods.map(row).join('') +
+          `<p class="e-total"><span>Total</span><span>${fmt(meal.total)} kcal, ${meal.protein} g protein</span></p>`;
+        tallest = Math.max(tallest, ghost.offsetHeight);
+      }
+      ghost.remove();
+      pipe.style.minHeight = `${Math.ceil(tallest)}px`;
+    }
+    reserve();
+    if (document.fonts) document.fonts.ready.then(reserve);
+    onWidth(reserve);
+
     function row(f) {
       const tag =
         f.tag === 'ok'
@@ -300,6 +362,7 @@
 
       // Move on to the next example by itself until someone picks one.
       await wait(5200);
+      await onScreen(card);
       if (live() && auto) play((i + 1) % MEALS.length);
     }
 
@@ -501,7 +564,8 @@
         : '<p class="hx-clean">Every split matched or beat your best.</p>';
       live.hidden = true;
       result.hidden = false;
-      if (auto) setTimeout(() => auto && start(), 6500);
+      if (auto)
+        setTimeout(() => onScreen(card).then(() => auto && start()), 6500);
     }
 
     done.addEventListener('click', () => {
@@ -519,6 +583,27 @@
         if (running) work.textContent = SEGS[seg].work(div);
       }),
     );
+
+    // Live and result share one spot in the card (see styles.css), so the
+    // card is as tall as the taller of the two. Keep room for every split
+    // row and every lost time row, so neither grows while it plays.
+    const lostEl = card.querySelector('[data-hx-lost]');
+    function reserve() {
+      splitsEl.style.minHeight = lostEl.style.minHeight = '';
+      const keep = [splitsEl.innerHTML, lostEl.innerHTML];
+      splitsEl.innerHTML = SEGS.slice(0, -1)
+        .map((s) => `<p style="animation:none"><span>${s.name}</span><b>0:00</b></p>`)
+        .join('');
+      lostEl.innerHTML = SEGS.map(
+        (s) => `<p><span>${s.name}</span><i></i><b>+0:00</b></p>`,
+      ).join('');
+      splitsEl.style.minHeight = `${splitsEl.offsetHeight}px`;
+      lostEl.style.minHeight = `${lostEl.offsetHeight}px`;
+      [splitsEl.innerHTML, lostEl.innerHTML] = keep;
+    }
+    reserve();
+    if (document.fonts) document.fonts.ready.then(reserve);
+    onWidth(reserve);
 
     paint();
     whenSeen(card, start);
