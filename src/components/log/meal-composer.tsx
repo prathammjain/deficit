@@ -28,6 +28,7 @@ import { deviceKey, getJSON, localStore, setJSON } from '@/lib/kv';
 import { portionedEntry, type LogEntry } from '@/lib/log-store';
 import { isWeighed, stepperLabel, stepQuantity } from '@/lib/quantity';
 import { aiLeft, useAiAccess } from '@/lib/food/ai-access';
+import { checkEntry, gramsInput } from '@/lib/food/custom-entry';
 import { loadRoastMode } from '@/lib/roast-setting';
 import { refreshAiAccess } from '@/lib/supabase/access';
 import {
@@ -640,7 +641,57 @@ function CustomMeal({
   const [label, setLabel] = useState('');
   const [kcal, setKcal] = useState('');
   const [protein, setProtein] = useState('');
-  const valid = label.trim().length > 0 && Number(kcal) > 0;
+  const [carbs, setCarbs] = useState('');
+  const [fat, setFat] = useState('');
+  const grams = (t: string) => (t ? Number(t) : undefined);
+  const macros = {
+    proteinG: grams(protein),
+    carbsG: grams(carbs),
+    fatG: grams(fat),
+  };
+  const check = checkEntry(kcal ? Number(kcal) : null, macros);
+  // Calories typed, or worked out from the macros when left blank.
+  const total =
+    Number(kcal) > 0
+      ? Number(kcal)
+      : check.kind === 'fromMacros'
+        ? check.kcal
+        : 0;
+  const valid = label.trim().length > 0 && total > 0;
+
+  const add = () => {
+    if (!valid) return;
+    const round = (g?: number) =>
+      g == null ? undefined : Math.round(g * 10) / 10;
+    onAdd({
+      label: label.trim(),
+      kcal: Math.round(total),
+      proteinG: round(macros.proteinG),
+      carbsG: round(macros.carbsG),
+      fatG: round(macros.fatG),
+    });
+    setLabel('');
+    setKcal('');
+    setProtein('');
+    setCarbs('');
+    setFat('');
+  };
+
+  const field = (label: string, value: string, set: (t: string) => void) => (
+    <View style={st.flex1}>
+      <Text style={st.manualFieldLabel}>{label}</Text>
+      <TextInput
+        style={st.manualNumInput}
+        placeholder="g"
+        placeholderTextColor={palette.textDim}
+        keyboardType="decimal-pad"
+        inputMode="decimal"
+        accessibilityLabel={`${label} in grams`}
+        value={value}
+        onChangeText={(t) => set(gramsInput(t))}
+      />
+    </View>
+  );
 
   return (
     <Card style={st.manualCard}>
@@ -651,42 +702,36 @@ function CustomMeal({
         value={label}
         onChangeText={setLabel}
       />
+      <TextInput
+        style={st.manualNumInput}
+        placeholder={
+          check.kind === 'fromMacros'
+            ? `${check.kcal} kcal, from your macros`
+            : 'Calories (kcal)'
+        }
+        placeholderTextColor={palette.textDim}
+        keyboardType="number-pad"
+        inputMode="numeric"
+        value={kcal}
+        onChangeText={(t) => setKcal(t.replace(/[^0-9]/g, ''))}
+      />
       <View style={st.manualRow}>
-        <TextInput
-          style={[st.manualNumInput, st.flex1]}
-          placeholder="kcal"
-          placeholderTextColor={palette.textDim}
-          keyboardType="number-pad"
-          inputMode="numeric"
-          value={kcal}
-          onChangeText={(t) => setKcal(t.replace(/[^0-9]/g, ''))}
-        />
-        <TextInput
-          style={[st.manualNumInput, st.flex1]}
-          placeholder="protein (g)"
-          placeholderTextColor={palette.textDim}
-          keyboardType="number-pad"
-          inputMode="numeric"
-          value={protein}
-          onChangeText={(t) => setProtein(t.replace(/[^0-9]/g, ''))}
-        />
-        <PrimaryButton
-          label="Add"
-          disabled={!valid}
-          style={st.manualBtn}
-          onPress={() => {
-            if (!valid) return;
-            onAdd({
-              label: label.trim(),
-              kcal: Math.round(Number(kcal)),
-              proteinG: protein ? Math.round(Number(protein)) : undefined,
-            });
-            setLabel('');
-            setKcal('');
-            setProtein('');
-          }}
-        />
+        {field('Protein', protein, setProtein)}
+        {field('Carbs', carbs, setCarbs)}
+        {field('Fat', fat, setFat)}
       </View>
+      {check.kind === 'mismatch' ? (
+        <Text style={st.manualNote}>
+          Your macros add up to about {check.kcal} kcal. Worth a second look if
+          that’s far off.
+        </Text>
+      ) : check.kind === 'fromMacros' ? (
+        <Text style={st.manualNote}>
+          Leave calories blank and Grain uses {check.kcal} kcal from your
+          macros.
+        </Text>
+      ) : null}
+      <PrimaryButton label="Add" disabled={!valid} onPress={add} />
     </Card>
   );
 }

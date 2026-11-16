@@ -42,6 +42,12 @@ body,
   color-scheme: light;
 }
 
+html {
+  /* No font inflation when an iPhone turns sideways. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
@@ -49,6 +55,24 @@ body {
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
+}
+
+/* The page blocks text selection so taps feel native, but fields must
+   stay selectable: older iOS won't place a caret or type otherwise. */
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* iOS zooms the whole page into any field under 16px and leaves it zoomed.
+   This query matches only iOS Safari and home screen apps. */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
 }
 
 /* No focus ring or underline on text fields: each field already sits in its

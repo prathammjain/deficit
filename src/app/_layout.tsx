@@ -7,9 +7,10 @@ import {
 } from 'expo-router';
 import Head from 'expo-router/head';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { AppLifecycle } from '@/components/app-lifecycle';
 import AppTabs from '@/components/app-tabs';
 import { ConsentScreen } from '@/components/consent';
 import { SignInScreen } from '@/components/sign-in-screen';
@@ -38,12 +39,6 @@ const NavTheme = {
 };
 
 export default function RootLayout() {
-  // Register the service worker on web so the browser can prompt "Add to Home Screen".
-  useEffect(() => {
-    if (Platform.OS !== 'web' || !('serviceWorker' in navigator)) return;
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-  }, []);
-
   // Light-only skin, fixed regardless of the device's light/dark setting.
   return (
     <AuthProvider>
@@ -56,6 +51,8 @@ export default function RootLayout() {
         <AuthGate>
           <AppTabs />
         </AuthGate>
+        {/* Service worker, updates and a new day, for the installed app. */}
+        <AppLifecycle />
       </ThemeProvider>
     </AuthProvider>
   );

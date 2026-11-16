@@ -1185,3 +1185,48 @@ lifter moving to HYROX: a morning workout and evening sim count as two
 sessions on one day on Home and Train, last week (sims only) reads as
 HYROX training, and the HYROX trend shows 1:13 faster with the last sim
 flagged as a dip.
+
+### Custom meals with full macros
+
+The Custom tab takes calories, protein, carbs and fat (labelled boxes,
+decimals allowed). Leave calories blank and Grain fills them from the
+macros at 4, 4 and 9 kcal per gram (the same Atwater factors the targets
+use), saying so on screen. A typed total more than 25% away from the
+macros gets a gentle "worth a second look": labels round, and fibre and
+alcohol carry energy too, so small gaps are normal. lib/food/custom-entry.ts.
+
+### Installed app, hardened for iPhone and Android
+
+- Updates: an installed app can sit open for days. On every return to
+  the screen, and every 30 minutes while open, Grain asks the server
+  which bundle is live. A new deploy reloads quietly when that can't
+  interrupt anything; mid workout, mid HYROX sim, in the program
+  writer or while typing it shows "A new version of Grain is ready,
+  Refresh / Later" instead (those sessions are saved either way).
+- A new day: a page left open overnight reloads on return, so Today is
+  today, again never mid session.
+- sw.js is registered with updateViaCache none, and vercel.json sends
+  no-cache for sw.js and manifest.json, so a fix to either reaches
+  phones on the next open. Hashed bundles stay immutable.
+- Storage: once installed, Grain asks the browser to keep its storage
+  (navigator.storage.persist), so offline changes waiting to sync are
+  never evicted.
+- iOS: launch screens for every current iPhone (public/splash, made by
+  scripts/make-ios-splash.py), instead of a white flash at launch; no
+  page zoom when tapping a field (16px fields on iOS only); fields stay
+  selectable despite the page's no select rule (older iOS won't type
+  otherwise); no font inflation when turned sideways.
+- Android: manifest gains id, scope, portrait orientation, categories,
+  separate any and maskable icons, and long press shortcuts on the home
+  screen icon: Log a meal, Train.
+- Already in place and kept: network first HTML with an offline
+  fallback, never caching Supabase traffic, viewport-fit cover with
+  safe areas, no pull to refresh or tap highlight, the install prompt
+  captured before the bundle loads, in-app browser escape.
+- Moved service worker registration from _layout.tsx into
+  components/app-lifecycle.tsx, with the rules in lib/pwa.ts (tested).
+
+Checked: 529 tests pass, tsc and eslint clean. In a local build:
+a macros only custom meal logged as 410 kcal with 30/50/10 g; a faked
+new deploy reloaded Home on return and showed the refresh banner mid
+sim without reloading; 11 launch screen tags and the new manifest load.

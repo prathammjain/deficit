@@ -1,22 +1,61 @@
 {
+  "id": "/",
   "name": "Grain: food tracking for every gram",
   "short_name": "Grain",
   "description": "Log meals in plain language — “2 roti, mom’s dal, 1 katori rice” — and get calories and macros you can trust. Built for Indian food.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#EDEAE4",
   "theme_color": "#EDEAE4",
+  "categories": [
+    "health",
+    "fitness",
+    "food"
+  ],
   "icons": [
     {
       "src": "/icons/icon-192.png?v=3",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-512.png?v=3",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png?v=3",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Log a meal",
+      "short_name": "Log",
+      "url": "/log",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png?v=3",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Train",
+      "short_name": "Train",
+      "url": "/train",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png?v=3",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

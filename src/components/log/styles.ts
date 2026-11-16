@@ -245,7 +245,12 @@ export const st = StyleSheet.create({
     color: palette.text,
     fontSize: 15,
   },
-  manualBtn: { paddingHorizontal: space.lg },
+  manualFieldLabel: {
+    color: palette.textMuted,
+    fontSize: 12,
+    marginBottom: space.xs,
+  },
+  manualNote: { color: palette.textMuted, fontSize: 13, lineHeight: 18 },
 
   empty: { color: palette.textDim, fontSize: 14, paddingVertical: space.sm },
   foodLine: {

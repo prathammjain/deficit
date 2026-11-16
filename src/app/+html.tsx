@@ -7,6 +7,24 @@ const DESCRIPTION =
   'get calories and macros you can trust. AI grounded on real food data, ' +
   'built for Indian food.';
 const URL = 'https://app.getgrain.fit';
+/**
+ * iOS launch screens, one per iPhone screen (scripts/make-ios-splash.py).
+ * Without them an installed Grain opens on a blank white screen.
+ */
+const SPLASH: [number, number, number][] = [
+  [440, 956, 3],
+  [402, 874, 3],
+  [420, 912, 3],
+  [430, 932, 3],
+  [393, 852, 3],
+  [428, 926, 3],
+  [390, 844, 3],
+  [414, 896, 3],
+  [414, 896, 2],
+  [375, 812, 3],
+  [375, 667, 2],
+];
+
 /** The account and the engine both live here; inlined at build time. */
 const SUPABASE = process.env.EXPO_PUBLIC_SUPABASE_URL;
 
@@ -65,6 +83,15 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="theme-color" content="#EDEAE4" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=3" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        {SPLASH.map(([w, h, r]) => (
+          <link
+            key={`${w}x${h}@${r}`}
+            rel="apple-touch-startup-image"
+            href={`/splash/iphone-${w}x${h}@${r}x.png`}
+            media={`(device-width: ${w}px) and (device-height: ${h}px) and (-webkit-device-pixel-ratio: ${r}) and (orientation: portrait)`}
+          />
+        ))}
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Grain" />
 
