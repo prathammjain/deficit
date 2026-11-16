@@ -278,191 +278,57 @@
           </div>
         </div>
 
-        <div class="gt-stage" data-gt>
-          <div class="gt-tilt" data-gt-tilt>
-            <div class="gt-deck">
-              <div
-                class="gt-screen"
-                role="region"
-                aria-roledescription="carousel"
-                aria-label="A guided tour of Grain"
-              >
-                <div class="t-slides">
-                  <!-- Food -->
-                  <div class="t-slide" data-slide="food" aria-label="Food">
-                    <p class="t-label">Today</p>
-                    <p class="t-title">Log</p>
-                    <div class="t-card t-left">
-                      <div>
-                        <p class="t-cap">Left to eat</p>
-                        <p class="t-big" data-t-left>2,287</p>
-                      </div>
-                      <div class="t-ring" aria-hidden="true">
-                        <svg viewBox="0 0 40 40">
-                          <circle class="t-ring-track" cx="20" cy="20" r="16" />
-                          <circle class="t-ring-fill" cx="20" cy="20" r="16" />
-                        </svg>
-                      </div>
-                    </div>
-                    <div class="t-card t-ask">
-                      <p class="t-input">
-                        <span data-t-type
-                          >2 eggs, 2 slices of toast, black coffee</span
-                        ><i class="t-caret"></i>
-                      </p>
-                      <p class="t-askbtn">
-                        <svg class="spark" viewBox="0 0 24 24" aria-hidden="true">
-                          <path
-                            d="M10 2.5c.7 4.6 2.9 6.8 7.5 7.5-4.6.7-6.8 2.9-7.5 7.5-.7-4.6-2.9-6.8-7.5-7.5 4.6-.7 6.8-2.9 7.5-7.5Z"
-                          /></svg
-                        >Ask GrainAI
-                      </p>
-                    </div>
-                    <div class="t-card t-rows">
-                      <p class="t-row" style="--i: 0">
-                        <span><b>Egg</b><em>2 large, 100 g</em></span><strong>143</strong>
-                      </p>
-                      <p class="t-row" style="--i: 1">
-                        <span><b>Toast</b><em>2 slices, 60 g</em></span><strong>151</strong>
-                      </p>
-                      <p class="t-row" style="--i: 2">
-                        <span><b>Black coffee</b><em>1 cup</em></span><strong>2</strong>
-                      </p>
-                      <p class="t-row t-total" style="--i: 3">
-                        <span>296 kcal</span><strong>20 g protein</strong>
-                      </p>
-                    </div>
-                  </div>
+        <div class="wk" data-wk>
+          <div class="wk-board" role="region" aria-label="One week in Grain, Monday to Sunday">
+            <div class="wk-top">
+              <div>
+                <p class="wk-label">Daily target</p>
+                <p class="wk-target"><span data-wk-target>2,287</span><small>kcal</small></p>
+              </div>
+              <p class="wk-day"><i aria-hidden="true"></i><span data-wk-day>Monday</span></p>
+            </div>
 
-                  <!-- Targets -->
-                  <div class="t-slide" data-slide="targets" aria-label="Targets">
-                    <p class="t-label">Monday</p>
-                    <p class="t-title">Overview</p>
-                    <div class="t-card t-check">
-                      <p class="t-eyebrow">Weekly check in</p>
-                      <p class="t-h">You burn less than we thought</p>
-                      <p class="t-line">
-                        <span>Daily target</span>
-                        <span><s>2,287</s> <b data-t-count="2037">2,037</b> kcal</span>
-                      </p>
-                      <p class="t-line">
-                        <span>Maintenance</span>
-                        <span><s>2,837</s> <b data-t-count="2587">2,587</b> kcal</span>
-                      </p>
-                      <p class="t-small">
-                        You averaged 2,000 kcal and lost 0.5 kg a week.
-                      </p>
-                      <p class="t-link">Keep last week’s target</p>
-                    </div>
-                    <div class="t-card t-macros">
-                      <p><b>153 g</b><em>Protein</em></p>
-                      <p><b>203 g</b><em>Carbs</em></p>
-                      <p><b>68 g</b><em>Fat</em></p>
-                    </div>
-                  </div>
+            <div class="wk-chart">
+              <p class="wk-chart-label">Weight<span>trend</span></p>
+              <div class="wk-plot">
+                <svg viewBox="0 0 320 112" aria-hidden="true"></svg>
+                <span class="wk-weigh" data-wk-weigh aria-hidden="true">82.4 kg</span>
+              </div>
+            </div>
 
-                  <!-- Training -->
-                  <div class="t-slide" data-slide="train" aria-label="Training">
-                    <p class="t-label">Workout · 32:10</p>
-                    <p class="t-title">Push</p>
-                    <div class="t-card t-sets">
-                      <p class="t-ex">Bench press <em>Last time 80 × 8</em></p>
-                      <p class="t-set" style="--i: 0">
-                        <span>1</span><span>80 kg</span><span>8</span><i class="t-tick"></i>
-                      </p>
-                      <p class="t-set" style="--i: 1">
-                        <span>2</span><span>80 kg</span><span>8</span><i class="t-tick"></i>
-                      </p>
-                      <p class="t-set" style="--i: 2">
-                        <span>3</span><span>82.5 kg</span><span>6</span><i class="t-tick"></i
-                        ><b class="t-pr">PR</b>
-                      </p>
-                    </div>
-                    <div class="t-card t-rest">
-                      <span>Rest</span><b data-t-rest>1:30</b><span class="t-skip">Skip</span>
-                    </div>
-                  </div>
+            <div class="wk-feed" data-wk-feed></div>
 
-                  <!-- HYROX -->
-                  <div class="t-slide" data-slide="hyrox" aria-label="HYROX">
-                    <p class="t-label t-accent">Run 3 of 8</p>
-                    <p class="t-title">Run 3</p>
-                    <p class="t-work">1 km</p>
-                    <p class="t-clock" data-t-clock>0:00</p>
-                    <p class="t-done">Done: Run 3</p>
-                    <p class="t-next">Next: Sled pull, 50 m at 103 kg</p>
-                    <div class="t-splits">
-                      <p><span>Sled push</span><b>3:25</b></p>
-                      <p><span>Run 2</span><b>5:08</b></p>
-                      <p><span>SkiErg</span><b>4:32</b></p>
-                      <p><span>Run 1</span><b>4:55</b></p>
-                    </div>
-                  </div>
+            <dl class="wk-stats">
+              <div><dt>Avg eaten</dt><dd data-wk-eaten>·</dd></div>
+              <div><dt>Sessions</dt><dd data-wk-sessions>0</dd></div>
+              <div><dt>Trend</dt><dd data-wk-trend>−0.0 kg</dd></div>
+            </dl>
 
-                  <!-- Progress -->
-                  <div class="t-slide" data-slide="progress" aria-label="Progress">
-                    <p class="t-label">This week</p>
-                    <p class="t-title">Progress</p>
-                    <div class="t-card">
-                      <p class="t-read">
-                        Lifts up 2.5% while bodyweight fell 0.6 kg.
-                      </p>
-                      <p class="t-cap">Training</p>
-                      <p class="t-mid">2 sessions</p>
-                      <p class="t-small">1 workout and 1 HYROX sim</p>
-                    </div>
-                    <div class="t-card">
-                      <p class="t-cap">HYROX first half</p>
-                      <p class="t-mid">1:13 faster</p>
-                      <svg class="t-chart" viewBox="0 0 200 60" aria-hidden="true">
-                        <path class="t-chart-area" d="M6 10 L100 52 L194 40 L194 60 L6 60 Z" />
-                        <path class="t-chart-line" d="M6 10 L100 52 L194 40" />
-                        <circle cx="6" cy="10" r="3" />
-                        <circle cx="100" cy="52" r="3" />
-                        <circle cx="194" cy="40" r="3" />
-                      </svg>
-                    </div>
-                  </div>
-
-                  <!-- Programs -->
-                  <div class="t-slide" data-slide="programs" aria-label="Programs">
-                    <p class="t-label">From your coach</p>
-                    <p class="t-title">Train</p>
-                    <div class="t-card t-code">
-                      <p class="t-cap">Follow with a code</p>
-                      <p class="t-codebox" data-t-code>ZFPXT6</p>
-                    </div>
-                    <div class="t-card t-prog">
-                      <p class="t-cap">Week 2 of 8 · Push Pull Legs</p>
-                      <p class="t-h">Pull</p>
-                      <p class="t-small">Deadlift, pull up, barbell row</p>
-                      <p class="t-start">Start Pull</p>
-                    </div>
-                    <div class="t-card t-plan">
-                      <p><span>Oats with whey and banana</span><b>650 kcal</b></p>
-                      <p><span>Chicken, rice and greens</span><b>720 kcal</b></p>
-                    </div>
-                  </div>
-                </div>
-
+            <div
+              class="wk-scrub"
+              data-wk-scrub
+              role="slider"
+              tabindex="0"
+              aria-label="Day of the week"
+              aria-valuemin="0"
+              aria-valuemax="6"
+              aria-valuenow="0"
+            >
+              <div class="wk-track"><i class="wk-fill"></i><b class="wk-knob"></b></div>
+              <div class="wk-days">
+                <button type="button" data-wk-go aria-label="Monday">M</button>
+                <button type="button" data-wk-go aria-label="Tuesday">T</button>
+                <button type="button" data-wk-go aria-label="Wednesday">W</button>
+                <button type="button" data-wk-go aria-label="Thursday">T</button>
+                <button type="button" data-wk-go aria-label="Friday">F</button>
+                <button type="button" data-wk-go aria-label="Saturday">S</button>
+                <button type="button" data-wk-go aria-label="Sunday">S</button>
               </div>
             </div>
           </div>
-
-          <div class="gt-ctrl">
-            <div class="gt-steps" role="tablist" aria-label="Tour chapters">
-              <button type="button" role="tab" data-go="food"><i></i>Food</button>
-              <button type="button" role="tab" data-go="targets"><i></i>Targets</button>
-              <button type="button" role="tab" data-go="train"><i></i>Training</button>
-              <button type="button" role="tab" data-go="hyrox"><i></i>HYROX</button>
-              <button type="button" role="tab" data-go="progress"><i></i>Progress</button>
-              <button type="button" role="tab" data-go="programs"><i></i>Programs</button>
-            </div>
-            <p class="gt-caption" data-gt-caption aria-live="polite">
-              Type or say what you ate. GrainAI looks up each food and adds up
-              the calories and macros.
-            </p>
-          </div>
+          <p class="wk-caption" data-wk-caption aria-live="polite">
+            Log food in one line. Grain looks up each food and keeps the day’s total.
+          </p>
         </div>
       </section>
 
@@ -2320,7 +2186,7 @@
     <script src="custom.js" defer></script>
     <script src="motion.js" defer></script>
     <script src="rail.js" defer></script>
-    <script src="tour.js" defer></script>
+    <script src="week.js" defer></script>
     <script src="demos.js" defer></script>
     <script src="tabs.js" defer></script>
   </body>

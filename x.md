@@ -1521,3 +1521,11 @@ unchanged (checked: no controls, no folding).
 - The hero tour is now a dark stack of cards with a chapter header ("01 Food", "04 HYROX") in place of the app's screen titles, status bar and tab bar. It still plays all six chapters by itself.
 - The working phone in the food section is now the only phone on the page, with a "Live demo · tap the phone to try it" badge above it.
 - Removed the "Show me the part for" chips (Fat loss, Muscle gain, Strength, HYROX, Coaching). They only jumped the tour to a chapter, which the tabs under the tour already do.
+
+## 2026-11-16: Hero rebuilt as "one week in Grain"
+
+- The card stack from earlier today looked different from the phone but was much less polished. Replaced it with a week scrubber (week.js), and removed tour.js and its styles.
+- A dark board plays Monday to Sunday in about 20 seconds. Each day fills a food bar against the target, adds a training card (push, easy run, pull, rest, legs, HYROX sim), drops the morning weigh-in on a chart and draws the trend line. Average eaten, sessions and trend change count up underneath.
+- Sunday shows the weekly check-in: averaged 2,040 kcal, trend down 0.5 kg, so maintenance 2,837 to 2,587 and the target rolls from 2,287 to 2,037.
+- Visitors can drag the scrubber or tap a day. Autoplay comes back 5 seconds after they let go, and it only plays while on screen. With reduced motion it opens on the finished week.
+- The split of jobs: the hero shows the whole system over a week, and the phone below is the hands-on demo of logging.
