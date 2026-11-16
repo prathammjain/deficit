@@ -1100,3 +1100,34 @@ Checked: 486 tests pass, tsc clean, eslint clean on the changed files
 Overview from a local build with 21 seeded days: 2,000 kcal a day and
 0.5 kg a week lost measured 2,540 kcal, and maintenance stepped from
 2,837 to 2,587 (the cap). Undo restored 2,837.
+
+### HYROX in Train
+
+A third tab in Train, visible to everyone: HYROX.
+
+- Pick a division (open or pro, women or men), start a full sim or
+  either half, and log it with one big button per segment: 8 runs and 8
+  stations in the official order, each with the division's load on
+  screen. Undo the last lap, or end and discard.
+- Times are timestamps saved on every lap, so a locked phone or a
+  reload mid race loses nothing. Taps within 1.5 s count once.
+- After a sim: total, running against stations, run fade (later runs
+  against earlier ones), where you lost time against your own bests,
+  and every split marked when it is a best. Stations compare only within
+  a division, since loads differ; runs compare across divisions.
+- No outside benchmark times: everything is measured against the user's
+  own sims, so nothing is made up.
+- Roxzone time is folded into the runs (a run lap is station to station),
+  which keeps a sim to 16 taps.
+- Loads: season 2026/27 singles, from hyrox.com's race page and the
+  published rulebook figures. Sources disagree on Women Open wall balls
+  (one says 75 reps since 2025/26; hyrox.com and the 2026/27 summaries
+  say 100). We use 100. Recheck every season.
+- Data in deficit.hyrox.* keys, synced like the rest.
+
+Not yet: doubles and relay, a race date countdown, station practice
+outside a sim, race day fueling (needs its own graded evidence).
+
+Checked: 500 tests pass, tsc and eslint clean. Ran it in a local build:
+started a sim from the tab, tapped laps, undid one, finished a seeded
+near complete sim against an earlier one, and landed back on the tab.

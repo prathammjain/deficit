@@ -1,10 +1,10 @@
 /**
  * The Train tab. Workouts: start, repeat, run a routine, describe one after
  * the fact, and the history. Progress: overload by week or month, joined
- * with food and bodyweight.
+ * with food and bodyweight. HYROX: race sims and where the time goes.
  */
 
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
@@ -18,6 +18,7 @@ import {
   useFollowing,
 } from '@/components/train/follow';
 import { WorkoutHistory } from '@/components/train/history';
+import { HyroxView } from '@/components/train/hyrox';
 import { namer, ProgramCard } from '@/components/train/program';
 import { ProgressView } from '@/components/train/progress';
 import { ResumeCard, StartCard, WeekStrip } from '@/components/train/start';
@@ -35,12 +36,22 @@ import {
   type Session,
 } from '@/lib/train/workout';
 
-type Tab = 'workouts' | 'progress';
+type Tab = 'workouts' | 'progress' | 'hyrox';
 
 export default function TrainScreen() {
   const { data, setData, reload } = useTraining();
   const { following, setFollowing } = useFollowing();
-  const [tab, setTab] = useState<Tab>('workouts');
+  const params = useLocalSearchParams<{ tab?: string; at?: string }>();
+  const [tab, setTab] = useState<Tab>(
+    params.tab === 'hyrox' ? 'hyrox' : 'workouts',
+  );
+  // Arriving from a finished HYROX sim lands on its tab. The screen stays
+  // mounted between visits, so each arrival carries its own stamp.
+  const [arrival, setArrival] = useState(params.at);
+  if (params.at !== arrival) {
+    setArrival(params.at);
+    if (params.tab === 'hyrox') setTab('hyrox');
+  }
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [describing, setDescribing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -111,6 +122,7 @@ export default function TrainScreen() {
         options={[
           { id: 'workouts', label: 'Workouts' },
           { id: 'progress', label: 'Progress' },
+          { id: 'hyrox', label: 'HYROX' },
         ]}
         value={tab}
         onChange={setTab}
@@ -195,8 +207,10 @@ export default function TrainScreen() {
             records={recordCounts(data.workouts, data.exById, data.bodyKg)}
           />
         </>
-      ) : (
+      ) : tab === 'progress' ? (
         <ProgressView data={data} today={today} />
+      ) : (
+        <HyroxView />
       )}
     </Screen>
   );

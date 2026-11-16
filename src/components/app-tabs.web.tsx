@@ -115,6 +115,7 @@ export default function AppTabs() {
             href="/exercise"
             style={styles.hiddenTrigger}
           />
+          <TabTrigger name="hyrox" href="/hyrox" style={styles.hiddenTrigger} />
           <TabTrigger
             name="import"
             href="/import"
@@ -175,6 +176,7 @@ export function BottomTabList(props: TabListProps) {
   const hidden =
     (pathname.startsWith('/admin') && width >= 1024) ||
     pathname.startsWith('/workout') ||
+    pathname.startsWith('/hyrox') ||
     pathname.startsWith('/write');
   return (
     <View
