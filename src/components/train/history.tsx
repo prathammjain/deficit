@@ -1,5 +1,6 @@
 /**
- * history.tsx: finished workouts, newest first, grouped by week.
+ * history.tsx: all training, newest first, grouped by week: workouts and
+ * HYROX sims in one timeline.
  */
 
 import { router } from 'expo-router';
@@ -7,6 +8,14 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { Card, SectionLabel } from '@/components/ui/primitives';
+import { recordSims } from '@/lib/hyrox/progress';
+import {
+  division,
+  PARTS,
+  raceClock,
+  summarize,
+  type Sim,
+} from '@/lib/hyrox/race';
 import { periodLabel, periodOf } from '@/lib/train/progress';
 import { durationText, workoutStats, type Workout } from '@/lib/train/workout';
 
@@ -14,6 +23,10 @@ import type { Training } from './data';
 import { tr } from './styles';
 
 const PAGE = 20;
+
+type Item =
+  | { kind: 'workout'; w: Workout; at: number; date: string }
+  | { kind: 'sim'; s: Sim; at: number; date: string };
 
 function dayText(day: string) {
   const [y, m, d] = day.split('-').map(Number);
@@ -35,13 +48,27 @@ export function WorkoutHistory({
   records: Map<string, number>;
 }) {
   const [shown, setShown] = useState(PAGE);
-  const newest = [...data.workouts].reverse();
-  const groups: { label: string; items: Workout[] }[] = [];
-  for (const w of newest.slice(0, shown)) {
-    const label = periodLabel(periodOf('week', w.date), today);
+  const newest: Item[] = [
+    ...data.workouts.map((w) => ({
+      kind: 'workout' as const,
+      w,
+      at: Date.parse(w.startedAt),
+      date: w.date,
+    })),
+    ...data.sims.map((s) => ({
+      kind: 'sim' as const,
+      s,
+      at: s.startedAt,
+      date: s.date,
+    })),
+  ].sort((a, b) => b.at - a.at);
+  const simRecords = recordSims(data.sims);
+  const groups: { label: string; items: Item[] }[] = [];
+  for (const item of newest.slice(0, shown)) {
+    const label = periodLabel(periodOf('week', item.date), today);
     const g = groups[groups.length - 1];
-    if (g?.label === label) g.items.push(w);
-    else groups.push({ label, items: [w] });
+    if (g?.label === label) g.items.push(item);
+    else groups.push({ label, items: [item] });
   }
 
   if (!newest.length) {
@@ -72,7 +99,18 @@ export function WorkoutHistory({
         <View key={g.label}>
           <SectionLabel>{g.label}</SectionLabel>
           <Card padded={false}>
-            {g.items.map((w, i) => {
+            {g.items.map((item, i) => {
+              if (item.kind === 'sim') {
+                return (
+                  <SimRow
+                    key={item.s.id}
+                    sim={item.s}
+                    first={i === 0}
+                    record={simRecords.has(item.s.id)}
+                  />
+                );
+              }
+              const w = item.w;
               const st = workoutStats(w);
               const lifts = w.exercises.map(
                 (e) => data.exById.get(e.exerciseId)?.name ?? 'Unknown',
@@ -126,9 +164,51 @@ export function WorkoutHistory({
           onPress={() => setShown(shown + PAGE)}
           style={{ alignSelf: 'center', padding: 12, marginTop: 8 }}
         >
-          <Text style={tr.linkText}>Show older workouts</Text>
+          <Text style={tr.linkText}>Show older training</Text>
         </Pressable>
       ) : null}
     </View>
+  );
+}
+
+/** A HYROX sim in the timeline; opens the HYROX tab. */
+function SimRow({
+  sim,
+  first,
+  record,
+}: {
+  sim: Sim;
+  first: boolean;
+  record: boolean;
+}) {
+  const part = PARTS.find((p) => p.id === sim.part)?.label.toLowerCase();
+  return (
+    <Pressable
+      onPress={() =>
+        router.navigate({
+          pathname: '/train',
+          params: { tab: 'hyrox', at: String(Date.now()) },
+        })
+      }
+      style={({ pressed }) => [
+        tr.histRow,
+        first && { borderTopWidth: 0 },
+        pressed && tr.pressed,
+      ]}
+    >
+      <View style={tr.histTop}>
+        <Text style={tr.histName} numberOfLines={1}>
+          HYROX {part}
+        </Text>
+        <Text style={tr.histDate}>{dayText(sim.date)}</Text>
+      </View>
+      <Text style={tr.histLifts} numberOfLines={1}>
+        {division(sim.division).name}
+      </Text>
+      <View style={tr.histStats}>
+        <Text style={tr.histStat}>{raceClock(summarize(sim).totalMs)}</Text>
+        {record ? <Text style={tr.prTag}>Best time</Text> : null}
+      </View>
+    </Pressable>
   );
 }

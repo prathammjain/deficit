@@ -1154,3 +1154,34 @@ near complete sim against an earlier one, and landed back on the tab.
 Checked: 507 tests pass, tsc and eslint clean. In a local build: set a
 race through the form, picked mixed doubles, saw the doubles loads, and
 the countdown line on Home.
+
+### HYROX progress, and one training record
+
+HYROX now tracks improvement, and all training is one record.
+
+- HYROX progress (lib/hyrox/progress.ts): a trend per division and part
+  (full sim or a half), opening on whichever has the most sims. The
+  headline is time against your first sim; dips against the previous sim
+  are said plainly ("0:17 slower than the one before. One sim is one
+  day; the trend is what counts"). Records: best full sim, best halves,
+  fastest 1 km run (runs within one format). Stations: best, latest, and
+  the change on the time before.
+- One record (lib/train/activity.ts): a workout and a HYROX sim are two
+  sessions, and a day with either is a training day. That now drives
+  Home's Training card, the Train week strip ("Sessions"), the Progress
+  summary ("1 workout and 1 HYROX sim"), a new Sessions by week chart,
+  and the history list, where sims sit in the same timeline as workouts
+  with "Best time" tags.
+- The weekly read line no longer calls a HYROX only week empty: "2 HYROX
+  sims that week, no lifting", or "with a new best time".
+- Switching styles keeps legacy data whole: lifting records, history and
+  volume stay as they were (the volume chart is now labelled lifting
+  volume), and HYROX sits beside them. Nutrition already follows any
+  training mix, since the weekly check in reads real expenditure from
+  intake and the weight trend.
+
+Checked: 520 tests pass, tsc and eslint clean. Local build seeded as a
+lifter moving to HYROX: a morning workout and evening sim count as two
+sessions on one day on Home and Train, last week (sims only) reads as
+HYROX training, and the HYROX trend shows 1:13 faster with the last sim
+flagged as a dip.

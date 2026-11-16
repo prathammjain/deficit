@@ -320,6 +320,21 @@ describe('the read', () => {
     ).toBe('No workouts logged that month.');
   });
 
+  it('reads a week of only HYROX as training, not an empty week', () => {
+    const none = { ...base.training, sessions: 0 };
+    expect(
+      periodRead({ ...base, training: none, hyrox: { sims: 2, records: 0 } }),
+    ).toBe('2 HYROX sims this week, no lifting.');
+    expect(
+      periodRead({
+        ...base,
+        current: false,
+        training: none,
+        hyrox: { sims: 1, records: 1 },
+      }),
+    ).toBe('1 HYROX sim that week, with a new best time.');
+  });
+
   it('joins strength and bodyweight', () => {
     expect(
       periodRead({

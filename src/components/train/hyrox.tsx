@@ -47,6 +47,7 @@ import {
 import { todayKey } from '@/lib/log-store';
 
 import { Chip } from './bits';
+import { HyroxProgress } from './hyrox-progress';
 import { SimSummary } from './hyrox-summary';
 import { tr } from './styles';
 
@@ -184,6 +185,8 @@ export function HyroxView() {
           <SimSummary sim={latest} earlier={sims.slice(1)} showSplits={false} />
         </>
       ) : null}
+
+      <HyroxProgress sims={sims} division={shown} />
 
       <SectionLabel>
         The race, {divisionOf(shown).name.toLowerCase()}

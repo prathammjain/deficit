@@ -493,6 +493,8 @@ export interface ReadInput {
   lifts: LiftRow[];
   food: FoodSummary;
   body: BodySummary;
+  /** HYROX sims in the period, and how many set a new best time. */
+  hyrox?: { sims: number; records: number };
 }
 
 /**
@@ -501,6 +503,14 @@ export interface ReadInput {
  */
 export function periodRead(x: ReadInput): string {
   const span = x.kind === 'week' ? 'week' : 'month';
+  if (x.training.sessions === 0 && x.hyrox?.sims) {
+    const n = x.hyrox.sims;
+    const sims = `${n} HYROX ${n === 1 ? 'sim' : 'sims'}`;
+    const when = x.current ? `this ${span}` : `that ${span}`;
+    return x.hyrox.records
+      ? `${sims} ${when}, with a new best time.`
+      : `${sims} ${when}, no lifting.`;
+  }
   if (x.training.sessions === 0) {
     return x.current
       ? `No workouts logged yet this ${span}.`

@@ -11,6 +11,7 @@ import { ChevronIcon, DotsIcon } from '@/components/ui/icons';
 import { Card, GlassSurface, PrimaryButton } from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
 import { addDays, periodOf, trainingSummary } from '@/lib/train/progress';
+import { activity } from '@/lib/train/activity';
 import {
   clock,
   tally,
@@ -216,6 +217,7 @@ export function WeekStrip({
 }) {
   const week = periodOf('week', today);
   const t = trainingSummary(data.workouts, data.exById, week);
+  const a = activity(data.workouts, data.sims, week);
   return (
     <Pressable
       onPress={onPress}
@@ -226,7 +228,7 @@ export function WeekStrip({
         <View style={tr.weekDays}>
           {LETTERS.map((letter, i) => {
             const day = addDays(week.start, i);
-            const on = t.days.includes(day);
+            const on = a.days.includes(day);
             return (
               <View key={day} style={tr.weekDay}>
                 <Text
@@ -250,8 +252,8 @@ export function WeekStrip({
         </View>
         <View style={tr.weekStats}>
           <Stat
-            value={String(t.sessions)}
-            label={t.sessions === 1 ? 'Workout' : 'Workouts'}
+            value={String(a.sessions)}
+            label={a.sessions === 1 ? 'Session' : 'Sessions'}
           />
           <Stat value={String(t.sets)} label="Hard sets" />
           <Stat

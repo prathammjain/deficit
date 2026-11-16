@@ -9,8 +9,10 @@ import { Pressable, Text, View } from 'react-native';
 import { Card } from '@/components/ui/primitives';
 import { palette, space } from '@/constants/palette';
 import { countdown } from '@/lib/hyrox/countdown';
+import type { Sim } from '@/lib/hyrox/race';
 import type { Following } from '@/lib/supabase/programs';
 import type { Exercise } from '@/lib/train/exercises';
+import { activity, activityText } from '@/lib/train/activity';
 import { position } from '@/lib/train/program';
 import { addDays, periodOf, trainingSummary } from '@/lib/train/progress';
 import type { Workout } from '@/lib/train/workout';
@@ -22,11 +24,14 @@ const NO_EXERCISES = new Map<string, Exercise>();
 
 export function TrainCard({
   workouts,
+  sims = [],
   following,
   today,
   race,
 }: {
   workouts: Workout[];
+  /** HYROX sims count as training too. */
+  sims?: Sim[];
   following: Following | null;
   today: string;
   /** A HYROX race on the calendar, counted down under the week. */
@@ -45,6 +50,7 @@ export function TrainCard({
       : null;
   const week = periodOf('week', today);
   const t = trainingSummary(workouts, NO_EXERCISES, week);
+  const a = activity(workouts, sims, week);
   const program = following?.program;
   const next =
     program && program.days.length
@@ -69,7 +75,7 @@ export function TrainCard({
                   key={day}
                   style={[
                     st.weekDot,
-                    t.days.includes(day) ? st.weekDotOn : st.weekDotOff,
+                    a.days.includes(day) ? st.weekDotOn : st.weekDotOff,
                   ]}
                 />
               ),
@@ -77,7 +83,7 @@ export function TrainCard({
           </View>
         </View>
 
-        {workouts.length === 0 ? (
+        {workouts.length === 0 && sims.length === 0 ? (
           <Text style={st.weekBody}>
             No workouts yet. Log one on Train and it shows up here, beside your
             food.
@@ -85,10 +91,12 @@ export function TrainCard({
         ) : (
           <>
             <Text style={st.weekValue}>
-              {t.sessions} {t.sessions === 1 ? 'workout' : 'workouts'}
+              {a.sessions} {a.sessions === 1 ? 'session' : 'sessions'}
             </Text>
             <Text style={st.weekGoal}>
-              {t.sets} hard sets · {t.volume.toLocaleString()} kg moved
+              {a.workouts
+                ? `${activityText(a)} · ${t.sets} hard sets · ${t.volume.toLocaleString()} kg moved`
+                : activityText(a)}
             </Text>
           </>
         )}
