@@ -9,7 +9,7 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
-import { Tabs } from '@/components/train/bits';
+import { Chip, Tabs } from '@/components/train/bits';
 import { CardioView } from '@/components/train/cardio';
 import { useTraining } from '@/components/train/data';
 import { DescribePanel } from '@/components/train/describe';
@@ -30,7 +30,13 @@ import { palette } from '@/constants/palette';
 import { formatToday } from '@/lib/date';
 import { todayKey } from '@/lib/log-store';
 import { recordCounts } from '@/lib/train/progress';
-import { deleteRoutine, loadSession, saveSession } from '@/lib/train/store';
+import {
+  deleteRoutine,
+  loadSession,
+  saveLoadUnit,
+  saveSession,
+} from '@/lib/train/store';
+import { setLoadUnit } from '@/lib/train/units';
 import {
   newSession,
   sessionFromRoutine,
@@ -216,6 +222,22 @@ export default function TrainScreen() {
             today={today}
             records={recordCounts(data.workouts, data.exById, data.bodyKg)}
           />
+
+          <View style={[tr.row, { gap: 8, marginTop: 20 }]}>
+            <Text style={[tr.faint, { marginRight: 4 }]}>Weights in</Text>
+            {(['kg', 'lb'] as const).map((u) => (
+              <Chip
+                key={u}
+                label={u}
+                on={(data.settings.unit ?? 'kg') === u}
+                onPress={async () => {
+                  setLoadUnit(u);
+                  const settings = await saveLoadUnit(u);
+                  setData({ ...data, settings });
+                }}
+              />
+            ))}
+          </View>
         </>
       ) : tab === 'progress' ? (
         <ProgressView data={data} today={today} />
@@ -226,6 +248,7 @@ export default function TrainScreen() {
           editId={params.tab === 'cardio' ? params.edit : undefined}
           editStamp={params.tab === 'cardio' ? params.at : undefined}
           onChanged={(cardio) => setData({ ...data, cardio })}
+          onMaxHr={(maxHr) => setData({ ...data, maxHr })}
         />
       ) : (
         <HyroxView />

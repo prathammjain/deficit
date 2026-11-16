@@ -263,6 +263,8 @@ export interface Sim {
   startedAt: number;
   /** When each segment ended, in order. */
   laps: number[];
+  /** Session RPE, 0 to 10 (Foster's scale), for training load. */
+  rpe?: number;
 }
 
 export interface Split {

@@ -21,6 +21,8 @@ import {
   type SetValues,
   type WorkSet,
   type Workout,
+  hasWork,
+  valuesOf,
 } from './workout';
 
 // Days and periods
@@ -224,7 +226,7 @@ export function exerciseHistory(
     const sets = w.exercises
       .filter((we) => we.exerciseId === ex.id)
       .flatMap((we) => we.sets)
-      .filter((s) => s.done && (s.reps ?? 0) > 0);
+      .filter((s) => s.done && hasWork(s));
     if (!sets.length) continue;
     out.push({
       workoutId: w.id,
@@ -295,9 +297,7 @@ export function liftBoard(
       exercise: ex,
       sessions: now.length,
       sets: now.reduce((n, s) => n + s.sets.filter(isHard).length, 0),
-      best: bestSet
-        ? { kg: bestSet.kg, reps: bestSet.reps }
-        : { kg: null, reps: null },
+      best: bestSet ? valuesOf(bestSet) : { kg: null, reps: null },
       score,
       before: before || null,
       change: change(score, before),
@@ -359,7 +359,7 @@ export function records(
       if (s.volume > 0) r.bestVolume = { volume: s.volume, date: s.date };
     }
     for (const set of s.sets.filter(isHard)) {
-      const v = { kg: set.kg, reps: set.reps };
+      const v = valuesOf(set);
       const kg = set.kg ?? 0;
       const reps = set.reps ?? 0;
       const score = setScore(set, ex, bodyKg);

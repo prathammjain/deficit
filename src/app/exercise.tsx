@@ -28,7 +28,8 @@ import {
   records,
   trend,
 } from '@/lib/train/progress';
-import { formatKg, setText } from '@/lib/train/workout';
+import { liftsWithReps, scoreText, setText } from '@/lib/train/workout';
+import { loadNum, loadUnit, volumeText } from '@/lib/train/units';
 
 export default function ExerciseScreen() {
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
@@ -107,15 +108,27 @@ export default function ExerciseScreen() {
         <>
           <Card style={{ marginTop: 24, gap: 6 }}>
             <Text style={tr.label}>
-              {bw
-                ? `Best estimated 1RM, bodyweight ${formatKg(data.bodyKg)} kg included`
-                : 'Best estimated 1RM'}
+              {ex.kind === 'timed'
+                ? 'Longest hold'
+                : ex.kind === 'distance'
+                  ? 'Best set, kilograms times metres'
+                  : bw || ex.kind === 'assisted'
+                    ? `Best estimated 1RM, bodyweight ${data.bodyKg} kg included`
+                    : 'Best estimated 1RM'}
             </Text>
             <View style={[tr.row, { alignItems: 'baseline', gap: 8 }]}>
               <DotMatrix style={tr.heroNum}>
-                {rec.best ? formatKg(Math.round(rec.best.score)) : '0'}
+                {!rec.best
+                  ? '0'
+                  : liftsWithReps(ex)
+                    ? loadNum(Math.round(rec.best.score))
+                    : ex.kind === 'timed'
+                      ? scoreText(rec.best.score, ex)
+                      : nb(setText(rec.best.set, ex))}
               </DotMatrix>
-              <Text style={tr.heroUnit}>kg</Text>
+              <Text style={tr.heroUnit}>
+                {liftsWithReps(ex) ? loadUnit() : ''}
+              </Text>
             </View>
             {rec.best ? (
               <Text style={tr.muted}>
@@ -175,7 +188,7 @@ export default function ExerciseScreen() {
               {rec.bestVolume ? (
                 <Record
                   label="Best session"
-                  value={`${rec.bestVolume.volume.toLocaleString()} kg`}
+                  value={volumeText(rec.bestVolume.volume)}
                   date={rec.bestVolume.date}
                 />
               ) : null}
@@ -200,7 +213,9 @@ export default function ExerciseScreen() {
                     <Text style={tr.tableKey}>
                       {r.reps} {r.reps === 1 ? 'rep' : 'reps'}
                     </Text>
-                    <Text style={tr.tableVal}>{formatKg(r.kg)} kg</Text>
+                    <Text style={tr.tableVal}>
+                      {loadNum(r.kg)} {loadUnit()}
+                    </Text>
                     <Text style={tr.tableDate}>{shortDate(r.date)}</Text>
                   </View>
                 ))}
@@ -232,7 +247,7 @@ export default function ExerciseScreen() {
                   </Text>
                 </View>
                 <Text style={tr.liftScore}>
-                  {s.best ? `${formatKg(s.best)} kg` : ' '}
+                  {s.best ? scoreText(s.best, ex) || ' ' : ' '}
                 </Text>
               </Pressable>
             ))}

@@ -29,6 +29,7 @@ import { durationText, workoutStats, type Workout } from '@/lib/train/workout';
 
 import type { Training } from './data';
 import { tr } from './styles';
+import { volumeText } from '@/lib/train/units';
 
 const PAGE = 20;
 
@@ -170,7 +171,7 @@ export function WorkoutHistory({
                   </Text>
                   <View style={tr.histStats}>
                     <Text style={tr.histStat}>
-                      {st.sets} sets · {st.volume.toLocaleString()} kg
+                      {st.sets} sets · {volumeText(st.volume)}
                       {st.ms > 0 ? ` · ${durationText(st.ms)}` : ''}
                     </Text>
                     {prs ? (

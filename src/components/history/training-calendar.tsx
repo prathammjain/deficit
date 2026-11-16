@@ -11,6 +11,7 @@ import { recordCounts } from '@/lib/train/progress';
 import { durationText, workoutStats, type Workout } from '@/lib/train/workout';
 
 import { st } from './styles';
+import { volumeText } from '@/lib/train/units';
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']; // Monday first
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -124,7 +125,7 @@ export function TrainingCalendar() {
           label={count === 1 ? 'Workout' : 'Workouts'}
         />
         <Total value={String(sets)} label="Hard sets" />
-        <Total value={`${volume.toLocaleString()} kg`} label="Volume" />
+        <Total value={volumeText(volume)} label="Volume" />
       </View>
 
       <View style={st.calWeekRow}>
@@ -225,7 +226,7 @@ export function TrainingCalendar() {
                   </Text>
                 ) : null}
                 <Text style={tc.workoutStats}>
-                  {s.sets} sets · {s.volume.toLocaleString()} kg
+                  {s.sets} sets · {volumeText(s.volume)}
                   {s.ms > 0 ? ` · ${durationText(s.ms)}` : ''}
                   {prs ? (
                     <Text style={tc.pr}>

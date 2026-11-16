@@ -7,7 +7,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 
 import type { CardioSession } from '@/lib/cardio/cardio';
-import { loadCardio } from '@/lib/cardio/store';
+import { loadCardio, loadCardioSettings } from '@/lib/cardio/store';
 import type { Sim } from '@/lib/hyrox/race';
 import { loadSims } from '@/lib/hyrox/store';
 import { loadProfile } from '@/lib/profile-store';
@@ -20,6 +20,7 @@ import {
   pendingCount,
   type TrainSettings,
 } from '@/lib/train/store';
+import { setLoadUnit } from '@/lib/train/units';
 import type { Routine, Workout } from '@/lib/train/workout';
 import { latestWeight } from '@/lib/weight-store';
 
@@ -30,6 +31,9 @@ export interface Training {
   sims: Sim[];
   /** Cardio sessions, oldest first: training too. */
   cardio: CardioSession[];
+  /** For the heart rate zones: age, and a measured max if the user set one. */
+  age: number | null;
+  maxHr: number | null;
   /** The library plus the user's own. */
   exercises: Exercise[];
   exById: Map<string, Exercise>;
@@ -42,22 +46,35 @@ export interface Training {
 }
 
 export async function loadTraining(): Promise<Training> {
-  const [workouts, custom, routines, settings, weight, profile, sims, cardio] =
-    await Promise.all([
-      loadWorkouts(),
-      loadCustomExercises(),
-      loadRoutines(),
-      loadTrainSettings(),
-      latestWeight().catch(() => null),
-      loadProfile().catch(() => null),
-      loadSims().catch(() => [] as Sim[]),
-      loadCardio().catch(() => [] as CardioSession[]),
-    ]);
+  const [
+    workouts,
+    custom,
+    routines,
+    settings,
+    weight,
+    profile,
+    sims,
+    cardio,
+    cardioSettings,
+  ] = await Promise.all([
+    loadWorkouts(),
+    loadCustomExercises(),
+    loadRoutines(),
+    loadTrainSettings(),
+    latestWeight().catch(() => null),
+    loadProfile().catch(() => null),
+    loadSims().catch(() => [] as Sim[]),
+    loadCardio().catch(() => [] as CardioSession[]),
+    loadCardioSettings().catch(() => ({ maxHr: null })),
+  ]);
+  setLoadUnit(settings.unit);
   const exercises = [...LIBRARY, ...custom];
   return {
     workouts,
     sims: [...sims].reverse(),
     cardio: [...cardio].reverse(),
+    age: profile?.age ?? null,
+    maxHr: cardioSettings.maxHr ?? null,
     exercises,
     exById: exerciseMap(exercises),
     routines,

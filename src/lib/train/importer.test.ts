@@ -238,9 +238,9 @@ describe('matching exported names', () => {
     expect(id('Pull Up (Weighted)')).toBe('pull_up');
   });
 
-  it('keeps assisted and unknown movements as new exercises', () => {
+  it('keeps assisted movements as new exercises, finds library ones', () => {
     expect(id('Pull Up (Assisted)')).toBeNull();
-    expect(id('Band Pullaparts')).toBeNull();
+    expect(id('Band Pullaparts')).toBe('band_pull_apart');
   });
 
   it('guesses a muscle for new exercises', () => {
@@ -275,9 +275,9 @@ describe('building the import', () => {
       name: 'Pull Up (assisted)',
       kind: 'weighted',
     });
-    expect(maps.get('Band Pullaparts')).toMatchObject({
-      to: 'new',
-      kind: 'bodyweight',
+    expect(maps.get('Band Pullaparts')).toEqual({
+      to: 'existing',
+      exerciseId: 'band_pull_apart',
     });
 
     const a = buildImport(r, maps);
@@ -287,7 +287,7 @@ describe('building the import', () => {
     );
     expect(a.workouts.map((w) => w.id)).toEqual(b.workouts.map((w) => w.id));
     expect(a.exercises.map((e) => e.id)).toEqual(b.exercises.map((e) => e.id));
-    expect(a.exercises).toHaveLength(2);
+    expect(a.exercises).toHaveLength(1);
     const w = a.workouts[0];
     expect(w).toMatchObject({
       name: 'Pull',
@@ -298,7 +298,7 @@ describe('building the import', () => {
     expect(w.exercises.map((e) => e.exerciseId)).toEqual([
       a.exercises[0].id,
       'barbell_row',
-      a.exercises[1].id,
+      'band_pull_apart',
     ]);
     expect(
       new Set(w.exercises.flatMap((e) => e.sets.map((s) => s.id))).size,

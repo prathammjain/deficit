@@ -102,9 +102,23 @@ describe('searchExercises', () => {
   });
 
   it('finds custom exercises too', () => {
-    const mine = customExercise('  sled   push ', 'quads', 'weighted');
-    expect(mine.name).toBe('Sled push');
+    const mine = customExercise('  tyre   flip ', 'quads', 'weighted');
+    expect(mine.name).toBe('Tyre flip');
     expect(mine.custom).toBe(true);
-    expect(searchExercises('sled', [...LIBRARY, mine])[0].id).toBe(mine.id);
+    expect(searchExercises('tyre', [...LIBRARY, mine])[0].id).toBe(mine.id);
+  });
+
+  it('has unique ids, and kinds and sides from the table', () => {
+    const ids = LIBRARY.map((e) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(LIBRARY.length).toBeGreaterThan(220);
+    const by = (id: string) => LIBRARY.find((e) => e.id === id)!;
+    expect(by('plank').kind).toBe('timed');
+    expect(by('farmers_walk').kind).toBe('distance');
+    expect(by('assisted_pull_up').kind).toBe('assisted');
+    expect(by('side_plank')).toMatchObject({ kind: 'timed', perSide: true });
+    expect(by('bench_press')).toMatchObject({ kind: 'weighted' });
+    expect(by('bench_press').perSide).toBeUndefined();
+    expect(by('pull_up').kind).toBe('bodyweight');
   });
 });

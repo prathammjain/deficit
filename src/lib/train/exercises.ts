@@ -67,10 +67,28 @@ export const EQUIPMENT_LABEL: Record<Equipment, string> = {
 };
 
 /**
- * weighted: a load and reps. bodyweight: reps, with an optional added load
- * (a belt for dips, a vest for pull ups).
+ * How a set is logged:
+ *   weighted: a load and reps.
+ *   bodyweight: reps, with an optional added load (a belt, a vest).
+ *   assisted: reps, with the help a machine or band gives; less help is
+ *     harder, so the load that counts is bodyweight minus the help.
+ *   timed: a hold in seconds (plank, dead hang), with an optional load.
+ *   distance: metres, with an optional load (farmers walk, sled push).
  */
-export type ExerciseKind = 'weighted' | 'bodyweight';
+export type ExerciseKind =
+  | 'weighted'
+  | 'bodyweight'
+  | 'assisted'
+  | 'timed'
+  | 'distance';
+
+export const KIND_LABEL: Record<ExerciseKind, string> = {
+  weighted: 'Weight and reps',
+  bodyweight: 'Bodyweight',
+  assisted: 'Assisted',
+  timed: 'Timed hold',
+  distance: 'Distance',
+};
 
 export interface Exercise {
   id: string;
@@ -79,6 +97,8 @@ export interface Exercise {
   equipment: Equipment;
   kind: ExerciseKind;
   aliases: string[];
+  /** One side at a time: reps and loads are for each side. */
+  perSide?: boolean;
   /** Made by the user rather than shipped in the library. */
   custom?: boolean;
 }
@@ -89,6 +109,8 @@ type Row = [
   muscle: Muscle,
   eq: Equipment,
   aliases: string,
+  /** "assisted", "timed" or "distance", and "side" for one side at a time. */
+  flags?: string,
 ];
 
 // Ordered roughly by how often each is done, so ties go to the common one.
@@ -113,7 +135,7 @@ const ROWS: Row[] = [
   ['pull_up', 'Pull ups', 'back', 'bodyweight', 'pullup|pull up|weighted pull up'],
   ['lat_pulldown', 'Lat pulldown', 'back', 'cable', 'pulldown|lat pull down|lat pull|lpd|wide grip pulldown'],
   ['barbell_row', 'Barbell row', 'back', 'barbell', 'row|bb row|bent over row|bent row|pendlay row'],
-  ['db_row', 'Dumbbell row', 'back', 'dumbbell', 'db row|single arm row|one arm row|single arm db row|kroc row'],
+  ['db_row', 'Dumbbell row', 'back', 'dumbbell', 'db row|single arm row|one arm row|single arm db row|kroc row', 'side'],
   ['cable_row', 'Seated cable row', 'back', 'cable', 'cable row|seated row|low row'],
   ['chin_up', 'Chin ups', 'back', 'bodyweight', 'chinup|chin up|weighted chin up'],
   ['t_bar_row', 'T bar row', 'back', 'barbell', 'tbar row|t bar|landmine row'],
@@ -151,7 +173,7 @@ const ROWS: Row[] = [
   ['incline_db_curl', 'Incline dumbbell curl', 'biceps', 'dumbbell', 'incline curl|incline db curl'],
   ['cable_curl', 'Cable curl', 'biceps', 'cable', 'cable bicep curl|rope curl'],
   ['machine_curl', 'Machine curl', 'biceps', 'machine', 'bicep curl machine|machine preacher curl'],
-  ['concentration_curl', 'Concentration curl', 'biceps', 'dumbbell', ''],
+  ['concentration_curl', 'Concentration curl', 'biceps', 'dumbbell', '', 'side'],
   ['bayesian_curl', 'Bayesian curl', 'biceps', 'cable', 'behind the body cable curl'],
   // Triceps
   ['tricep_pushdown', 'Triceps pushdown', 'triceps', 'cable', 'pushdown|tricep pushdown|rope pushdown|tricep rope|rope extension|cable pushdown'],
@@ -178,14 +200,14 @@ const ROWS: Row[] = [
   ['leg_press', 'Leg press', 'quads', 'machine', 'leg press machine|45 degree leg press|seated leg press'],
   ['leg_extension', 'Leg extension', 'quads', 'machine', 'quad extension|leg ext'],
   ['hack_squat', 'Hack squat', 'quads', 'machine', 'hack squat machine|hack'],
-  ['bulgarian_split_squat', 'Bulgarian split squat', 'quads', 'dumbbell', 'bss|bulgarian|split squat|rear foot elevated split squat'],
+  ['bulgarian_split_squat', 'Bulgarian split squat', 'quads', 'dumbbell', 'bss|bulgarian|split squat|rear foot elevated split squat', 'side'],
   ['front_squat', 'Front squat', 'quads', 'barbell', ''],
-  ['lunge', 'Lunges', 'quads', 'dumbbell', 'lunge|walking lunge|db lunge|reverse lunge'],
+  ['lunge', 'Lunges', 'quads', 'dumbbell', 'lunge|walking lunge|db lunge|reverse lunge', 'side'],
   ['goblet_squat', 'Goblet squat', 'quads', 'dumbbell', ''],
   ['smith_squat', 'Smith machine squat', 'quads', 'smith', 'smith squat'],
   ['pendulum_squat', 'Pendulum squat', 'quads', 'machine', ''],
   ['trap_bar_deadlift', 'Trap bar deadlift', 'quads', 'trapbar', 'hex bar deadlift|trap bar|hex bar|trap bar dl'],
-  ['step_up', 'Step ups', 'quads', 'dumbbell', 'step up|stepup|box step up'],
+  ['step_up', 'Step ups', 'quads', 'dumbbell', 'step up|stepup|box step up', 'side'],
   ['belt_squat', 'Belt squat', 'quads', 'machine', ''],
   // Hamstrings
   ['rdl', 'Romanian deadlift', 'hamstrings', 'barbell', 'rdl|romanian|romanian dl|bb rdl'],
@@ -210,18 +232,169 @@ const ROWS: Row[] = [
   ['standing_calf_raise', 'Standing calf raise', 'calves', 'machine', 'calf raise|calf|standing calf|calf raise machine'],
   ['seated_calf_raise', 'Seated calf raise', 'calves', 'machine', 'seated calf'],
   ['leg_press_calf_raise', 'Calf press', 'calves', 'machine', 'leg press calf raise|calf press on leg press'],
-  ['single_leg_calf_raise', 'Single leg calf raise', 'calves', 'dumbbell', 'single leg calf'],
+  ['single_leg_calf_raise', 'Single leg calf raise', 'calves', 'dumbbell', 'single leg calf', 'side'],
+  // Chest, more
+  ['decline_db_press', 'Decline dumbbell press', 'chest', 'dumbbell', 'decline db press|decline db bench'],
+  ['incline_machine_press', 'Incline chest press machine', 'chest', 'machine', 'incline machine press|incline chest press'],
+  ['incline_cable_fly', 'Low to high cable fly', 'chest', 'cable', 'low cable fly|incline cable fly|low to high fly'],
+  ['high_cable_fly', 'High to low cable fly', 'chest', 'cable', 'high cable fly|high to low fly'],
+  ['incline_db_fly', 'Incline dumbbell fly', 'chest', 'dumbbell', 'incline fly|incline db fly'],
+  ['smith_incline_press', 'Smith machine incline press', 'chest', 'smith', 'smith incline|incline smith press|smith incline bench'],
+  ['floor_press', 'Floor press', 'chest', 'barbell', 'barbell floor press|bb floor press'],
+  ['db_floor_press', 'Dumbbell floor press', 'chest', 'dumbbell', 'db floor press'],
+  ['svend_press', 'Svend press', 'chest', 'other', 'plate squeeze press'],
+  ['incline_push_up', 'Incline push ups', 'chest', 'bodyweight', 'incline pushup|hands elevated push up'],
+  ['decline_push_up', 'Decline push ups', 'chest', 'bodyweight', 'decline pushup|feet elevated push up'],
+  ['deficit_push_up', 'Deficit push ups', 'chest', 'bodyweight', 'deficit pushup'],
+  ['ring_dip', 'Ring dips', 'chest', 'bodyweight', 'ring dip'],
+  ['assisted_dip', 'Assisted dips', 'chest', 'machine', 'assisted dip|assisted dip machine|band assisted dip', 'assisted'],
+  // Back, more
+  ['assisted_pull_up', 'Assisted pull ups', 'back', 'machine', 'assisted pullup|assisted pull up machine|band assisted pull up|gravitron', 'assisted'],
+  ['assisted_chin_up', 'Assisted chin ups', 'back', 'machine', 'assisted chinup|band assisted chin up', 'assisted'],
+  ['neutral_pull_up', 'Neutral grip pull ups', 'back', 'bodyweight', 'neutral pullup|hammer grip pull up|parallel grip pull up'],
+  ['muscle_up', 'Muscle ups', 'back', 'bodyweight', 'muscle up|bar muscle up|ring muscle up'],
+  ['single_arm_pulldown', 'Single arm lat pulldown', 'back', 'cable', 'one arm pulldown|single arm pulldown', 'side'],
+  ['machine_pulldown', 'Lat pulldown machine', 'back', 'machine', 'plate loaded pulldown|machine lat pulldown|iso lateral pulldown'],
+  ['high_row_machine', 'High row machine', 'back', 'machine', 'high row|iso lateral high row'],
+  ['low_row_machine', 'Low row machine', 'back', 'machine', 'iso lateral low row|low row machine'],
+  ['single_arm_cable_row', 'Single arm cable row', 'back', 'cable', 'one arm cable row', 'side'],
+  ['seal_row', 'Seal row', 'back', 'barbell', 'bench row|prone row'],
+  ['meadows_row', 'Meadows row', 'back', 'barbell', 'meadows', 'side'],
+  ['db_pullover', 'Dumbbell pullover', 'back', 'dumbbell', 'pullover|db pullover'],
+  ['reverse_hyper', 'Reverse hyperextension', 'back', 'machine', 'reverse hyper'],
+  ['deficit_deadlift', 'Deficit deadlift', 'back', 'barbell', 'deficit dl'],
+  ['snatch_grip_deadlift', 'Snatch grip deadlift', 'back', 'barbell', 'snatch grip dl'],
+  ['clean_and_jerk', 'Clean and jerk', 'back', 'barbell', 'clean jerk|c and j'],
+  ['snatch', 'Snatch', 'back', 'barbell', 'power snatch|squat snatch'],
+  ['trap_bar_shrug', 'Trap bar shrug', 'back', 'trapbar', 'trap bar shrugs'],
+  ['cable_shrug', 'Cable shrug', 'back', 'cable', 'cable shrugs'],
+  // Shoulders, more
+  ['behind_neck_press', 'Behind the neck press', 'shoulders', 'barbell', 'btn press|behind neck press'],
+  ['z_press', 'Z press', 'shoulders', 'barbell', 'zpress'],
+  ['smith_shoulder_press', 'Smith machine shoulder press', 'shoulders', 'smith', 'smith ohp|smith overhead press'],
+  ['single_arm_db_press', 'Single arm dumbbell press', 'shoulders', 'dumbbell', 'one arm db press|single arm shoulder press', 'side'],
+  ['kb_press', 'Kettlebell press', 'shoulders', 'kettlebell', 'kb press|kettlebell overhead press', 'side'],
+  ['seated_lateral_raise', 'Seated lateral raise', 'shoulders', 'dumbbell', 'seated laterals'],
+  ['lean_away_lateral', 'Lean away lateral raise', 'shoulders', 'dumbbell', 'lean away raise', 'side'],
+  ['single_arm_cable_lateral', 'Single arm cable lateral raise', 'shoulders', 'cable', 'one arm cable lateral', 'side'],
+  ['cable_rear_delt_fly', 'Cable rear delt fly', 'shoulders', 'cable', 'reverse cable fly|cable reverse fly'],
+  ['cable_front_raise', 'Cable front raise', 'shoulders', 'cable', 'cable front raises'],
+  ['db_upright_row', 'Dumbbell upright row', 'shoulders', 'dumbbell', 'db upright row'],
+  ['cable_upright_row', 'Cable upright row', 'shoulders', 'cable', ''],
+  ['y_raise', 'Y raise', 'shoulders', 'dumbbell', 'incline y raise'],
+  ['band_pull_apart', 'Band pull apart', 'shoulders', 'other', 'pull apart|band pull aparts'],
+  ['pike_push_up', 'Pike push ups', 'shoulders', 'bodyweight', 'pike pushup'],
+  ['handstand_push_up', 'Handstand push ups', 'shoulders', 'bodyweight', 'hspu|handstand pushup'],
+  ['overhead_carry', 'Overhead carry', 'shoulders', 'dumbbell', 'waiter walk|overhead walk', 'distance'],
+  // Biceps, more
+  ['spider_curl', 'Spider curl', 'biceps', 'dumbbell', 'spider curls'],
+  ['db_preacher_curl', 'Dumbbell preacher curl', 'biceps', 'dumbbell', 'single arm preacher curl|db preacher', 'side'],
+  ['machine_preacher_curl', 'Preacher curl machine', 'biceps', 'machine', 'machine preacher'],
+  ['rope_hammer_curl', 'Rope hammer curl', 'biceps', 'cable', 'cable hammer curl|cable rope curl'],
+  ['cross_body_curl', 'Cross body hammer curl', 'biceps', 'dumbbell', 'cross body curl|pinwheel curl', 'side'],
+  ['drag_curl', 'Drag curl', 'biceps', 'barbell', 'bar drag curl'],
+  ['zottman_curl', 'Zottman curl', 'biceps', 'dumbbell', ''],
+  ['curl_21s', '21s', 'biceps', 'barbell', 'twenty ones|21 curls'],
+  // Triceps, more
+  ['single_arm_pushdown', 'Single arm pushdown', 'triceps', 'cable', 'one arm pushdown', 'side'],
+  ['reverse_grip_pushdown', 'Reverse grip pushdown', 'triceps', 'cable', 'underhand pushdown'],
+  ['single_arm_overhead_extension', 'Single arm overhead cable extension', 'triceps', 'cable', 'one arm overhead extension', 'side'],
+  ['ez_overhead_extension', 'EZ bar overhead extension', 'triceps', 'ezbar', 'ez overhead extension|ez bar french press'],
+  ['db_skull_crusher', 'Dumbbell skull crusher', 'triceps', 'dumbbell', 'db skull crusher|db lying extension'],
+  ['cable_tricep_kickback', 'Cable triceps kickback', 'triceps', 'cable', 'cable tricep kickback', 'side'],
+  ['machine_tricep_extension', 'Triceps extension machine', 'triceps', 'machine', 'tricep machine|triceps machine'],
+  ['machine_dip', 'Dip machine', 'triceps', 'machine', 'seated dip|tricep dip machine'],
+  ['diamond_push_up', 'Diamond push ups', 'triceps', 'bodyweight', 'diamond pushup|close grip push up'],
+  ['tate_press', 'Tate press', 'triceps', 'dumbbell', ''],
+  // Forearms and grip, more
+  ['reverse_wrist_curl', 'Reverse wrist curl', 'forearms', 'barbell', 'wrist extension'],
+  ['db_wrist_curl', 'Dumbbell wrist curl', 'forearms', 'dumbbell', 'db wrist curl'],
+  ['wrist_roller', 'Wrist roller', 'forearms', 'other', ''],
+  ['farmers_walk', 'Farmers walk', 'forearms', 'dumbbell', 'farmers carry|farmer walk|farmer carry|farmers', 'distance'],
+  ['dead_hang', 'Dead hang', 'forearms', 'bodyweight', 'bar hang|hang from bar', 'timed'],
+  ['plate_pinch', 'Plate pinch', 'forearms', 'other', 'pinch grip|plate pinch hold', 'timed'],
+  // Core, more
+  ['plank', 'Plank', 'core', 'bodyweight', 'front plank|forearm plank|planks', 'timed'],
+  ['side_plank', 'Side plank', 'core', 'bodyweight', 'side planks', 'timed|side'],
+  ['hollow_hold', 'Hollow body hold', 'core', 'bodyweight', 'hollow hold|hollow body', 'timed'],
+  ['l_sit', 'L sit', 'core', 'bodyweight', 'lsit|l sit hold', 'timed'],
+  ['dead_bug', 'Dead bug', 'core', 'bodyweight', 'deadbug|dead bugs'],
+  ['pallof_press', 'Pallof press', 'core', 'cable', 'anti rotation press', 'side'],
+  ['woodchop', 'Cable woodchop', 'core', 'cable', 'woodchopper|wood chop|cable wood chop', 'side'],
+  ['captains_chair', 'Captains chair leg raise', 'core', 'machine', 'roman chair leg raise|vertical knee raise'],
+  ['v_up', 'V ups', 'core', 'bodyweight', 'v up|jackknife'],
+  ['bicycle_crunch', 'Bicycle crunch', 'core', 'bodyweight', 'bicycle crunches'],
+  ['reverse_crunch', 'Reverse crunch', 'core', 'bodyweight', 'reverse crunches'],
+  ['mountain_climber', 'Mountain climbers', 'core', 'bodyweight', 'mountain climber'],
+  ['landmine_rotation', 'Landmine rotation', 'core', 'barbell', 'landmine twist|landmine 180'],
+  ['suitcase_carry', 'Suitcase carry', 'core', 'kettlebell', 'suitcase walk|single arm carry', 'distance|side'],
+  // Quads, more
+  ['pause_squat', 'Pause squat', 'quads', 'barbell', 'paused squat'],
+  ['box_squat', 'Box squat', 'quads', 'barbell', 'box squats'],
+  ['safety_bar_squat', 'Safety bar squat', 'quads', 'barbell', 'ssb squat|safety squat bar'],
+  ['zercher_squat', 'Zercher squat', 'quads', 'barbell', 'zercher'],
+  ['barbell_lunge', 'Barbell lunges', 'quads', 'barbell', 'bb lunge|barbell lunge', 'side'],
+  ['smith_split_squat', 'Smith machine split squat', 'quads', 'smith', 'smith bulgarian|smith split squat', 'side'],
+  ['single_leg_press', 'Single leg press', 'quads', 'machine', 'one leg press', 'side'],
+  ['single_leg_extension', 'Single leg extension', 'quads', 'machine', 'one leg extension', 'side'],
+  ['v_squat', 'V squat', 'quads', 'machine', 'v squat machine'],
+  ['heel_elevated_goblet', 'Heel elevated goblet squat', 'quads', 'dumbbell', 'cyclist squat|heels elevated squat'],
+  ['sissy_squat', 'Sissy squat', 'quads', 'bodyweight', 'sissy squats'],
+  ['pistol_squat', 'Pistol squat', 'quads', 'bodyweight', 'pistol|single leg squat', 'side'],
+  ['air_squat', 'Air squats', 'quads', 'bodyweight', 'bodyweight squat|air squat'],
+  ['jump_squat', 'Jump squats', 'quads', 'bodyweight', 'squat jump'],
+  ['box_jump', 'Box jumps', 'quads', 'bodyweight', 'box jump'],
+  ['thruster', 'Thrusters', 'quads', 'barbell', 'thruster|barbell thruster'],
+  ['wall_ball', 'Wall balls', 'quads', 'other', 'wall ball shots|wallball|wall ball'],
+  ['wall_sit', 'Wall sit', 'quads', 'bodyweight', 'wall squat hold|wall sits', 'timed'],
+  ['sled_push', 'Sled push', 'quads', 'other', 'prowler|prowler push|sled', 'distance'],
+  ['sandbag_lunge', 'Sandbag lunges', 'quads', 'other', 'sandbag walking lunge|sandbag lunge', 'distance'],
+  // Hamstrings, more
+  ['single_leg_rdl', 'Single leg Romanian deadlift', 'hamstrings', 'dumbbell', 'single leg rdl|sl rdl|one leg rdl', 'side'],
+  ['standing_leg_curl', 'Standing leg curl', 'hamstrings', 'machine', 'standing hamstring curl', 'side'],
+  ['glute_ham_raise', 'Glute ham raise', 'hamstrings', 'bodyweight', 'ghr|glute ham'],
+  ['cable_pull_through', 'Cable pull through', 'hamstrings', 'cable', 'pull through|pull throughs'],
+  ['trap_bar_rdl', 'Trap bar Romanian deadlift', 'hamstrings', 'trapbar', 'trap bar rdl'],
+  ['smith_rdl', 'Smith machine Romanian deadlift', 'hamstrings', 'smith', 'smith rdl'],
+  ['ball_leg_curl', 'Stability ball leg curl', 'hamstrings', 'bodyweight', 'ball leg curl|swiss ball leg curl'],
+  ['sled_pull', 'Sled pull', 'hamstrings', 'other', 'sled drag|backward sled drag', 'distance'],
+  // Glutes, more
+  ['db_hip_thrust', 'Dumbbell hip thrust', 'glutes', 'dumbbell', 'db hip thrust'],
+  ['smith_hip_thrust', 'Smith machine hip thrust', 'glutes', 'smith', 'smith hip thrust'],
+  ['single_leg_hip_thrust', 'Single leg hip thrust', 'glutes', 'bodyweight', 'sl hip thrust|one leg hip thrust', 'side'],
+  ['frog_pump', 'Frog pumps', 'glutes', 'bodyweight', 'frog pump'],
+  ['cable_abduction', 'Cable hip abduction', 'glutes', 'cable', 'standing cable abduction', 'side'],
+  ['machine_kickback', 'Glute kickback machine', 'glutes', 'machine', 'kickback machine'],
+  ['curtsy_lunge', 'Curtsy lunge', 'glutes', 'dumbbell', 'curtsy lunges', 'side'],
+  ['band_walk', 'Banded lateral walk', 'glutes', 'other', 'monster walk|lateral band walk|band walk'],
+  // Adductors, more
+  ['cable_adduction', 'Cable hip adduction', 'adductors', 'cable', 'standing cable adduction', 'side'],
+  ['cossack_squat', 'Cossack squat', 'adductors', 'bodyweight', 'cossack squats', 'side'],
+  ['copenhagen_plank', 'Copenhagen plank', 'adductors', 'bodyweight', 'copenhagen|copenhagen hold', 'timed|side'],
+  // Calves, more
+  ['smith_calf_raise', 'Smith machine calf raise', 'calves', 'smith', 'smith calf raise'],
+  ['donkey_calf_raise', 'Donkey calf raise', 'calves', 'machine', 'donkey calf'],
+  ['tibialis_raise', 'Tibialis raise', 'calves', 'bodyweight', 'tib raise|tib bar raise'],
 ];
 
+const KIND_FLAGS: ExerciseKind[] = ['assisted', 'timed', 'distance'];
+
 export const LIBRARY: Exercise[] = ROWS.map(
-  ([id, name, muscle, equipment, aliases]) => ({
-    id,
-    name,
-    muscle,
-    equipment,
-    kind: equipment === 'bodyweight' ? 'bodyweight' : 'weighted',
-    aliases: aliases ? aliases.split('|') : [],
-  }),
+  ([id, name, muscle, equipment, aliases, flags = '']) => {
+    const f = flags.split('|');
+    const kind: ExerciseKind =
+      KIND_FLAGS.find((k) => f.includes(k)) ??
+      (equipment === 'bodyweight' ? 'bodyweight' : 'weighted');
+    return {
+      id,
+      name,
+      muscle,
+      equipment,
+      kind,
+      aliases: aliases ? aliases.split('|') : [],
+      ...(f.includes('side') ? { perSide: true } : {}),
+    };
+  },
 );
 
 /** Equipment words shortened, so "dumbbell press" and "db press" meet. */
@@ -403,6 +576,7 @@ export function customExercise(
   name: string,
   muscle: Muscle,
   kind: ExerciseKind,
+  perSide = false,
 ): Exercise {
   const clean = name.trim().replace(/\s+/g, ' ');
   return {
@@ -412,6 +586,7 @@ export function customExercise(
     equipment: kind === 'bodyweight' ? 'bodyweight' : 'other',
     kind,
     aliases: [],
+    ...(perSide ? { perSide: true } : {}),
     custom: true,
   };
 }

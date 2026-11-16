@@ -70,6 +70,8 @@ import { loadWorkouts } from '@/lib/train/store';
 import type { Workout } from '@/lib/train/workout';
 import { weekReport } from '@/lib/week-report';
 import { latestWeight, setWeight } from '@/lib/weight-store';
+import { loadTrainSettings } from '@/lib/train/store';
+import { setLoadUnit } from '@/lib/train/units';
 
 /** Days read for the top cards: enough to see a break and the return. */
 const LOOKBACK = 45;
@@ -127,7 +129,7 @@ export default function HomeScreen() {
   const refresh = useCallback(async () => {
     // All at once rather than the profile first: only a brand new account
     // has no profile, and for everyone else that saves a round trip.
-    const [p, lw, ws, recs, marks, hyrox, hx, cd] = await Promise.all([
+    const [p, lw, ws, recs, marks, hyrox, hx, cd, ts] = await Promise.all([
       loadProfile(),
       latestWeight(),
       loadWorkouts().catch(() => [] as Workout[]),
@@ -136,7 +138,9 @@ export default function HomeScreen() {
       loadHyrox().catch(() => null),
       loadSims().catch(() => [] as Sim[]),
       loadCardio().catch(() => [] as CardioSession[]),
+      loadTrainSettings().catch(() => null),
     ]);
+    setLoadUnit(ts?.unit);
     setRace(hyrox?.race ?? null);
     setSims(hx);
     setCardio(cd);

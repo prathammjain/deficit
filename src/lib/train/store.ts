@@ -27,6 +27,7 @@ import {
 } from '../kv';
 import { newId, type Exercise } from './exercises';
 import type { Routine, Session, Workout } from './workout';
+import type { LoadUnit } from './units';
 
 // Synced to the account (the deficit. prefix also moves local data up on
 // first sign in).
@@ -355,12 +356,23 @@ export async function deleteRoutine(
 export interface TrainSettings {
   /** Rest per exercise, remembered from the last time it was changed. */
   rest: Record<string, number>;
+  /** Training weights in kilograms (the default) or pounds. */
+  unit?: LoadUnit;
 }
 
 export async function loadTrainSettings(
   store: KVStore = kv,
 ): Promise<TrainSettings> {
   return (await safeGet<TrainSettings>(store, SETTINGS)) ?? { rest: {} };
+}
+
+export async function saveLoadUnit(
+  unit: LoadUnit,
+  store: KVStore = kv,
+): Promise<TrainSettings> {
+  const next = { ...(await loadTrainSettings(store)), unit };
+  await setJSON(store, SETTINGS, next);
+  return next;
 }
 
 export async function rememberRest(

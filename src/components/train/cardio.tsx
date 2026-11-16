@@ -7,15 +7,8 @@
  * measures, so it never raises the food target (see lib/cardio/cardio.ts).
  */
 
-import { useState } from 'react';
-import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BarChart, LineChart } from '@/components/charts';
 import {
@@ -25,17 +18,16 @@ import {
   ProgressBar,
   SectionLabel,
 } from '@/components/ui/primitives';
-import { palette, radius, space, type as typo } from '@/constants/palette';
+import { palette, space, type as typo } from '@/constants/palette';
 import {
   checkSession,
   clock,
   distanceText,
-  EFFORTS,
   kindOf,
   kindRecords,
   kindsDone,
-  KINDS,
   markName,
+  maxHr,
   minutes,
   msPerKm,
   nearLifting,
@@ -47,12 +39,14 @@ import {
   WHO_STRENGTH_DAYS,
   WHO_UPPER,
   type CardioKind,
+  type CardioLive,
   type CardioSession,
-  type Effort,
 } from '@/lib/cardio/cardio';
 import {
+  clearLive,
   deleteCardio,
   loadCardioSettings,
+  loadLive,
   markNearTipSeen,
   newCardio,
   saveCardio,
@@ -60,73 +54,24 @@ import {
 import { shortDate } from '@/lib/date';
 import { periodOf, periodTick, shiftPeriod } from '@/lib/train/progress';
 
-import { Chip, DayStepper, NumField } from './bits';
+import { Chip } from './bits';
+import { PredictCard, ZonesCard } from './cardio-insights';
+import {
+  blank,
+  draftKm,
+  draftLaps,
+  draftMs,
+  draftStart,
+  fromLive,
+  fromSession,
+  SessionForm,
+  type Draft,
+} from './cardio-form';
+import { LiveCard } from './cardio-live';
 import type { Training } from './data';
 import { tr } from './styles';
 
 const MIN = 60_000;
-
-interface Draft {
-  id: string | null;
-  kind: CardioKind;
-  date: string;
-  /** "07:30", or "" to count back from now. */
-  time: string;
-  h: number | null;
-  m: number | null;
-  s: number | null;
-  /** In the kind's own unit: km, or metres. */
-  dist: number | null;
-  hr: number | null;
-  effort: Effort;
-}
-
-const pad = (n: number) => String(n).padStart(2, '0');
-
-function blank(today: string, kind: CardioKind = 'run'): Draft {
-  return {
-    id: null,
-    kind,
-    date: today,
-    time: '',
-    h: null,
-    m: null,
-    s: null,
-    dist: null,
-    hr: null,
-    effort: 'moderate',
-  };
-}
-
-function fromSession(c: CardioSession): Draft {
-  const d = new Date(c.startedAt);
-  const secs = Math.round(c.ms / 1000);
-  const unit = kindOf(c.kind).unit;
-  return {
-    id: c.id,
-    kind: c.kind,
-    date: c.date,
-    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
-    h: Math.floor(secs / 3600) || null,
-    m: Math.floor((secs % 3600) / 60) || null,
-    s: secs % 60 || null,
-    dist: c.km ? (unit === 'm' ? Math.round(c.km * 1000) : c.km) : null,
-    hr: c.avgHr ?? null,
-    effort: c.effort,
-  };
-}
-
-const draftMs = (d: Draft) =>
-  ((d.h ?? 0) * 3600 + (d.m ?? 0) * 60 + (d.s ?? 0)) * 1000;
-
-/** When it started: the typed time, or counted back from now for today. */
-function draftStart(d: Draft, today: string, ms: number): number {
-  const [y, mo, day] = d.date.split('-').map(Number);
-  const t = /^(\d{1,2}):(\d{2})$/.exec(d.time.trim());
-  if (t) return new Date(y, mo - 1, day, Number(t[1]), Number(t[2])).getTime();
-  if (d.date === today) return Date.now() - ms;
-  return new Date(y, mo - 1, day, 12, 0).getTime();
-}
 
 /** "0:12 faster" or "1.4 km/h faster", against an earlier pace. */
 function paceChange(kind: CardioKind, now: number, then: number): string {
@@ -166,6 +111,7 @@ export function CardioView({
   editId,
   editStamp,
   onChanged,
+  onMaxHr,
 }: {
   data: Training;
   today: string;
@@ -174,6 +120,8 @@ export function CardioView({
   /** Changes on each arrival, so the same session can be opened again. */
   editStamp?: string;
   onChanged: (cardio: CardioSession[]) => void;
+  /** A measured max heart rate was set or cleared. */
+  onMaxHr: (v: number | null) => void;
 }) {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -181,6 +129,20 @@ export function CardioView({
   const [tip, setTip] = useState(false);
   const [busy, setBusy] = useState(false);
   const [picked, setPicked] = useState<CardioKind | null>(null);
+  const [live, setLive] = useState<CardioLive | null>(null);
+
+  // A session being timed survives leaving the tab and reloading the app.
+  useEffect(() => {
+    let alive = true;
+    loadLive()
+      .then((l) => {
+        if (alive) setLive(l);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // Arriving from the history opens that session. Adjusted during render so
   // there is no flash of the closed form.
@@ -198,18 +160,14 @@ export function CardioView({
     if (!draft) return;
     const ms = draftMs(draft);
     const def = kindOf(draft.kind);
-    const km =
-      def.unit && draft.dist
-        ? def.unit === 'm'
-          ? draft.dist / 1000
-          : draft.dist
-        : null;
+    const km = draftKm(draft);
     const problem = checkSession({ kind: draft.kind, ms, km, avgHr: draft.hr });
     if (problem) {
       setError(problem);
       return;
     }
     const startedAt = draftStart(draft, today, ms);
+    const laps = draftLaps(draft);
     const session = newCardio(
       {
         kind: draft.kind,
@@ -218,6 +176,13 @@ export function CardioView({
         km,
         avgHr: draft.hr,
         effort: draft.effort,
+        ...(laps.length ? { laps } : {}),
+        ...(laps.length && draft.intervals ? { intervals: true } : {}),
+        ...(draft.incline ? { incline: draft.incline } : {}),
+        ...(draft.elevation ? { elevation: draft.elevation } : {}),
+        ...(draft.indoor ? { indoor: true } : {}),
+        ...(draft.note.trim() ? { note: draft.note.trim() } : {}),
+        ...(draft.rpe ? { rpe: draft.rpe } : {}),
       },
       draft.id ?? undefined,
     );
@@ -225,6 +190,10 @@ export function CardioView({
     try {
       const all = await saveCardio(session);
       onChanged([...all].reverse());
+      if (draft.fromLive) {
+        setLive(null);
+        void clearLive().catch(() => undefined);
+      }
       setDraft(null);
       setError(null);
       setNotice(
@@ -281,6 +250,7 @@ export function CardioView({
         <SessionForm
           draft={draft}
           today={today}
+          maxHr={maxHr(data.age, data.maxHr)}
           error={error}
           busy={busy}
           onChange={(d) => {
@@ -311,6 +281,20 @@ export function CardioView({
           />
           {notice ? <Text style={[tr.faint, cs.notice]}>{notice}</Text> : null}
         </Card>
+      )}
+
+      {draft ? null : (
+        <LiveCard
+          live={live}
+          defaultKind={kinds[0] ?? 'run'}
+          onLive={setLive}
+          onFinish={(l) => {
+            setNotice(null);
+            setTip(false);
+            setError(null);
+            setDraft(fromLive(l, today));
+          }}
+        />
       )}
 
       {tip ? (
@@ -382,6 +366,14 @@ export function CardioView({
           Cardio and HYROX, with vigorous minutes counted double.
         </Text>
       </Card>
+
+      <ZonesCard
+        cardio={data.cardio}
+        week={week}
+        age={data.age}
+        measured={data.maxHr}
+        onMeasured={onMaxHr}
+      />
 
       {kind && rec ? (
         <>
@@ -466,6 +458,10 @@ export function CardioView({
             )}
           </Card>
 
+          {kind === 'run' ? (
+            <PredictCard cardio={data.cardio} today={today} />
+          ) : null}
+
           <SectionLabel>Records</SectionLabel>
           <Card>
             {rec.marks.map((m) => (
@@ -539,202 +535,6 @@ export function CardioView({
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
-function SessionForm({
-  draft,
-  today,
-  error,
-  busy,
-  onChange,
-  onSave,
-  onCancel,
-  onDelete,
-}: {
-  draft: Draft;
-  today: string;
-  error: string | null;
-  busy: boolean;
-  onChange: (d: Draft) => void;
-  onSave: () => void;
-  onCancel: () => void;
-  onDelete?: () => void;
-}) {
-  const def = kindOf(draft.kind);
-  const set = (patch: Partial<Draft>) => onChange({ ...draft, ...patch });
-  const effort = EFFORTS.find((e) => e.id === draft.effort);
-  return (
-    <Card style={cs.top}>
-      <Text style={tr.strong}>{draft.id ? 'Edit session' : 'Log cardio'}</Text>
-
-      <View style={[tr.chips, cs.field]}>
-        {KINDS.map((k) => (
-          <Chip
-            key={k.id}
-            label={k.label}
-            on={k.id === draft.kind}
-            onPress={() =>
-              set({
-                kind: k.id,
-                // A distance typed in km means nothing in metres.
-                dist: kindOf(k.id).unit === def.unit ? draft.dist : null,
-              })
-            }
-          />
-        ))}
-      </View>
-
-      <View style={cs.field}>
-        <DayStepper
-          value={draft.date}
-          today={today}
-          onChange={(date) => set({ date })}
-        />
-      </View>
-
-      <Text style={[tr.label, cs.field]}>TIME</Text>
-      <View style={cs.inline}>
-        <NumField
-          value={draft.h}
-          placeholder="h"
-          label="Hours"
-          maxLength={2}
-          style={[tr.input, cs.box]}
-          onChange={(h) => set({ h })}
-        />
-        <NumField
-          value={draft.m}
-          placeholder="min"
-          label="Minutes"
-          maxLength={2}
-          style={[tr.input, cs.box]}
-          onChange={(m) => set({ m })}
-        />
-        <NumField
-          value={draft.s}
-          placeholder="s"
-          label="Seconds"
-          maxLength={2}
-          style={[tr.input, cs.box]}
-          onChange={(s) => set({ s })}
-        />
-      </View>
-
-      {def.unit ? (
-        <>
-          <Text style={[tr.label, cs.field]}>
-            DISTANCE, {def.unit === 'm' ? 'METRES' : 'KM'}
-          </Text>
-          <NumField
-            value={draft.dist}
-            placeholder={def.unit === 'm' ? '2000' : '5.0'}
-            label={`Distance in ${def.unit === 'm' ? 'metres' : 'km'}`}
-            decimal={def.unit === 'km'}
-            maxLength={def.unit === 'm' ? 6 : 6}
-            style={tr.input}
-            onChange={(dist) => set({ dist })}
-          />
-        </>
-      ) : null}
-
-      <Text style={[tr.label, cs.field]}>EFFORT</Text>
-      <View style={tr.chips}>
-        {EFFORTS.map((e) => (
-          <Chip
-            key={e.id}
-            label={e.label}
-            on={e.id === draft.effort}
-            onPress={() => set({ effort: e.id })}
-          />
-        ))}
-      </View>
-      {effort ? <Text style={[tr.faint, cs.under]}>{effort.hint}</Text> : null}
-
-      <View style={[cs.inline, cs.field]}>
-        <View style={cs.half}>
-          <Text style={tr.label}>AVG HEART RATE</Text>
-          <NumField
-            value={draft.hr}
-            placeholder="Optional"
-            label="Average heart rate"
-            style={[tr.input, cs.gap]}
-            onChange={(hr) => set({ hr })}
-          />
-        </View>
-        <View style={cs.half}>
-          <Text style={tr.label}>STARTED AT</Text>
-          <TimeField value={draft.time} onChange={(time) => set({ time })} />
-        </View>
-      </View>
-      {!draft.time && draft.date === today ? (
-        <Text style={[tr.faint, cs.under]}>
-          Leave the start empty if you just finished: Grain counts back from
-          now.
-        </Text>
-      ) : null}
-
-      {error ? <Text style={[cs.error, cs.field]}>{error}</Text> : null}
-
-      <View style={[cs.actions, cs.field]}>
-        <PrimaryButton
-          label={draft.id ? 'Save changes' : 'Save'}
-          onPress={onSave}
-          disabled={busy || draftMs(draft) <= 0}
-          style={tr.flex1}
-        />
-        <Pressable onPress={onCancel} hitSlop={8}>
-          <Text style={tr.linkText}>Cancel</Text>
-        </Pressable>
-      </View>
-      {onDelete ? (
-        <Pressable onPress={onDelete} hitSlop={8} style={cs.delete}>
-          <Text style={[tr.linkText, cs.danger]}>Delete session</Text>
-        </Pressable>
-      ) : null}
-    </Card>
-  );
-}
-
-/** The browser's own time picker on the web; typed "07:30" elsewhere. */
-function TimeField({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (time: string) => void;
-}) {
-  if (Platform.OS === 'web') {
-    return (
-      <input
-        type="time"
-        value={value}
-        aria-label="Started at"
-        onChange={(e) => onChange(e.target.value)}
-        style={{
-          marginTop: space.sm,
-          padding: space.md,
-          borderRadius: radius.sm,
-          border: 'none',
-          background: palette.surface2,
-          color: palette.text,
-          fontSize: 15,
-          fontFamily: 'inherit',
-          width: '100%',
-          boxSizing: 'border-box',
-        }}
-      />
-    );
-  }
-  return (
-    <TextInput
-      value={value}
-      onChangeText={onChange}
-      placeholder="07:30"
-      placeholderTextColor={palette.textFaint}
-      maxLength={5}
-      style={[tr.input, cs.gap]}
-    />
-  );
-}
 
 function Row({
   name,

@@ -25,6 +25,7 @@ import {
   matchExercise,
   searchExercises,
   type Exercise,
+  KIND_LABEL,
   type ExerciseKind,
   type Muscle,
 } from '@/lib/train/exercises';
@@ -61,6 +62,7 @@ export function ExercisePicker({
   const [creating, setCreating] = useState(false);
   const [newMuscle, setNewMuscle] = useState<Muscle | null>(null);
   const [newKind, setNewKind] = useState<ExerciseKind>('weighted');
+  const [newSide, setNewSide] = useState(false);
 
   const byId = useMemo(() => exerciseMap(exercises), [exercises]);
   const results = useMemo(
@@ -134,7 +136,7 @@ export function ExercisePicker({
 
   const create = async () => {
     if (!newMuscle || !typed) return;
-    const ex = customExercise(typed, newMuscle, newKind);
+    const ex = customExercise(typed, newMuscle, newKind, newSide);
     await onCreate(ex);
     setCreating(false);
     setQuery('');
@@ -244,15 +246,31 @@ export function ExercisePicker({
                   </View>
                   <Text style={tr.menuLabel}>LOGGED AS</Text>
                   <View style={tr.chips}>
+                    {(Object.keys(KIND_LABEL) as ExerciseKind[]).map((k) => (
+                      <Chip
+                        key={k}
+                        label={KIND_LABEL[k]}
+                        on={newKind === k}
+                        onPress={() => setNewKind(k)}
+                      />
+                    ))}
+                  </View>
+                  <Text style={tr.faint}>
+                    {newKind === 'assisted'
+                      ? 'Log the help the machine or band gives. Less help counts as stronger.'
+                      : newKind === 'timed'
+                        ? 'Log seconds held, with any added weight.'
+                        : newKind === 'distance'
+                          ? 'Log metres, with any weight carried or pushed.'
+                          : newKind === 'bodyweight'
+                            ? 'Log reps, with any added weight.'
+                            : 'Log weight and reps.'}
+                  </Text>
+                  <View style={tr.chips}>
                     <Chip
-                      label="Weight and reps"
-                      on={newKind === 'weighted'}
-                      onPress={() => setNewKind('weighted')}
-                    />
-                    <Chip
-                      label="Bodyweight reps"
-                      on={newKind === 'bodyweight'}
-                      onPress={() => setNewKind('bodyweight')}
+                      label="One side at a time"
+                      on={newSide}
+                      onPress={() => setNewSide(!newSide)}
                     />
                   </View>
                   <PrimaryButton

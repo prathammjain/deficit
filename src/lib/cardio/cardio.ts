@@ -34,6 +34,13 @@ export type CardioKind =
 
 export type Effort = 'light' | 'moderate' | 'vigorous';
 
+/** One lap or interval: its time, and its distance and heart rate if known. */
+export interface CardioLap {
+  ms: number;
+  km?: number | null;
+  hr?: number | null;
+}
+
 export interface CardioSession {
   id: string;
   kind: CardioKind;
@@ -46,6 +53,22 @@ export interface CardioSession {
   km?: number | null;
   avgHr?: number | null;
   effort: Effort;
+  /** Laps or intervals, in order. */
+  laps?: CardioLap[];
+  /**
+   * The laps are reps with rest between, not splits of one effort. The
+   * session's time then leaves the rest out, so it isn't a continuous
+   * effort: it doesn't count toward best times or race predictions.
+   */
+  intervals?: boolean;
+  /** Treadmill incline, percent. */
+  incline?: number | null;
+  /** Climb, metres. */
+  elevation?: number | null;
+  indoor?: boolean;
+  note?: string;
+  /** Session RPE, 0 to 10 (Foster's scale), for training load. */
+  rpe?: number | null;
 }
 
 /** How a kind is shown: its pace unit and the distances it keeps bests for. */
@@ -308,10 +331,29 @@ const oldestFirst = (xs: CardioSession[]) =>
  * A session counts for a mark when it covered the mark and at most 5% more:
  * the time at the mark is its pace times the mark. Much longer sessions are
  * left out, since an even pace over 12 km says little about a best 5 km.
+ * Laps count too: a 1 km rep in an interval session is a 1 km time.
  */
 function timeAt(s: CardioSession, mark: number): number | null {
-  if (!s.km || s.km < mark || s.km > mark * 1.05) return null;
-  return (s.ms * mark) / s.km;
+  let best: number | null = null;
+  for (const e of efforts(s)) {
+    if (e.km < mark || e.km > mark * 1.05) continue;
+    const t = (e.ms * mark) / e.km;
+    if (best == null || t < best) best = t;
+  }
+  return best;
+}
+
+/**
+ * The whole session and each lap, wherever there is a distance. An interval
+ * session's total is left out (its time skips the rest); its reps count.
+ */
+function efforts(s: CardioSession): { ms: number; km: number }[] {
+  const out: { ms: number; km: number }[] = [];
+  if (s.km && s.km > 0 && !s.intervals) out.push({ ms: s.ms, km: s.km });
+  for (const l of s.laps ?? []) {
+    if (l.km && l.km > 0 && l.ms > 0) out.push({ ms: l.ms, km: l.km });
+  }
+  return out;
 }
 
 export function kindRecords(
@@ -466,4 +508,234 @@ export function nearLifting(s: CardioSession, workouts: Workout[]): boolean {
     const gap = Math.max(ws - end, start - we, 0);
     return gap < NEAR_MS;
   });
+}
+
+// ------------------------------------------------------------ Laps
+
+/** Total time and distance of laps; distance null when no lap has one. */
+export function lapTotals(laps: CardioLap[]): {
+  ms: number;
+  km: number | null;
+} {
+  const ms = laps.reduce((t, l) => t + (l.ms || 0), 0);
+  const withKm = laps.filter((l) => l.km && l.km > 0);
+  const km = withKm.length
+    ? withKm.reduce((t, l) => t + (l.km as number), 0)
+    : null;
+  return { ms, km: km == null ? null : Math.round(km * 1000) / 1000 };
+}
+
+/** N laps of one distance, times to fill in: "6 × 800 m". */
+export function intervals(n: number, km: number | null): CardioLap[] {
+  return Array.from({ length: Math.max(0, Math.min(50, n)) }, () => ({
+    ms: 0,
+    km,
+  }));
+}
+
+/** Index of the fastest lap by pace, among laps with a distance. */
+export function fastestLap(laps: CardioLap[]): number | null {
+  let best: number | null = null;
+  let pace = Infinity;
+  laps.forEach((l, i) => {
+    if (!l.km || l.km <= 0 || !(l.ms > 0)) return;
+    const p = l.ms / l.km;
+    if (p < pace) [best, pace] = [i, p];
+  });
+  return best;
+}
+
+// ------------------------------------------------------------ Live timer
+
+/** A session being timed now. Times are timestamps, so a reload keeps it. */
+export interface CardioLive {
+  kind: CardioKind;
+  startedAt: number;
+  /** When it was paused, or null while running. */
+  pausedAt: number | null;
+  /** Time spent paused before the current pause. */
+  pausedMs: number;
+  /** Moving time at each lap press. */
+  laps: number[];
+  /** The distance of each lap, when every lap is the same (a track). */
+  lapKm: number | null;
+}
+
+export function startLive(
+  kind: CardioKind,
+  now: number = Date.now(),
+): CardioLive {
+  return {
+    kind,
+    startedAt: now,
+    pausedAt: null,
+    pausedMs: 0,
+    laps: [],
+    lapKm: null,
+  };
+}
+
+/** Time moving so far, leaving out pauses. */
+export function movingMs(l: CardioLive, now: number = Date.now()): number {
+  return Math.max(0, (l.pausedAt ?? now) - l.startedAt - l.pausedMs);
+}
+
+export function pauseLive(l: CardioLive, now: number = Date.now()): CardioLive {
+  return l.pausedAt != null ? l : { ...l, pausedAt: now };
+}
+
+export function resumeLive(
+  l: CardioLive,
+  now: number = Date.now(),
+): CardioLive {
+  if (l.pausedAt == null) return l;
+  return { ...l, pausedMs: l.pausedMs + (now - l.pausedAt), pausedAt: null };
+}
+
+export function lapLive(l: CardioLive, now: number = Date.now()): CardioLive {
+  const t = movingMs(l, now);
+  const last = l.laps[l.laps.length - 1] ?? 0;
+  return t - last < 1000 ? l : { ...l, laps: [...l.laps, t] };
+}
+
+/**
+ * The laps of a finished live session. The time after the last lap press
+ * is one more lap when it's over a few seconds; every full lap gets the lap
+ * distance when one was set, the last part lap gets none.
+ */
+export function liveLaps(l: CardioLive, endMs: number): CardioLap[] {
+  const marks = [...l.laps];
+  if (endMs - (marks[marks.length - 1] ?? 0) >= 5000) marks.push(endMs);
+  return marks.map((t, i) => ({
+    ms: t - (marks[i - 1] ?? 0),
+    km: i < l.laps.length ? l.lapKm : null,
+  }));
+}
+
+// ------------------------------------------------------------ Heart rate
+
+/**
+ * Tanaka et al. 2001 (J Am Coll Cardiol, a meta analysis of 351 studies):
+ * max heart rate is about 208 minus 0.7 times age, give or take 10 beats.
+ * A measured max, when the user has one, always wins.
+ */
+export function maxHr(
+  age: number | null | undefined,
+  measured?: number | null,
+): number | null {
+  if (measured && measured >= 120 && measured <= 230)
+    return Math.round(measured);
+  if (!age || age < 10 || age > 100) return null;
+  return Math.round(208 - 0.7 * age);
+}
+
+/**
+ * Five zones from the ACSM intensity bands (Guidelines, 10th edition, 2018),
+ * as a share of max heart rate. Zones 3 and 4 are the moderate and vigorous
+ * the WHO minutes count.
+ */
+export const ZONES: { n: 1 | 2 | 3 | 4 | 5; label: string; from: number }[] = [
+  { n: 1, label: 'Very light', from: 0 },
+  { n: 2, label: 'Light', from: 0.57 },
+  { n: 3, label: 'Moderate', from: 0.64 },
+  { n: 4, label: 'Vigorous', from: 0.77 },
+  { n: 5, label: 'Near max', from: 0.96 },
+];
+
+export function zoneOf(hr: number, max: number): 1 | 2 | 3 | 4 | 5 {
+  const f = hr / max;
+  let z: 1 | 2 | 3 | 4 | 5 = 1;
+  for (const x of ZONES) if (f >= x.from) z = x.n;
+  return z;
+}
+
+/** The beats a zone starts at, for a max. */
+export const zoneFrom = (n: number, max: number) =>
+  Math.round((ZONES.find((z) => z.n === n)?.from ?? 0) * max);
+
+/** The talk test effort a heart rate points to: under 64% light, 77% up vigorous. */
+export function effortFromHr(hr: number, max: number): Effort {
+  const z = zoneOf(hr, max);
+  return z >= 4 ? 'vigorous' : z === 3 ? 'moderate' : 'light';
+}
+
+/**
+ * Minutes in each zone in a period, from lap heart rates where laps have
+ * them and the session average otherwise. Averages hide the ups and downs
+ * inside a session, so this is a rough split, and the screen says so.
+ */
+export function zoneMinutes(
+  sessions: CardioSession[],
+  p: Period,
+  max: number,
+): { zones: number[]; untracked: number } {
+  const zones = [0, 0, 0, 0, 0];
+  let untracked = 0;
+  for (const s of sessions) {
+    if (!inPeriod(s.date, p)) continue;
+    const parts =
+      s.laps && s.laps.some((l) => l.hr)
+        ? s.laps.map((l) => ({ ms: l.ms, hr: l.hr ?? s.avgHr ?? null }))
+        : [{ ms: s.ms, hr: s.avgHr ?? null }];
+    for (const part of parts) {
+      if (part.hr) zones[zoneOf(part.hr, max) - 1] += part.ms / MIN;
+      else untracked += part.ms / MIN;
+    }
+  }
+  return { zones: zones.map(Math.round), untracked: Math.round(untracked) };
+}
+
+// ------------------------------------------------------------ Race predictor
+
+/**
+ * Riegel's formula (American Scientist, 1981): time at a new distance is the
+ * known time times the distance ratio to the power 1.06. It assumes training
+ * for the longer distance, so it tends to flatter people who haven't done
+ * it; the screen calls it a rough guide.
+ */
+export function riegel(
+  ms: number,
+  fromKm: number,
+  toKm: number,
+  k = 1.06,
+): number {
+  return ms * Math.pow(toKm / fromKm, k);
+}
+
+export interface Prediction {
+  /** The effort it is based on. */
+  from: { km: number; ms: number; date: string };
+  times: { km: number; ms: number }[];
+}
+
+/** Distances the predictor answers for. */
+export const PREDICT_KM = [5, 10, 21.0975, 42.195];
+
+/**
+ * From the strongest continuous run of 3 km or more in the last 12 weeks
+ * (the one that predicts the fastest 10 km). Interval sessions and single
+ * laps are left out: reps with rest between flatter a prediction.
+ */
+export function predictRaces(
+  sessions: CardioSession[],
+  today: string,
+): Prediction | null {
+  const start = addDays(today, -83);
+  let best: Prediction['from'] | null = null;
+  let bestTen = Infinity;
+  for (const s of sessions) {
+    if (s.kind !== 'run' || s.date < start || s.date > today) continue;
+    if (s.intervals || !s.km || s.km < 3) continue;
+    const ten = riegel(s.ms, s.km, 10);
+    if (ten < bestTen) {
+      bestTen = ten;
+      best = { km: s.km, ms: s.ms, date: s.date };
+    }
+  }
+  if (!best) return null;
+  const from = best;
+  return {
+    from,
+    times: PREDICT_KM.map((km) => ({ km, ms: riegel(from.ms, from.km, km) })),
+  };
 }

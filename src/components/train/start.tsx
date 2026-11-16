@@ -23,6 +23,7 @@ import {
 import { Chip, Stat } from './bits';
 import type { Training } from './data';
 import { tr } from './styles';
+import { volumeText } from '@/lib/train/units';
 
 /** "today", "yesterday", "3 days ago", "9 Nov". */
 export function relativeDay(day: string, today: string): string {
@@ -256,10 +257,7 @@ export function WeekStrip({
             label={a.sessions === 1 ? 'Session' : 'Sessions'}
           />
           <Stat value={String(t.sets)} label="Hard sets" />
-          <Stat
-            value={`${t.volume.toLocaleString()} kg`}
-            label="Volume this week"
-          />
+          <Stat value={volumeText(t.volume)} label="Volume this week" />
         </View>
       </Card>
     </Pressable>

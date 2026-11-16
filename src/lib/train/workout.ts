@@ -10,6 +10,7 @@
 
 import { todayKey } from '../log-store';
 import { newId, type Exercise, type Muscle } from './exercises';
+import { loadNum, loadUnit } from './units';
 
 export type SetType = 'warmup' | 'working' | 'drop' | 'failure';
 
@@ -22,8 +23,15 @@ export const SET_TYPES: { id: SetType; label: string }[] = [
 
 export interface WorkSet {
   id: string;
+  /** The load: on the bar, or added for bodyweight, timed and distance. */
   kg: number | null;
   reps: number | null;
+  /** Timed holds: seconds. */
+  secs?: number | null;
+  /** Distance work: metres. */
+  m?: number | null;
+  /** Assisted lifts: the kilograms of help. */
+  assist?: number | null;
   type: SetType;
   done: boolean;
   /** How hard it felt, 6 to 10, where 10 left nothing in the tank. */
@@ -65,6 +73,8 @@ export interface Workout extends ProgramLink {
   /** Where an imported workout came from. */
   importedFrom?: 'strong' | 'hevy' | 'csv' | 'notes';
   routineId?: string;
+  /** Session RPE, 0 to 10 (Foster's scale), for training load. */
+  sessionRpe?: number;
 }
 
 /** A workout still being logged. */
@@ -93,7 +103,18 @@ export interface Routine {
 export interface SetValues {
   kg: number | null;
   reps: number | null;
+  secs?: number | null;
+  m?: number | null;
+  assist?: number | null;
 }
+
+/** The value fields of a set, in the order they're looked up. */
+export const VALUE_KEYS = ['kg', 'reps', 'secs', 'm', 'assist'] as const;
+export type ValueKey = (typeof VALUE_KEYS)[number];
+
+/** Reps, seconds or metres: a set with work in it. */
+export const hasWork = (s: SetValues) =>
+  (s.reps ?? 0) > 0 || (s.secs ?? 0) > 0 || (s.m ?? 0) > 0;
 
 export const DEFAULT_REST = 90;
 
@@ -114,27 +135,45 @@ export function e1rm(kg: number, reps: number): number {
   return tenth(kg * (1 + reps / 30));
 }
 
-/** The load a set moved: the bar, or bodyweight plus anything added. */
+/**
+ * The load a set moved: the bar; bodyweight plus anything added; or
+ * bodyweight minus the help, for assisted lifts.
+ */
 export function setLoad(
   s: SetValues,
   ex: Pick<Exercise, 'kind'>,
   bodyKg: number,
 ): number {
-  return ex.kind === 'bodyweight' ? bodyKg + (s.kg ?? 0) : (s.kg ?? 0);
+  if (ex.kind === 'bodyweight') return bodyKg + (s.kg ?? 0);
+  if (ex.kind === 'assisted') return Math.max(0, bodyKg - (s.assist ?? 0));
+  return s.kg ?? 0;
 }
 
-/** A set's strength score: the estimated max of the load it moved. */
+/** True when a kind's sets are judged by estimated max (lifts with reps). */
+export const liftsWithReps = (ex: Pick<Exercise, 'kind'>) =>
+  ex.kind === 'weighted' || ex.kind === 'bodyweight' || ex.kind === 'assisted';
+
+/**
+ * A set's score, for records: the estimated max for lifts with reps; the
+ * seconds for a hold; for distance work, kilograms times metres when
+ * loaded (more load or more distance both beat it), else the metres.
+ */
 export function setScore(
   s: SetValues,
   ex: Pick<Exercise, 'kind'>,
   bodyKg: number,
 ): number {
+  if (ex.kind === 'timed') return s.secs ?? 0;
+  if (ex.kind === 'distance') {
+    const m = s.m ?? 0;
+    return (s.kg ?? 0) > 0 ? (s.kg ?? 0) * m : m;
+  }
   return e1rm(setLoad(s, ex, bodyKg), s.reps ?? 0);
 }
 
-/** Done, not a warmup, with reps: a set that counts. */
+/** Done, not a warmup, with reps, seconds or metres: a set that counts. */
 export function isHard(s: WorkSet): boolean {
-  return s.done && s.type !== 'warmup' && (s.reps ?? 0) > 0;
+  return s.done && s.type !== 'warmup' && hasWork(s);
 }
 
 /** Kilograms moved in a set (logged load times reps). Warmups move none. */
@@ -144,7 +183,33 @@ export function setVolume(s: WorkSet): number {
 
 /** True when a set has what it needs to be ticked. */
 export function canTick(s: SetValues, ex: Pick<Exercise, 'kind'>): boolean {
-  return (s.reps ?? 0) > 0 && (ex.kind === 'bodyweight' || s.kg != null);
+  switch (ex.kind) {
+    case 'timed':
+      return (s.secs ?? 0) > 0;
+    case 'distance':
+      return (s.m ?? 0) > 0;
+    case 'weighted':
+      return (s.reps ?? 0) > 0 && s.kg != null;
+    default:
+      return (s.reps ?? 0) > 0;
+  }
+}
+
+/**
+ * A best score in words: "102.5 kg" estimated max for lifts with reps,
+ * "1:15" for a hold, "" for distance (its best set says more).
+ */
+export function scoreText(score: number, ex: Pick<Exercise, 'kind'>): string {
+  if (ex.kind === 'timed') return secsText(score);
+  if (ex.kind === 'distance') return '';
+  return `${loadNum(score)} ${loadUnit()}`;
+}
+
+/** "45s", "1:30". */
+export function secsText(secs: number): string {
+  if (secs < 60) return `${Math.round(secs)}s`;
+  const m = Math.floor(secs / 60);
+  return `${m}:${String(Math.round(secs % 60)).padStart(2, '0')}`;
 }
 
 // Formatting
@@ -154,20 +219,33 @@ export function formatKg(kg: number): string {
 }
 
 /**
- * A set the way lifters write it: "80 × 8", "BW × 12", "BW+10 × 6", with
- * its RPE when there is one: "100 × 5 @8.5".
+ * A set the way lifters write it: "80 × 8", "BW × 12", "BW+10 × 6",
+ * "Assist 20 × 8", "45s", "20 × 40 m", with its RPE when there is one:
+ * "100 × 5 @8.5". Loads are in the chosen unit.
  */
 export function setText(
   s: SetValues & { rpe?: number },
   ex: Pick<Exercise, 'kind'>,
 ): string {
   const reps = s.reps ?? 0;
-  const base =
-    ex.kind === 'bodyweight'
-      ? s.kg
-        ? `BW+${formatKg(s.kg)} × ${reps}`
-        : `BW × ${reps}`
-      : `${s.kg == null ? '0' : formatKg(s.kg)} × ${reps}`;
+  const load = (kg: number) => loadNum(kg);
+  let base: string;
+  switch (ex.kind) {
+    case 'bodyweight':
+      base = s.kg ? `BW+${load(s.kg)} × ${reps}` : `BW × ${reps}`;
+      break;
+    case 'assisted':
+      base = s.assist ? `Assist ${load(s.assist)} × ${reps}` : `BW × ${reps}`;
+      break;
+    case 'timed':
+      base = `${secsText(s.secs ?? 0)}${s.kg ? ` +${load(s.kg)}` : ''}`;
+      break;
+    case 'distance':
+      base = s.kg ? `${load(s.kg)} × ${s.m ?? 0} m` : `${s.m ?? 0} m`;
+      break;
+    default:
+      base = `${s.kg == null ? '0' : load(s.kg)} × ${reps}`;
+  }
   return s.rpe ? `${base} @${s.rpe}` : base;
 }
 
@@ -228,7 +306,7 @@ export function lastSets(
   for (const w of newestFirst(workouts, before, skipId)) {
     for (const we of w.exercises) {
       if (map.has(we.exerciseId)) continue;
-      const done = we.sets.filter((s) => s.done && (s.reps ?? 0) > 0);
+      const done = we.sets.filter((s) => s.done && hasWork(s));
       if (done.length) map.set(we.exerciseId, done);
     }
   }
@@ -264,7 +342,7 @@ export function placeholderFor(
   previous: WorkSet[] | undefined,
 ): SetValues {
   const prev = previousFor(sets, index, previous);
-  if (prev) return { kg: prev.kg, reps: prev.reps };
+  if (prev) return valuesOf(prev);
   const g = group(sets[index]);
   const above = sets
     .slice(0, index)
@@ -272,15 +350,31 @@ export function placeholderFor(
     .reverse();
   const same = previous?.filter((s) => group(s) === g) ?? [];
   const last = same[same.length - 1];
-  return {
-    kg: above.find((s) => s.kg != null)?.kg ?? last?.kg ?? null,
-    reps: above.find((s) => s.reps != null)?.reps ?? last?.reps ?? null,
-  };
+  const out: SetValues = { kg: null, reps: null };
+  for (const k of VALUE_KEYS) {
+    const v = above.find((s) => s[k] != null)?.[k] ?? last?.[k] ?? null;
+    if (v != null || k === 'kg' || k === 'reps') out[k] = v;
+  }
+  return out;
+}
+
+/** Just the values of a set. */
+export function valuesOf(s: SetValues): SetValues {
+  const out: SetValues = { kg: s.kg ?? null, reps: s.reps ?? null };
+  for (const k of ['secs', 'm', 'assist'] as const) {
+    if (s[k] != null) out[k] = s[k];
+  }
+  return out;
 }
 
 /** A set's values with any gaps filled from its placeholder. */
 export function filled(s: WorkSet, ph: SetValues): SetValues {
-  return { kg: s.kg ?? ph.kg, reps: s.reps ?? ph.reps };
+  const out: SetValues = { kg: s.kg ?? ph.kg, reps: s.reps ?? ph.reps };
+  for (const k of ['secs', 'm', 'assist'] as const) {
+    const v = s[k] ?? ph[k];
+    if (v != null) out[k] = v;
+  }
+  return out;
 }
 
 /** The best an exercise has ever done, to judge new sets against. */
@@ -552,7 +646,7 @@ export function finishSession(
   const exercises = s.exercises
     .map((we) => ({
       ...we,
-      sets: we.sets.filter((x) => x.done && (x.reps ?? 0) > 0),
+      sets: we.sets.filter((x) => x.done && hasWork(x)),
     }))
     .filter((we) => we.sets.length > 0);
   if (!exercises.length) return null;
@@ -630,6 +724,30 @@ export function patchBlock(
   patch: Partial<WorkoutExercise>,
 ): Blocks {
   return mapBlock(blocks, blockId, (b) => ({ ...b, ...patch }));
+}
+
+/**
+ * Swap the exercise in a block. Same kind of exercise: the sets carry over.
+ * A different kind (a press for a plank): the sets keep their number and
+ * types but start empty, since kilograms and reps mean nothing as seconds.
+ */
+export function swapExercise(
+  blocks: Blocks,
+  blockId: string,
+  exerciseId: string,
+  exById: Map<string, Exercise>,
+): Blocks {
+  return mapBlock(blocks, blockId, (b) => {
+    const was = exById.get(b.exerciseId)?.kind;
+    const now = exById.get(exerciseId)?.kind;
+    if (was === now) return { ...b, exerciseId };
+    return {
+      ...b,
+      exerciseId,
+      target: undefined,
+      sets: b.sets.map((x) => ({ ...newSet(), id: x.id, type: x.type })),
+    };
+  });
 }
 
 export function removeBlock(blocks: Blocks, blockId: string): Blocks {

@@ -12,23 +12,27 @@ import { formatToday } from '@/lib/date';
 import type { Exercise } from '@/lib/train/exercises';
 import {
   durationText,
-  formatKg,
   prSets,
   setScore,
   setText,
   workoutStats,
   type Bests,
   type Workout,
+  scoreText,
 } from '@/lib/train/workout';
+import { volumeText } from '@/lib/train/units';
 
 import { nb, Stat } from './bits';
+import { SessionRpe } from './effort';
 import { tr } from './styles';
+import { saveWorkout } from '@/lib/train/store';
 
 export interface RecordLine {
   name: string;
   set: string;
   score: number;
   before: number;
+  kind: Exercise['kind'];
 }
 
 /** The best record each exercise set in a workout. */
@@ -52,6 +56,7 @@ export function workoutRecords(
         set: nb(setText(top, ex)),
         score: setScore(top, ex, bodyKg),
         before: bests.get(ex.id)?.score ?? 0,
+        kind: ex.kind,
       });
     }
   }
@@ -63,11 +68,7 @@ export function StatsRow({ w, records }: { w: Workout; records: number }) {
   return (
     <View style={[tr.row, { marginTop: 4 }]}>
       <Stat value={String(st.sets)} label="Hard sets" flex={0.8} />
-      <Stat
-        value={`${st.volume.toLocaleString()} kg`}
-        label="Volume"
-        flex={1.4}
-      />
+      <Stat value={volumeText(st.volume)} label="Volume" flex={1.4} />
       <Stat
         value={st.ms > 0 ? durationText(st.ms) : 'Not timed'}
         label="Time"
@@ -96,8 +97,11 @@ export function RecordsCard({ lines }: { lines: RecordLine[] }) {
             <View style={tr.flex1}>
               <Text style={tr.liftName}>{r.name}</Text>
               <Text style={tr.liftMeta}>
-                Est. 1RM {formatKg(r.score)} kg, best before{' '}
-                {formatKg(r.before)} kg
+                {r.kind === 'timed'
+                  ? `Longest hold, best before ${scoreText(r.before, r)}`
+                  : r.kind === 'distance'
+                    ? 'Best distance set yet'
+                    : `Est. 1RM ${scoreText(r.score, r)}, best before ${scoreText(r.before, r)}`}
               </Text>
             </View>
             <Text style={[tr.liftScore, tr.accentText]}>{r.set}</Text>
@@ -129,6 +133,7 @@ export function FinishSummary({
   const [name, setName] = useState(workout.name);
   const [saved, setSaved] = useState<string | null>(null);
   const update = !!workout.routineId;
+  const [rpe, setRpe] = useState<number | null>(workout.sessionRpe ?? null);
 
   return (
     <View>
@@ -140,6 +145,20 @@ export function FinishSummary({
 
       <Card style={{ marginTop: 20 }}>
         <StatsRow w={workout} records={lines.length} />
+      </Card>
+
+      <Card style={{ marginTop: 12 }}>
+        <SessionRpe
+          value={rpe}
+          title="How hard was this workout?"
+          onChange={(v) => {
+            setRpe(v);
+            const { sessionRpe: _old, ...rest } = workout;
+            void saveWorkout(v ? { ...rest, sessionRpe: v } : rest).catch(
+              () => undefined,
+            );
+          }}
+        />
       </Card>
 
       <RecordsCard lines={lines} />

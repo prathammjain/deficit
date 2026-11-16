@@ -8,10 +8,25 @@
  *   set is ticked.
  */
 
-import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  Animated,
+  PanResponder,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type ViewStyle,
+} from 'react-native';
 
-import { CheckIcon, DotsIcon, PlusIcon } from '@/components/ui/icons';
+import {
+  CheckIcon,
+  DotsIcon,
+  MinusIcon,
+  PlusIcon,
+} from '@/components/ui/icons';
 import { Card } from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
 import {
@@ -27,7 +42,6 @@ import {
   addSet,
   canTick,
   filled,
-  formatKg,
   moveBlock,
   patchBlock,
   patchSet,
@@ -39,10 +53,19 @@ import {
   restText,
   setLabel,
   setText,
+  valuesOf,
   type Bests,
+  type ValueKey,
   type WorkSet,
   type WorkoutExercise,
 } from '@/lib/train/workout';
+import {
+  fromShown,
+  loadNum,
+  loadStep,
+  loadUnit,
+  toShown,
+} from '@/lib/train/units';
 
 import { Chip, NumField } from './bits';
 import { COL, tr } from './styles';
@@ -69,6 +92,8 @@ export function BlockList(p: BlockListProps) {
   const [menu, setMenu] = useState<string | null>(null);
   const [typeFor, setTypeFor] = useState<string | null>(null);
   const [nudge, setNudge] = useState<string | null>(null);
+  // The set being worked on: last focused, or next after a tick.
+  const [active, setActive] = useState<string | null>(null);
 
   return (
     <View>
@@ -88,6 +113,7 @@ export function BlockList(p: BlockListProps) {
             return;
           }
           const next = patchSet(p.blocks, b.id, s.id, { ...v, done: true });
+          setActive(b.sets.find((x, j) => j > index && !x.done)?.id ?? null);
           p.onChange(
             next,
             next.find((x) => x.id === b.id),
@@ -109,6 +135,8 @@ export function BlockList(p: BlockListProps) {
             menuOpen={menu === b.id}
             typeFor={typeFor}
             nudge={nudge}
+            active={active}
+            onActive={setActive}
             onMenu={() => setMenu(menu === b.id ? null : b.id)}
             onTypeFor={(id) => setTypeFor(typeFor === id ? null : id)}
             onSet={(setId, patch) =>
@@ -151,6 +179,8 @@ function ExerciseCard({
   menuOpen,
   typeFor,
   nudge,
+  active,
+  onActive,
   onMenu,
   onTypeFor,
   onSet,
@@ -175,6 +205,8 @@ function ExerciseCard({
   menuOpen: boolean;
   typeFor: string | null;
   nudge: string | null;
+  active: string | null;
+  onActive: (setId: string) => void;
   onMenu: () => void;
   onTypeFor: (setId: string) => void;
   onSet: (setId: string, patch: Partial<WorkSet>) => void;
@@ -194,6 +226,7 @@ function ExerciseCard({
     ? [
         MUSCLE_LABEL[ex.muscle],
         EQUIPMENT_LABEL[ex.equipment],
+        ex.perSide ? 'each side' : null,
         rest != null ? `rest ${restText(rest)}` : null,
       ]
         .filter(Boolean)
@@ -282,9 +315,11 @@ function ExerciseCard({
         <Text style={[tr.colText, { width: COL.set }]}>SET</Text>
         <Text style={[tr.colText, tr.flex1]}>PREVIOUS</Text>
         <Text style={[tr.colText, { width: COL.kg }]}>
-          {kind === 'bodyweight' ? '+KG' : 'KG'}
+          {fieldsFor(kind)[0].label}
         </Text>
-        <Text style={[tr.colText, { width: COL.reps }]}>REPS</Text>
+        <Text style={[tr.colText, { width: COL.reps }]}>
+          {fieldsFor(kind)[1].label}
+        </Text>
         <View style={{ width: COL.tick }} />
       </View>
 
@@ -299,6 +334,14 @@ function ExerciseCard({
           editable={editable}
           typeOpen={typeFor === s.id}
           nudge={nudge === s.id}
+          active={
+            active === s.id ||
+            (active == null &&
+              !s.done &&
+              block.sets.findIndex((x) => !x.done) === i &&
+              anyDone)
+          }
+          onFocus={() => onActive(s.id)}
           onType={() => onTypeFor(s.id)}
           onSet={(patch) => onSet(s.id, patch)}
           onTick={() => onTick(i)}
@@ -320,6 +363,76 @@ function ExerciseCard({
   );
 }
 
+/** What a set's two boxes hold, by exercise kind. */
+interface Field {
+  key: ValueKey;
+  label: string;
+  /** A load, shown and typed in the chosen unit. */
+  load: boolean;
+  /** What a tap on plus or minus adds, in stored units. */
+  step: number;
+}
+
+function fieldsFor(kind: Exercise['kind']): [Field, Field] {
+  const u = loadUnit().toUpperCase();
+  const load = (key: ValueKey, label: string): Field => ({
+    key,
+    label,
+    load: true,
+    step: loadStep(),
+  });
+  const plain = (key: ValueKey, label: string, step: number): Field => ({
+    key,
+    label,
+    load: false,
+    step,
+  });
+  switch (kind) {
+    case 'bodyweight':
+      return [load('kg', `+${u}`), plain('reps', 'REPS', 1)];
+    case 'assisted':
+      return [load('assist', 'HELP'), plain('reps', 'REPS', 1)];
+    case 'timed':
+      return [load('kg', `+${u}`), plain('secs', 'SEC', 5)];
+    case 'distance':
+      return [load('kg', u), plain('m', 'M', 10)];
+    default:
+      return [load('kg', u), plain('reps', 'REPS', 1)];
+  }
+}
+
+/** The field a kind can't be ticked without, besides the second box. */
+const needsFirst = (kind: Exercise['kind']) => kind === 'weighted';
+
+const shownValue = (f: Field, v: number | null | undefined) =>
+  v == null ? '' : f.load ? loadNum(v) : String(v);
+
+const POP: ViewStyle | null =
+  Platform.OS === 'web'
+    ? ({
+        animationKeyframes: [
+          {
+            '0%': { transform: [{ scale: 0.7 }] },
+            '55%': { transform: [{ scale: 1.18 }] },
+            '100%': { transform: [{ scale: 1 }] },
+          },
+        ],
+        animationDuration: '320ms',
+        animationTimingFunction: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+      } as unknown as ViewStyle)
+    : null;
+
+const FADE: ViewStyle | null =
+  Platform.OS === 'web'
+    ? ({
+        transitionProperty: 'background-color',
+        transitionDuration: '220ms',
+      } as unknown as ViewStyle)
+    : null;
+
+/** How far a set must be dragged left to delete it. */
+const SWIPE_DELETE = 96;
+
 function SetRow({
   sets,
   index,
@@ -329,10 +442,12 @@ function SetRow({
   editable,
   typeOpen,
   nudge,
+  active,
   onType,
   onSet,
   onTick,
   onRemove,
+  onFocus,
 }: {
   sets: WorkSet[];
   index: number;
@@ -342,122 +457,207 @@ function SetRow({
   editable: boolean;
   typeOpen: boolean;
   nudge: boolean;
+  /** The set being worked on: it shows the plus and minus buttons. */
+  active: boolean;
   onType: () => void;
   onSet: (patch: Partial<WorkSet>) => void;
   onTick: () => void;
   onRemove: () => void;
+  onFocus: () => void;
 }) {
   const s = sets[index];
   const ex = { kind };
   const prev = previousFor(sets, index, previous);
   const ph = placeholderFor(sets, index, previous);
   const label = setLabel(sets, index);
-  const bw = kind === 'bodyweight';
-  const kgPlaceholder = ph.kg != null ? formatKg(ph.kg) : bw ? 'BW' : '';
-  const needsKg = nudge && !bw && s.kg == null && ph.kg == null;
-  const needsReps = nudge && s.reps == null && ph.reps == null;
+  const [a, b] = fieldsFor(kind);
+  const aHint =
+    ph[a.key] != null
+      ? shownValue(a, ph[a.key])
+      : kind === 'bodyweight' || kind === 'assisted' || kind === 'timed'
+        ? 'BW'
+        : '';
+  const needsA =
+    nudge && needsFirst(kind) && s[a.key] == null && ph[a.key] == null;
+  const needsB = nudge && s[b.key] == null && ph[b.key] == null;
+
+  // Swipe left to delete. Only a clearly sideways drag starts it, so
+  // scrolling and typing are untouched.
+  const [gone, setGone] = useState(false);
+  useEffect(() => {
+    if (gone) onRemove();
+  }, [gone, onRemove]);
+  const [x] = useState(() => new Animated.Value(0));
+  const [pan] = useState(() =>
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) =>
+        Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 2,
+      onPanResponderMove: (_, g) => x.setValue(Math.min(0, g.dx)),
+      onPanResponderRelease: (_, g) => {
+        if (g.dx < -SWIPE_DELETE) {
+          Animated.timing(x, {
+            toValue: -480,
+            duration: 160,
+            useNativeDriver: false,
+          }).start(() => setGone(true));
+        } else {
+          Animated.spring(x, {
+            toValue: 0,
+            useNativeDriver: false,
+            bounciness: 6,
+          }).start();
+        }
+      },
+      onPanResponderTerminate: () =>
+        Animated.spring(x, { toValue: 0, useNativeDriver: false }).start(),
+    }),
+  );
+
+  const step = (f: Field, dir: 1 | -1) => {
+    const base = s[f.key] ?? ph[f.key] ?? 0;
+    const next = Math.max(0, Math.round((base + dir * f.step) * 1000) / 1000);
+    onSet({ [f.key]: next });
+  };
+
+  const box = (f: Field, hint: string, needs: boolean, width: number) => (
+    <NumField
+      value={
+        f.load && s[f.key] != null
+          ? toShown(s[f.key] as number)
+          : (s[f.key] ?? null)
+      }
+      placeholder={hint}
+      decimal={f.load}
+      maxLength={f.key === 'm' ? 5 : f.load ? 6 : 3}
+      label={`Set ${label} ${f.label.toLowerCase()}`}
+      onFocus={onFocus}
+      onChange={(n) =>
+        onSet({ [f.key]: n == null ? null : f.load ? fromShown(n) : n })
+      }
+      style={[tr.cell, { width }, s.done && tr.cellDone, needs && tr.cellNudge]}
+    />
+  );
+
+  const row = (
+    <View style={[tr.setRow, FADE, editable && s.done && tr.setRowDone]}>
+      <Pressable
+        onPress={onType}
+        disabled={!editable}
+        hitSlop={4}
+        accessibilityLabel={`Set ${label} type`}
+        style={({ pressed }) => [
+          tr.setLabelBtn,
+          typeOpen && { backgroundColor: palette.surface2 },
+          pressed && tr.pressed,
+        ]}
+      >
+        <Text
+          style={[
+            tr.setLabel,
+            (s.type === 'drop' || s.type === 'failure') && tr.setLabelSpecial,
+            s.type === 'warmup' && tr.setLabelWarm,
+          ]}
+        >
+          {label}
+        </Text>
+        {s.rpe ? <Text style={tr.rpeTag}>@{s.rpe}</Text> : null}
+      </Pressable>
+
+      <Pressable
+        style={tr.prevCell}
+        disabled={!editable || !prev || s.done}
+        onPress={() => prev && onSet(valuesOf(prev))}
+        accessibilityLabel={
+          prev ? `Use last time: ${setText(prev, ex)}` : undefined
+        }
+      >
+        <Text style={tr.prevText} numberOfLines={1}>
+          {prev ? setText(prev, ex) : ' '}
+        </Text>
+      </Pressable>
+
+      {editable ? (
+        <>
+          {box(a, aHint, needsA, COL.kg)}
+          {box(b, ph[b.key] != null ? String(ph[b.key]) : '', needsB, COL.reps)}
+        </>
+      ) : (
+        <>
+          <Text style={[tr.cellText, { width: COL.kg }]}>
+            {s[a.key]
+              ? `${a.label.startsWith('+') ? '+' : ''}${shownValue(a, s[a.key])}`
+              : a.label.startsWith('+') || a.key === 'assist'
+                ? 'BW'
+                : '0'}
+          </Text>
+          <Text style={[tr.cellText, { width: COL.reps }]}>
+            {s[b.key] ?? 0}
+          </Text>
+        </>
+      )}
+
+      <View style={tr.tick}>
+        {editable ? (
+          <Pressable
+            onPress={onTick}
+            hitSlop={6}
+            accessibilityRole="checkbox"
+            aria-checked={s.done}
+            accessibilityLabel={`Set ${label} done`}
+            style={({ pressed }) => [
+              tr.tickCircle,
+              s.done && tr.tickCircleDone,
+              s.done && POP,
+              pressed && tr.pressed,
+            ]}
+          >
+            <CheckIcon
+              size={14}
+              color={s.done ? palette.surface : palette.textDim}
+            />
+          </Pressable>
+        ) : null}
+        {pr ? <Text style={tr.pr}>PR</Text> : null}
+      </View>
+    </View>
+  );
 
   return (
     <View>
-      <View style={[tr.setRow, editable && s.done && tr.setRowDone]}>
-        <Pressable
-          onPress={onType}
-          disabled={!editable}
-          hitSlop={4}
-          accessibilityLabel={`Set ${label} type`}
-          style={({ pressed }) => [
-            tr.setLabelBtn,
-            typeOpen && { backgroundColor: palette.surface2 },
-            pressed && tr.pressed,
-          ]}
-        >
-          <Text
+      {editable ? (
+        <View style={es.swipeWrap}>
+          <Animated.View
             style={[
-              tr.setLabel,
-              (s.type === 'drop' || s.type === 'failure') && tr.setLabelSpecial,
-              s.type === 'warmup' && tr.setLabelWarm,
+              es.swipeUnder,
+              {
+                opacity: x.interpolate({
+                  inputRange: [-40, -4, 0],
+                  outputRange: [1, 0, 0],
+                  extrapolate: 'clamp',
+                }),
+              },
             ]}
+            pointerEvents="none"
           >
-            {label}
-          </Text>
-          {s.rpe ? <Text style={tr.rpeTag}>@{s.rpe}</Text> : null}
-        </Pressable>
-
-        <Pressable
-          style={tr.prevCell}
-          disabled={!editable || !prev || s.done}
-          onPress={() => prev && onSet({ kg: prev.kg, reps: prev.reps })}
-          accessibilityLabel={
-            prev ? `Use last time: ${setText(prev, ex)}` : undefined
-          }
-        >
-          <Text style={tr.prevText} numberOfLines={1}>
-            {prev ? setText(prev, ex) : ' '}
-          </Text>
-        </Pressable>
-
-        {editable ? (
-          <>
-            <NumField
-              value={s.kg}
-              placeholder={kgPlaceholder}
-              decimal
-              label={`Set ${label} ${bw ? 'added weight' : 'weight'}`}
-              onChange={(kg) => onSet({ kg })}
-              style={[
-                tr.cell,
-                { width: COL.kg },
-                s.done && tr.cellDone,
-                needsKg && tr.cellNudge,
-              ]}
-            />
-            <NumField
-              value={s.reps}
-              placeholder={ph.reps != null ? String(ph.reps) : ''}
-              label={`Set ${label} reps`}
-              onChange={(reps) => onSet({ reps })}
-              style={[
-                tr.cell,
-                { width: COL.reps },
-                s.done && tr.cellDone,
-                needsReps && tr.cellNudge,
-              ]}
-            />
-          </>
-        ) : (
-          <>
-            <Text style={[tr.cellText, { width: COL.kg }]}>
-              {bw ? (s.kg ? `+${formatKg(s.kg)}` : 'BW') : formatKg(s.kg ?? 0)}
-            </Text>
-            <Text style={[tr.cellText, { width: COL.reps }]}>
-              {s.reps ?? 0}
-            </Text>
-          </>
-        )}
-
-        <View style={tr.tick}>
-          {editable ? (
-            <Pressable
-              onPress={onTick}
-              hitSlop={6}
-              accessibilityRole="checkbox"
-              aria-checked={s.done}
-              accessibilityLabel={`Set ${label} done`}
-              style={({ pressed }) => [
-                tr.tickCircle,
-                s.done && tr.tickCircleDone,
-                pressed && tr.pressed,
-              ]}
-            >
-              <CheckIcon
-                size={14}
-                color={s.done ? palette.surface : palette.textDim}
-              />
-            </Pressable>
-          ) : null}
-          {pr ? <Text style={tr.pr}>PR</Text> : null}
+            <Text style={es.swipeText}>Delete</Text>
+          </Animated.View>
+          <Animated.View
+            style={[es.swipeTop, { transform: [{ translateX: x }] }]}
+            {...pan.panHandlers}
+          >
+            {row}
+          </Animated.View>
         </View>
-      </View>
+      ) : (
+        row
+      )}
+
+      {editable && active && !s.done && !typeOpen ? (
+        <View style={es.steps}>
+          <Stepper field={a} onStep={(d) => step(a, d)} />
+          <Stepper field={b} onStep={(d) => step(b, d)} />
+        </View>
+      ) : null}
 
       {typeOpen ? (
         <>
@@ -488,3 +688,94 @@ function SetRow({
     </View>
   );
 }
+
+/** Minus and plus for one box: 2.5 kg or 5 lb, 1 rep, 5 s, 10 m. */
+function Stepper({
+  field,
+  onStep,
+}: {
+  field: Field;
+  onStep: (dir: 1 | -1) => void;
+}) {
+  const amount = field.load
+    ? `${loadNum(field.step)}`
+    : field.key === 'secs'
+      ? '5s'
+      : field.key === 'm'
+        ? '10 m'
+        : '1';
+  const name = field.load ? loadUnit() : field.label.toLowerCase();
+  return (
+    <View style={es.stepper}>
+      <Pressable
+        onPress={() => onStep(-1)}
+        hitSlop={4}
+        accessibilityLabel={`${amount} ${name} less`}
+        style={({ pressed }) => [es.stepBtn, pressed && tr.pressed]}
+      >
+        <MinusIcon size={11} />
+        <Text style={es.stepText}>{amount}</Text>
+      </Pressable>
+      <Text style={es.stepName}>{field.label}</Text>
+      <Pressable
+        onPress={() => onStep(1)}
+        hitSlop={4}
+        accessibilityLabel={`${amount} ${name} more`}
+        style={({ pressed }) => [es.stepBtn, pressed && tr.pressed]}
+      >
+        <PlusIcon size={11} />
+        <Text style={es.stepText}>{amount}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+const es = StyleSheet.create({
+  swipeWrap: { position: 'relative', overflow: 'hidden', borderRadius: 10 },
+  swipeUnder: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: palette.danger,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    paddingRight: 16,
+    borderRadius: 10,
+  },
+  swipeText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  swipeTop: { backgroundColor: palette.surface },
+  steps: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 4,
+    paddingTop: 2,
+    paddingBottom: 8,
+  },
+  stepper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: palette.surface2,
+    borderRadius: 10,
+    padding: 3,
+  },
+  stepBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 10,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: palette.surface,
+  },
+  stepText: { fontSize: 12.5, fontWeight: '700', color: palette.text },
+  stepName: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    color: palette.textMuted,
+  },
+});

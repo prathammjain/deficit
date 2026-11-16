@@ -19,6 +19,7 @@ import { addDays, periodOf, trainingSummary } from '@/lib/train/progress';
 import type { Workout } from '@/lib/train/workout';
 
 import { st } from './styles';
+import { volumeText } from '@/lib/train/units';
 
 // Counting sessions, sets and kilograms needs no exercise details.
 const NO_EXERCISES = new Map<string, Exercise>();
@@ -99,7 +100,7 @@ export function TrainCard({
             </Text>
             <Text style={st.weekGoal}>
               {a.workouts
-                ? `${activityText(a)} · ${t.sets} hard sets · ${t.volume.toLocaleString()} kg moved`
+                ? `${activityText(a)} · ${t.sets} hard sets · ${volumeText(t.volume)} moved`
                 : activityText(a)}
             </Text>
           </>

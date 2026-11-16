@@ -58,6 +58,7 @@ import {
   lastSets,
   newSession,
   patchBlock,
+  swapExercise,
   routineFromWorkout,
   sessionFromWorkout,
   tally,
@@ -67,6 +68,7 @@ import {
   type Workout,
   type WorkoutExercise,
 } from '@/lib/train/workout';
+import { volumeText } from '@/lib/train/units';
 
 export default function WorkoutRoute() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -390,8 +392,7 @@ function LiveWorkout() {
         <Text style={tr.sessionMeta}>
           {session.exercises.length}{' '}
           {session.exercises.length === 1 ? 'exercise' : 'exercises'} ·{' '}
-          {count.done} of {count.total} sets ·{' '}
-          {Math.round(count.volume).toLocaleString()} kg
+          {count.done} of {count.total} sets · {volumeText(count.volume)}
         </Text>
 
         {confirm ? (
@@ -547,9 +548,12 @@ function LiveWorkout() {
           onPick={(ids) => {
             const blocks =
               picker.replace != null
-                ? patchBlock(session.exercises, picker.replace, {
-                    exerciseId: ids[0],
-                  })
+                ? swapExercise(
+                    session.exercises,
+                    picker.replace,
+                    ids[0],
+                    data.exById,
+                  )
                 : [
                     ...session.exercises,
                     ...exerciseBlocks(ids, (id) => data.settings.rest[id]),
@@ -765,9 +769,12 @@ function SavedWorkout({ id }: { id: string }) {
             onPick={(ids) => {
               const blocks =
                 picker.replace != null
-                  ? patchBlock(draft.exercises, picker.replace, {
-                      exerciseId: ids[0],
-                    })
+                  ? swapExercise(
+                      draft.exercises,
+                      picker.replace,
+                      ids[0],
+                      data.exById,
+                    )
                   : [
                       ...draft.exercises,
                       ...exerciseBlocks(ids, () => undefined),

@@ -36,12 +36,19 @@ import {
   type PeriodKind,
 } from '@/lib/train/progress';
 import { activity, activityText } from '@/lib/train/activity';
-import { durationText, formatKg, setText } from '@/lib/train/workout';
+import {
+  durationText,
+  formatKg,
+  scoreText,
+  setText,
+} from '@/lib/train/workout';
 import { loadWeights, type WeightEntry } from '@/lib/weight-store';
 
 import { nb, Tabs } from './bits';
 import type { Training } from './data';
 import { tr } from './styles';
+import { volumeText } from '@/lib/train/units';
+import { trainingLoad } from '@/lib/train/load';
 
 const minDay = (a: string, b: string) => (a < b ? a : b);
 
@@ -138,6 +145,7 @@ export function ProgressView({
   );
   const previous = trainingSummary(workouts, exById, sameDays);
   const lifts = liftBoard(workouts, exById, bodyKg, period);
+  const load = trainingLoad(workouts, data.sims, data.cardio, period);
   const series = trainingSeries(
     workouts,
     exById,
@@ -218,7 +226,7 @@ export function ProgressView({
           <Text style={tr.menuLabel}>TRAINING</Text>
           <Text style={tr.summaryValue}>
             {act.workouts || !(act.sims || act.cardio)
-              ? `${training.volume.toLocaleString()} kg moved`
+              ? `${volumeText(training.volume)} moved`
               : activityText(act)}
           </Text>
           <Text style={tr.summarySub}>
@@ -306,6 +314,31 @@ export function ProgressView({
         <Text style={[tr.faint, { marginTop: 8 }]}>
           Every workout, HYROX sim and cardio session, so a switch in training
           never reads as a break.
+        </Text>
+      </Card>
+
+      <SectionLabel>{`Training load by ${span}`}</SectionLabel>
+      <Card>
+        <BarChart
+          values={series.map(
+            (s) =>
+              trainingLoad(workouts, data.sims, data.cardio, s.period).load,
+          )}
+          height={80}
+          positiveColor={palette.accent}
+        />
+        <View style={tr.barLabels}>
+          <Text style={tr.faint}>{periodTick(series[0].period)}</Text>
+          <Text style={[tr.faint, { color: palette.text }]}>
+            {periodTick(series[series.length - 1].period)}
+          </Text>
+        </View>
+        <Text style={[tr.faint, { marginTop: 8 }]}>
+          How hard each session felt, 1 to 10, times its minutes (Foster’s
+          session RPE), across lifting, HYROX and cardio.{' '}
+          {load.rated + load.unrated
+            ? `${load.rated} of ${load.rated + load.unrated} sessions rated ${thisSpan}. Rate a session when you finish it.`
+            : ''}
         </Text>
       </Card>
 
@@ -398,7 +431,7 @@ export function ProgressView({
               </View>
               <View>
                 <Text style={tr.liftScore}>
-                  {l.score ? `${formatKg(l.score)} kg` : ' '}
+                  {l.score ? scoreText(l.score, l.exercise) || ' ' : ' '}
                 </Text>
                 <Text style={tr.liftChange}>
                   {l.change == null ? (
@@ -423,7 +456,8 @@ export function ProgressView({
         </Pressable>
       ) : null}
       <Text style={[tr.faint, { marginTop: 8 }]}>
-        kg is the best estimated one rep max, compared with the {span} before.
+        The number is the best estimated one rep max (or longest hold), compared
+        with the {span} before.
       </Text>
     </View>
   );

@@ -37,6 +37,7 @@ import {
   saveLive,
   saveSim,
 } from '@/lib/hyrox/store';
+import { SessionRpe } from '@/components/train/effort';
 
 /** Taps closer together than this are a double tap, not two laps. */
 const MIN_LAP_MS = 1500;
@@ -86,6 +87,18 @@ export default function HyroxSimRoute() {
         <ScrollView contentContainerStyle={tr.content}>
           <Text style={st.eyebrow}>SIM FINISHED</Text>
           <SimSummary sim={done.sim} earlier={done.earlier} />
+          <View style={{ marginTop: space.lg }}>
+            <SessionRpe
+              value={done.sim.rpe}
+              title="How hard was this sim?"
+              onChange={(v) => {
+                const { rpe: _old, ...rest } = done.sim;
+                const sim = v ? { ...rest, rpe: v } : rest;
+                setDone({ ...done, sim });
+                void saveSim(sim).catch(() => undefined);
+              }}
+            />
+          </View>
           <PrimaryButton
             label="Back to Train"
             onPress={backToTrain}

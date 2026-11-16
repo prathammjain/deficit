@@ -1415,3 +1415,78 @@ Seen while testing, not caused by this: a web build with the Supabase
 settings logs React hydration error #418 on load (the server rendered
 page is the loading gate, the first client render differs). A build
 without them doesn't. Worth a look separately.
+
+## 2026-11-16: Deeper workout and cardio logging
+
+Compared against Strong, Hevy and Boostcamp (lifting) and Strava and Runna
+(cardio), plus the research. Built what was picked; GPS, social and watch
+apps left out on purpose.
+
+Workouts:
+- Exercise types (lib/train/exercises.ts, workout.ts): weighted,
+  bodyweight, assisted (log the help; the load that counts is bodyweight
+  minus it, so less help reads as stronger), timed holds (seconds, optional
+  load) and distance (metres, optional load). One side at a time is a flag:
+  shown as "each side". Holds score by seconds, distance by kg times
+  metres; neither moves volume. Each type gets its own two logger boxes
+  (+KG and SEC, HELP and REPS, KG and M).
+- Library from 105 to 234 exercises, including plank, side plank, hollow
+  hold, L sit, dead hang, wall sit, farmers walk, suitcase and overhead
+  carries, sled push and pull, sandbag lunges, wall balls, assisted pull
+  ups, chin ups and dips. New names that existing aliases already caught
+  (Pendlay row, rope pushdown, toes to bar and a few more) were left out so
+  imports and described workouts keep matching the same exercise. One
+  importer change: "Band Pullaparts" now maps to the new Band pull apart.
+- Swap (the Replace menu): sets carry over for the same type; a different
+  type keeps the set count and types but clears the numbers.
+- Pounds (lib/train/units.ts): a kg or lb switch at the bottom of Train.
+  Everything is stored in kg; lb is how loads are shown and typed (225 lb
+  is stored as 102.058 kg and reads back as 225). Bodyweight and food stay
+  metric.
+
+Cardio:
+- Laps and intervals: "6 × 800 m" builds the rows, each lap gets a time,
+  distance and heart rate, with pace and the fastest lap shown. Laps count
+  toward best times at their own distance. A session marked as reps with
+  rest between leaves its total out of best times and predictions, since
+  its time skips the rest.
+- Live timer: start, lap, pause, finish; timestamps in storage, so a lock
+  or reload keeps it; finish opens the form filled in. Lap distance chips
+  per kind (400 m and 1 km for runs, 500 m for rowing, 25 or 50 m for
+  swimming).
+- Incline, climb, indoors or outdoors, notes.
+- Heart rate zones: max from Tanaka et al. 2001 (208 minus 0.7 × age, give
+  or take 10), or a measured max the user sets. Five zones from the ACSM
+  bands (10th edition): under 57% very light, 57 to 63% light, 64 to 76%
+  moderate, 77 to 95% vigorous, 96% up near max. Weekly minutes per zone
+  from lap heart rate where logged, the session average otherwise. The form
+  shows the zone a heart rate falls in and offers the matching effort.
+- Race predictor: Riegel 1981, time × (distance ratio)^1.06, from the
+  strongest continuous run of 3 km or more in the last 12 weeks. Labelled a
+  rough guide; it flatters runners who haven't trained for the longer
+  distance.
+- Training load across everything: Foster et al. 2001 session RPE (1 to
+  10) times minutes, for workouts, HYROX sims and cardio. Rated on the
+  workout finish screen, the sim finish screen and the cardio form. A
+  weekly chart on Progress counts rated sessions only and says how many
+  weren't rated.
+
+Logger UI:
+- Plus and minus under the set being worked on: 2.5 kg or 5 lb, 1 rep,
+  5 s, 10 m. It follows the last box tapped, and moves to the next set
+  after a tick.
+- Tick animation (a CSS scale pop, web only) and a background fade on a
+  done row; swipe a set left to delete it (PanResponder and Animated, no
+  new library). The rest bar was already pinned to the bottom.
+
+Queued for discussion, not built: counting secondary muscles as half sets
+in weekly volume (Pelland et al. 2024/2026, the "fractional" method). It
+needs a secondary muscle list per exercise and changes every weekly set
+number the user has seen, so it wants a decision first.
+
+Checked: 573 tests pass, tsc and eslint clean. In a local web build:
+plank, assisted pull ups, farmers walk and bench in one workout with the
+right boxes; plus and minus; swipe delete; 225 lb in, 102.06 kg stored,
+pounds on the finish screen; workout rating saved; intervals saved with 4
+laps; live timer through a reload into the form and cleared on save; zones,
+predictions and the load chart.
