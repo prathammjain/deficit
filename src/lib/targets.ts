@@ -8,6 +8,8 @@
  * The one rule: same input -> same output, every time.
  */
 
+import type { CoachState } from './coach';
+
 export type Sex = 'male' | 'female';
 
 export type ActivityLevel =
@@ -80,12 +82,18 @@ export interface ProfileInput {
   proteinMode?: ProteinMode;
   /** Used only when proteinMode === 'manual'. */
   manualProteinG?: number;
+  /** Set by the weekly check in; replaces the formula maintenance. */
+  coach?: CoachState;
 }
 
 export interface Targets {
   bmr: number;
   /** TDEE — what the white paper calls "maintenance calories". */
   maintenanceKcal: number;
+  /** Mifflin-St Jeor × activity, whether or not the coach has replaced it. */
+  formulaMaintenanceKcal: number;
+  /** True once a weekly check in has set maintenance from real data. */
+  coached: boolean;
   targetKcal: number;
   proteinG: number;
   carbsG: number;
@@ -164,7 +172,10 @@ export function computeTargets(profile: ProfileInput): Targets {
   const { sex, age, heightCm, weightKg, activityLevel } = profile;
 
   const bmr = bmrMifflinStJeor({ sex, weightKg, heightCm, age });
-  const maintenanceKcal = tdee(bmr, activityLevel);
+  const formulaMaintenanceKcal = tdee(bmr, activityLevel);
+  const coached = profile.coach != null;
+  const maintenanceKcal =
+    profile.coach?.maintenanceKcal ?? formulaMaintenanceKcal;
   const goal = profile.goal ?? 'lose';
 
   if (goal !== 'lose') {
@@ -174,6 +185,8 @@ export function computeTargets(profile: ProfileInput): Targets {
     return {
       bmr,
       maintenanceKcal,
+      formulaMaintenanceKcal,
+      coached,
       targetKcal,
       ...macroSplit({
         targetKcal,
@@ -229,6 +242,8 @@ export function computeTargets(profile: ProfileInput): Targets {
   return {
     bmr,
     maintenanceKcal,
+    formulaMaintenanceKcal,
+    coached,
     targetKcal,
     proteinG,
     carbsG,

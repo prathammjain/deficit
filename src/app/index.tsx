@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { InstallCard } from '@/components/add-to-home-screen';
 import { AdaptiveCard } from '@/components/dashboard/adaptive-card';
+import { CheckInCard } from '@/components/dashboard/check-in-card';
 import {
   CatchUpCard,
   ComebackCard,
@@ -53,6 +54,12 @@ import {
 } from '@/lib/profile-store';
 import { useAuth } from '@/lib/supabase/auth';
 import { takeProgramLink } from '@/lib/supabase/programs';
+import {
+  checkIn,
+  daysUntilCheckIn,
+  isCheckInDue,
+  keepLastWeek,
+} from '@/lib/coach';
 import { computeTargets, type ProfileInput } from '@/lib/targets';
 import { predictWeeklyLoss } from '@/lib/weekly-prediction';
 import { loadWorkouts } from '@/lib/train/store';
@@ -118,16 +125,31 @@ export default function HomeScreen() {
       gatherDailyRecords(LOOKBACK).catch(() => [] as DayRecord[]),
       loadCompleteDays().catch(() => new Set<string>()),
     ]);
-    setProfile(p);
+    let prof = p;
     if (p) {
       const hist = honestHistory(recs, computeTargets(p).targetKcal, marks);
-      setAdaptive(estimateAdaptiveTdee(closedDays(hist)));
+      const est = estimateAdaptiveTdee(closedDays(hist));
+      // The weekly check in: maintenance follows the data, a step at a time.
+      const today = todayKey();
+      if (isCheckInDue(p.coach, today)) {
+        const now = computeTargets(p);
+        const next = checkIn({
+          coach: p.coach,
+          adaptive: est,
+          formulaKcal: now.formulaMaintenanceKcal,
+          bmr: now.bmr,
+          today,
+        });
+        if (next) prof = await saveProfile({ ...p, coach: next });
+      }
+      setAdaptive(est);
       setHistory(hist);
       setLastWeight(lw?.kg ?? null);
       setWorkouts(ws);
       setRecords(recs);
       setComplete(marks);
     }
+    setProfile(prof);
     setLoading(false);
   }, []);
 
@@ -179,6 +201,13 @@ export default function HomeScreen() {
     },
     [profile, records, complete],
   );
+
+  const handleKeepLastWeek = useCallback(async () => {
+    if (!profile?.coach) return;
+    setProfile(
+      await saveProfile({ ...profile, coach: keepLastWeek(profile.coach) }),
+    );
+  }, [profile]);
 
   // The top cards use the same numbers as History.
   const targets: HistoryTargets | null = profile
@@ -236,6 +265,13 @@ export default function HomeScreen() {
     : records.slice(-30);
   const summary = targets ? summarizeHistory(shown, targets, complete) : null;
   const everLogged = records.some((r) => r.logged);
+  // Shown on the day of a check in that moved the numbers.
+  const checked =
+    profile.coach?.on === today &&
+    profile.coach.previousKcal != null &&
+    profile.coach.previousKcal !== profile.coach.maintenanceKcal
+      ? profile.coach
+      : null;
 
   return (
     <Screen>
@@ -286,6 +322,25 @@ export default function HomeScreen() {
           </SectionLabel>
           <DeficitSummary summary={summary} since={since} goal={t.goal} />
         </>
+      ) : null}
+
+      {checked ? (
+        <CheckInCard
+          maintenanceBefore={checked.previousKcal as number}
+          maintenanceNow={checked.maintenanceKcal}
+          targetBefore={
+            computeTargets({
+              ...profile,
+              coach: {
+                ...checked,
+                maintenanceKcal: checked.previousKcal as number,
+              },
+            }).targetKcal
+          }
+          targetNow={t.targetKcal}
+          adaptive={adaptive}
+          onKeepLastWeek={handleKeepLastWeek}
+        />
       ) : null}
 
       {/* The plan: the one number the day is built around */}
@@ -354,9 +409,11 @@ export default function HomeScreen() {
       <SectionLabel>Adaptive target</SectionLabel>
       <AdaptiveCard
         adaptive={adaptive}
-        formulaTdee={t.maintenanceKcal}
-        dailyDeficit={t.dailyDeficitKcal}
-        bmr={t.bmr}
+        formulaTdee={t.formulaMaintenanceKcal}
+        planKcal={t.maintenanceKcal}
+        nextCheckInDays={
+          profile.coach ? daysUntilCheckIn(profile.coach, today) : null
+        }
         goal={t.goal}
       />
 

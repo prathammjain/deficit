@@ -1055,3 +1055,48 @@ Avoid NEVO (no charging users), the CoFID API and Quadram labelling set
 (non commercial) and the ifct2017 package (AGPL).
 
 Next: a 200 meal accuracy test set and a baseline, before any change.
+
+## 2026-11-16
+
+### Competitor review and direction
+
+MacroFactor (Stronger By Science; $11.99 a month) wins on its weekly
+coaching algorithm, not on logging, and ships training as a separate
+app. STNDRD is a content app around Chris Bumstead. Describing a meal
+to AI is no longer unique. Agreed direction: compete on science backed
+quality at an Indian price. Build order: adaptive calorie coach, then a
+Muscle section, then Hyrox, then endurance through imports.
+
+Pratham's call on layout: every section stays visible to every user, so
+people see all Grain can do. Onboarding sets what comes first; it never
+hides a section. The UI has to keep that simple.
+
+Every science rule shipped will cite its evidence and carry a grade
+(strong, moderate, emerging).
+
+### Weekly check in: targets now follow real data
+
+The adaptive estimate used to be a suggestion nobody applied. Now a
+weekly check in (on Overview) sets the maintenance every target is built
+on, everywhere computeTargets runs.
+
+- coach.ts: moves from last week's maintenance (the formula the first
+  time) toward the adaptive estimate by a share that grows with
+  confidence: 0.35 low, 0.6 medium, 0.85 high. Shrinkage, so it eases in
+  rather than jumping. One check in moves it at most 250 kcal, and it
+  stays between BMR and 2.5 × BMR. Those two are guards against bad
+  logging, not physiology.
+- A week without a trustworthy estimate changes nothing.
+- The profile stores coach { maintenanceKcal, on, previousKcal }.
+  saveProfile keeps it when the profile form is edited.
+- Check in day shows a card: old to new target and maintenance, the
+  average intake and weight trend behind it, and "Keep last week's
+  target", which restores the old number until the next check in.
+- Chose automatic changes with an undo over asking each week: less
+  friction, as MacroFactor does.
+
+Checked: 486 tests pass, tsc clean, eslint clean on the changed files
+(the import resolver can't load in the device VM). Rendered the
+Overview from a local build with 21 seeded days: 2,000 kcal a day and
+0.5 kg a week lost measured 2,540 kcal, and maintenance stepped from
+2,837 to 2,587 (the cap). Undo restored 2,837.

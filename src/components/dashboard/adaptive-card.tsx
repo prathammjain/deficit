@@ -2,8 +2,8 @@ import { Text, View } from 'react-native';
 
 import { Card, Hairline } from '@/components/ui/primitives';
 import { palette } from '@/constants/palette';
-import { recommendedTarget, type AdaptiveTdee } from '@/lib/adaptive-tdee';
-import { ABSOLUTE_KCAL_FLOOR, type Goal } from '@/lib/targets';
+import type { AdaptiveTdee } from '@/lib/adaptive-tdee';
+import type { Goal } from '@/lib/targets';
 
 import { st } from './styles';
 
@@ -17,14 +17,16 @@ const CONFIDENCE_COPY: Record<AdaptiveTdee['confidence'], string> = {
 export function AdaptiveCard({
   adaptive,
   formulaTdee,
-  dailyDeficit,
-  bmr,
+  planKcal,
+  nextCheckInDays,
   goal = 'lose',
 }: {
   adaptive: AdaptiveTdee | null;
   formulaTdee: number;
-  dailyDeficit: number;
-  bmr: number;
+  /** The maintenance the targets use now (coached or formula). */
+  planKcal: number;
+  /** Days to the next weekly check in; null before the first. */
+  nextCheckInDays: number | null;
   goal?: Goal;
 }) {
   // Enough data, but too many days in it went unlogged to trust the maths.
@@ -57,7 +59,8 @@ export function AdaptiveCard({
         <Text style={st.adaptiveLead}>Learning your real maintenance</Text>
         <Text style={st.adaptiveBody}>
           Your target starts from a formula. After about a week of meals and
-          weigh ins, Grain works out what you really burn and adjusts it.
+          weigh ins, Grain works out what you really burn and updates your
+          target every week.
         </Text>
         <View style={st.adaptiveProgressRow}>
           <Text style={st.adaptiveProgressText}>{days} of 7 days logged</Text>
@@ -68,11 +71,6 @@ export function AdaptiveCard({
   }
 
   const est = adaptive.estimatedTdeeKcal as number;
-  const suggested = recommendedTarget(
-    est,
-    dailyDeficit,
-    Math.max(bmr, ABSOLUTE_KCAL_FLOOR),
-  );
   const delta = est - formulaTdee;
   const trend = adaptive.trendKgPerWeek ?? 0;
   // Warning colour only for the scale moving against the goal.
@@ -92,7 +90,7 @@ export function AdaptiveCard({
 
       <View style={st.adaptiveBig}>
         <Text style={st.adaptiveTdee}>{est.toLocaleString()}</Text>
-        <Text style={st.adaptiveTdeeUnit}>kcal real maintenance</Text>
+        <Text style={st.adaptiveTdeeUnit}>kcal measured burn</Text>
       </View>
 
       <View style={st.adaptiveStatsRow}>
@@ -116,9 +114,14 @@ export function AdaptiveCard({
 
       <Hairline style={st.metaDivider} />
       <View style={st.suggestRow}>
-        <Text style={st.suggestLabel}>Suggested target</Text>
-        <Text style={st.suggestValue}>{suggested.toLocaleString()} kcal</Text>
+        <Text style={st.suggestLabel}>Your plan uses</Text>
+        <Text style={st.suggestValue}>{planKcal.toLocaleString()} kcal</Text>
       </View>
+      <Text style={st.adaptiveBody}>
+        {nextCheckInDays == null || nextCheckInDays === 0
+          ? 'Your plan updates at the next weekly check in.'
+          : `Next weekly check in ${nextCheckInDays === 1 ? 'tomorrow' : `in ${nextCheckInDays} days`}.`}
+      </Text>
     </Card>
   );
 }

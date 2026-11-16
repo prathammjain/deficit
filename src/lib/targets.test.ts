@@ -118,6 +118,17 @@ describe('computeTargets', () => {
     expect(t.safetyNote).toBeUndefined();
   });
 
+  it('uses the coached maintenance once a check in has set one', () => {
+    const t = computeTargets({
+      ...baseExample,
+      coach: { maintenanceKcal: 2600, on: '2026-11-16' },
+    });
+    expect(t.coached).toBe(true);
+    expect(t.formulaMaintenanceKcal).toBe(2837);
+    expect(t.maintenanceKcal).toBe(2600);
+    expect(t.targetKcal).toBe(2600 - 550);
+  });
+
   it('is deterministic — same input, same output', () => {
     expect(computeTargets(baseExample)).toEqual(computeTargets(baseExample));
   });

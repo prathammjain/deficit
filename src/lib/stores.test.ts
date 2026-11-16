@@ -130,6 +130,16 @@ describe('profile-store', () => {
     expect((await loadProfile(s))?.age).toBe(30);
   });
 
+  it('keeps the weekly check in when the profile is edited from the form', async () => {
+    const s = createMemoryStore();
+    const coach = { maintenanceKcal: 2500, on: '2026-11-16' };
+    await saveProfile({ ...SAMPLE, coach }, s);
+    const edited = await saveProfile({ ...SAMPLE, weightKg: 83 }, s);
+    expect(edited.coach).toEqual(coach);
+    const cleared = await saveProfile({ ...SAMPLE, coach: undefined }, s);
+    expect(cleared.coach).toBeUndefined();
+  });
+
   it('preserves createdAt across edits but moves updatedAt', async () => {
     const s = createMemoryStore();
     const first = await saveProfile(SAMPLE, s);

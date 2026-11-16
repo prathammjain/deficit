@@ -36,6 +36,9 @@ export async function saveProfile(
   const existing = await loadProfile(store);
   const profile: StoredProfile = {
     ...input,
+    // Editing the profile rebuilds the input from the form, which knows
+    // nothing of the weekly check in: keep it unless the input sets it.
+    coach: 'coach' in input ? input.coach : existing?.coach,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
     version: 1,
