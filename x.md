@@ -1333,3 +1333,28 @@ full):
 Result: 23.1 screens down to 16.7 on a 390 x 844 phone. The fold saved
 less than estimated (66 px, not 550): the demo still has to keep room
 for the moment one food shows all its matches.
+
+## 2026-11-16: Link previews for the new direction
+
+When a getgrain.fit link is shared (X, Instagram, WhatsApp, Reddit,
+LinkedIn, iMessage, Slack, Discord) the preview still showed the old
+food only card and line.
+
+- New picture, landing/og-card-v2.png (1200 x 630, 134 KB): the hero line
+  "Calorie, macro and training tracking for people who train seriously",
+  four tags (accurate food log, adaptive targets, lifting, HYROX) and four
+  example cards (a 644 kcal meal, this week's adjusted target, a squat
+  best, HYROX sims getting faster). Numbers are large enough to read in a
+  small preview. Made from scripts/og-card.html by
+  scripts/make-og-card.py. Rendered here with Inter Display for the
+  headline because Satoshi couldn't be downloaded in this environment;
+  re-running the script on a normal connection uses Satoshi.
+- New file name on purpose: the apps cache the picture by its address, so
+  a new name is the only reliable way to make them fetch the new one.
+  The old og-card.png stays for links already shared.
+- Tags now the same everywhere: og:title, og:description (140 chars, two
+  to three lines in most apps), og:site_name, og:url, og:locale,
+  og:image with secure_url, type, width, height and alt, and
+  twitter:card summary_large_image with title, description, image and
+  alt. Privacy and Terms pages got their own titles with the same
+  picture. The structured data screenshot points at the new picture.
